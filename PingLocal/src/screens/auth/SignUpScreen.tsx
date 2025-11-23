@@ -1,0 +1,297 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  Image,
+  SafeAreaView,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  ActivityIndicator,
+  StyleSheet,
+} from 'react-native';
+import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { useAuth } from '../../contexts/AuthContext';
+import { SignUpScreenProps } from '../../types/navigation';
+
+export default function SignUpScreen({ navigation }: SignUpScreenProps) {
+  const { signUp } = useAuth();
+  const [firstName, setFirstName] = useState('');
+  const [surname, setSurname] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const validatePassword = (pass: string) => {
+    return pass.length >= 8;
+  };
+
+  const handleSignUp = async () => {
+    if (!firstName || !surname || !email || !password) {
+      setError('Please fill in all fields');
+      return;
+    }
+
+    if (!validatePassword(password)) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+
+    setError('');
+    setIsLoading(true);
+
+    const fullName = `${firstName} ${surname}`;
+    const { error: signUpError } = await signUp(email, password, fullName);
+
+    if (signUpError) {
+      setError(signUpError.message || 'Failed to create account');
+      setIsLoading(false);
+      return;
+    }
+
+    navigation.navigate('Verification', { email });
+    setIsLoading(false);
+  };
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <SafeAreaView style={styles.safeArea}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+          >
+            {/* Back button */}
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={styles.backButton}
+            >
+              <Text style={styles.backButtonText}>←</Text>
+            </TouchableOpacity>
+
+            {/* Illustration */}
+            <View style={styles.illustrationContainer}>
+              <Image
+                source={require('../../../assets/images/registerscreen_graphic.avif')}
+                style={styles.illustration}
+                resizeMode="contain"
+              />
+            </View>
+
+            {/* Content */}
+            <View style={styles.content}>
+              <Text style={styles.headline}>Discover, Love, Support</Text>
+              <Text style={styles.subtitle}>
+                Ping Local is the ultimate companion to getting the most out of using your local independent businesses.
+              </Text>
+
+              {/* Form */}
+              <View style={styles.form}>
+                {/* Name row */}
+                <View style={styles.nameRow}>
+                  <View style={[styles.inputContainer, styles.nameInput]}>
+                    <TextInput
+                      placeholder="Enter First Name"
+                      placeholderTextColor={colors.grayMedium}
+                      value={firstName}
+                      onChangeText={setFirstName}
+                      autoCapitalize="words"
+                      style={styles.input}
+                    />
+                  </View>
+                  <View style={[styles.inputContainer, styles.nameInput, styles.nameInputMargin]}>
+                    <TextInput
+                      placeholder="Enter Surname"
+                      placeholderTextColor={colors.grayMedium}
+                      value={surname}
+                      onChangeText={setSurname}
+                      autoCapitalize="words"
+                      style={styles.input}
+                    />
+                  </View>
+                </View>
+
+                <View style={[styles.inputContainer, styles.inputMargin]}>
+                  <TextInput
+                    placeholder="Enter Email"
+                    placeholderTextColor={colors.grayMedium}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    style={styles.input}
+                  />
+                </View>
+
+                <View style={[styles.inputContainer, styles.inputMargin]}>
+                  <TextInput
+                    placeholder="Enter Password"
+                    placeholderTextColor={colors.grayMedium}
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    style={styles.input}
+                  />
+                </View>
+
+                {/* Password hint */}
+                <Text style={styles.passwordHint}>
+                  Password must be at least 8 characters
+                </Text>
+
+                {/* Error message */}
+                {error ? (
+                  <Text style={styles.errorText}>{error}</Text>
+                ) : null}
+
+                {/* Sign up button */}
+                <TouchableOpacity
+                  onPress={handleSignUp}
+                  disabled={isLoading}
+                  style={styles.signUpButton}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color={colors.primary} />
+                  ) : (
+                    <Text style={styles.signUpButtonText}>Join Ping Local</Text>
+                  )}
+                </TouchableOpacity>
+
+                {/* Business link */}
+                <TouchableOpacity style={styles.businessLink}>
+                  <Text style={styles.businessLinkText}>
+                    → Apply to join as a Ping Local Business
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.primary,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  backButton: {
+    position: 'absolute',
+    top: spacing.md,
+    left: spacing.md,
+    zIndex: 10,
+    backgroundColor: colors.accent,
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButtonText: {
+    color: colors.primary,
+    fontSize: fontSize.xl,
+  },
+  illustrationContainer: {
+    alignItems: 'center',
+    paddingTop: 64,
+    paddingBottom: spacing.md,
+  },
+  illustration: {
+    width: 192,
+    height: 192,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: spacing.lg,
+  },
+  headline: {
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.bold,
+    color: colors.white,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: fontSize.sm,
+    color: colors.white,
+    textAlign: 'center',
+    marginTop: spacing.sm,
+    paddingHorizontal: spacing.md,
+  },
+  form: {
+    marginTop: spacing.lg,
+  },
+  nameRow: {
+    flexDirection: 'row',
+  },
+  nameInput: {
+    flex: 1,
+  },
+  nameInputMargin: {
+    marginLeft: spacing.sm,
+  },
+  inputContainer: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  inputMargin: {
+    marginTop: spacing.sm,
+  },
+  input: {
+    fontSize: fontSize.md,
+    color: colors.grayDark,
+  },
+  passwordHint: {
+    color: colors.grayMedium,
+    fontSize: fontSize.xs,
+    textAlign: 'center',
+    marginTop: spacing.xs,
+  },
+  errorText: {
+    color: colors.accent,
+    textAlign: 'center',
+    fontSize: fontSize.sm,
+    marginTop: spacing.sm,
+  },
+  signUpButton: {
+    backgroundColor: colors.accent,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.full,
+    marginTop: spacing.md,
+  },
+  signUpButtonText: {
+    color: colors.primary,
+    textAlign: 'center',
+    fontWeight: fontWeight.semibold,
+    fontSize: fontSize.md,
+  },
+  businessLink: {
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  businessLinkText: {
+    color: colors.accent,
+    textAlign: 'center',
+    fontSize: fontSize.sm,
+  },
+});
