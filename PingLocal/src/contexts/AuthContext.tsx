@@ -8,13 +8,12 @@ interface AuthContextType {
   user: User | null;
   supabaseUser: SupabaseUser | null;
   isLoading: boolean;
-  signUp: (email: string, password: string, name: string) => Promise<{ error: Error | null }>;
+  signUp: (email: string, password: string, firstName: string, surname: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   verifyEmail: (token: string) => Promise<{ error: Error | null }>;
   resendVerification: () => Promise<{ error: Error | null }>;
   refreshUser: () => Promise<void>;
-  completeOnboarding: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,13 +70,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signUp = async (email: string, password: string, name: string) => {
+  const signUp = async (email: string, password: string, firstName: string, surname: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          data: { name },
+          data: { first_name: firstName, surname },
         },
       });
 
@@ -88,11 +87,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { error: profileError } = await supabase.from('users').insert({
           id: data.user.id,
           email,
-          name,
+          first_name: firstName,
+          surname,
           loyalty_points: 0,
-          tier: 'member',
-          is_verified: false,
-          has_completed_onboarding: false,
+          loyalty_tier: 'Ping Local Member',
+          verified: false,
         });
 
         if (profileError) throw profileError;
@@ -138,7 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         await supabase
           .from('users')
-          .update({ is_verified: true })
+          .update({ verified: true })
           .eq('id', user.id);
 
         await refreshUser();
@@ -170,17 +169,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const completeOnboarding = async () => {
-    if (user) {
-      await supabase
-        .from('users')
-        .update({ has_completed_onboarding: true })
-        .eq('id', user.id);
-
-      await refreshUser();
-    }
-  };
-
   return (
     <AuthContext.Provider
       value={{
@@ -194,7 +182,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         verifyEmail,
         resendVerification,
         refreshUser,
-        completeOnboarding,
       }}
     >
       {children}

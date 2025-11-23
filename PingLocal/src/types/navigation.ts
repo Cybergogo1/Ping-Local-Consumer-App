@@ -7,7 +7,7 @@ export type AuthStackParamList = {
   Welcome: undefined;
   Login: undefined;
   SignUp: undefined;
-  Verification: { email: string };
+  Verification: { email: string; isNewSignup?: boolean };
   ForgotPassword: undefined;
 };
 
@@ -18,20 +18,27 @@ export type OnboardingStackParamList = {
 
 // Main Tab Navigator
 export type MainTabParamList = {
-  Home: undefined;
-  Map: undefined;
-  Favorites: undefined;
-  Directory: undefined;
+  Feed: undefined;
+  Favourites: undefined;
+  Claimed: undefined;
+  Businesses: undefined;
   Account: undefined;
 };
 
 // Home Stack (nested in Home tab)
 export type HomeStackParamList = {
   HomeFeed: undefined;
-  OfferDetail: { offerId: string };
-  BusinessDetail: { businessId: string };
+  OfferDetail: { offerId: number };
+  BusinessDetail: { businessId: number };
   Notifications: undefined;
   LoyaltyInfo: undefined;
+};
+
+// Directory Stack (nested in Directory tab)
+export type DirectoryStackParamList = {
+  DirectoryMain: undefined;
+  BusinessDetail: { businessId: number };
+  OfferDetail: { offerId: number };
 };
 
 // Account Stack (nested in Account tab)
@@ -71,4 +78,24 @@ export type SignUpScreenProps = {
 export type VerificationScreenProps = {
   navigation: StackNavigationProp<AuthStackParamList, 'Verification'>;
   route: RouteProp<AuthStackParamList, 'Verification'>;
+};
+
+// Home Stack Screen Props
+export type HomeFeedScreenProps = {
+  navigation: StackNavigationProp<HomeStackParamList, 'HomeFeed'>;
+};
+
+export type OfferDetailScreenProps = {
+  navigation: StackNavigationProp<HomeStackParamList, 'OfferDetail'>;
+  route: RouteProp<HomeStackParamList, 'OfferDetail'>;
+};
+
+export type BusinessDetailScreenProps = {
+  navigation: StackNavigationProp<HomeStackParamList, 'BusinessDetail'>;
+  route: RouteProp<HomeStackParamList, 'BusinessDetail'>;
+};
+
+// Directory Stack Screen Props
+export type DirectoryScreenProps = {
+  navigation: StackNavigationProp<DirectoryStackParamList, 'DirectoryMain'>;
 };

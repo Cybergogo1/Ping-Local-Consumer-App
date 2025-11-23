@@ -26,15 +26,12 @@ export default function RootNavigator() {
       {!session ? (
         // Not logged in - show auth screens
         <Stack.Screen name="Auth" component={AuthNavigator} />
-      ) : !user?.is_verified ? (
-        // Logged in but not verified - stay in auth for verification
-        <Stack.Screen name="Auth" component={AuthNavigator} />
-      ) : !user?.has_completed_onboarding ? (
-        // Verified but hasn't completed onboarding
-        <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
       ) : (
-        // Fully authenticated and onboarded
-        <Stack.Screen name="Main" component={MainTabNavigator} />
+        // Logged in - show main app
+        <>
+          <Stack.Screen name="Main" component={MainTabNavigator} />
+          <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
+        </>
       )}
     </Stack.Navigator>
   );

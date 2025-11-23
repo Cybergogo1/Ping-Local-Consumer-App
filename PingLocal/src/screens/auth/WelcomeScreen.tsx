@@ -5,10 +5,10 @@ import {
   TouchableOpacity,
   ImageBackground,
   Image,
-  SafeAreaView,
   StatusBar,
   StyleSheet,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
 import { WelcomeScreenProps } from '../../types/navigation';
 
@@ -21,7 +21,7 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        <SafeAreaView style={styles.safeArea}>
+        <SafeAreaView style={styles.safeArea} edges={['top']}>
           <View style={styles.content}>
             {/* Top section with illustration */}
             <View style={styles.illustrationContainer}>

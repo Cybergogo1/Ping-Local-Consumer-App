@@ -1,5 +1,6 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, StatusBar } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontSize, fontWeight, spacing, borderRadius } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -8,16 +9,23 @@ export default function AccountScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Account</Text>
-      {user && (
-        <Text style={styles.userName}>{user.name}</Text>
-      )}
-      <TouchableOpacity
-        onPress={signOut}
-        style={styles.signOutButton}
-      >
-        <Text style={styles.signOutButtonText}>Sign Out</Text>
-      </TouchableOpacity>
+      <StatusBar barStyle="dark-content" />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Account</Text>
+        </View>
+        <View style={styles.content}>
+          {user && (
+            <Text style={styles.userName}>{user.name}</Text>
+          )}
+          <TouchableOpacity
+            onPress={signOut}
+            style={styles.signOutButton}
+          >
+            <Text style={styles.signOutButtonText}>Sign Out</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
     </View>
   );
 }
@@ -25,23 +33,35 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: colors.grayLight,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  header: {
+    backgroundColor: colors.white,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.grayLight,
+  },
+  headerTitle: {
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+  },
+  content: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.white,
     paddingHorizontal: spacing.lg,
-  },
-  title: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.semibold,
-    color: colors.primary,
   },
   userName: {
     fontSize: fontSize.md,
     color: colors.grayMedium,
-    marginTop: spacing.sm,
+    marginBottom: spacing.lg,
   },
   signOutButton: {
-    marginTop: spacing.lg,
     backgroundColor: colors.primary,
     paddingVertical: spacing.sm + 4,
     paddingHorizontal: spacing.lg,

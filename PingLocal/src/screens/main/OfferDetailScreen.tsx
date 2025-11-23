@@ -1,0 +1,764 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  Image,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  StyleSheet,
+  StatusBar,
+  Modal,
+  Dimensions,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { supabase } from '../../lib/supabase';
+import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
+import { Offer } from '../../types/database';
+import { OfferDetailScreenProps } from '../../types/navigation';
+
+const { width: screenWidth } = Dimensions.get('window');
+const placeholderImage = require('../../../assets/images/placeholder_offer.jpg');
+
+export default function OfferDetailScreen({ navigation, route }: OfferDetailScreenProps) {
+  const { offerId } = route.params;
+
+  const [offer, setOffer] = useState<Offer | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showDescriptionModal, setShowDescriptionModal] = useState(false);
+
+  useEffect(() => {
+    fetchOffer();
+  }, [offerId]);
+
+  const fetchOffer = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('offers')
+        .select(`
+          *,
+          businesses (
+            id, name, location_area, featured_image, location, phone_number, description_summary, created
+          )
+        `)
+        .eq('id', offerId)
+        .single();
+
+      if (error) throw error;
+      setOffer(data);
+    } catch (error) {
+      console.error('Error fetching offer:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+  };
+
+  const formatJoinedDate = (dateString?: string) => {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+  };
+
+  const isExpired = () => {
+    if (!offer?.end_date) return false;
+    return new Date(offer.end_date) < new Date();
+  };
+
+  const getButtonText = () => {
+    if (!offer) return 'Buy Now!';
+
+    // Use custom button text if set (must be a non-empty string)
+    if (offer.custom_button_text && typeof offer.custom_button_text === 'string' && offer.custom_button_text.trim() !== '') {
+      return offer.custom_button_text;
+    }
+
+    const isPayUpfront = offer.offer_type === 'Pay up front';
+    const requiresBooking = offer.requires_booking;
+
+    if (isPayUpfront) {
+      return requiresBooking ? 'Book & Buy!' : 'Buy Now!';
+    } else {
+      return requiresBooking ? 'Book & Claim!' : 'Claim Now!';
+    }
+  };
+
+  const handleClaimPress = () => {
+    if (!offer) return;
+    console.log('Claim pressed for offer:', offer.id);
+  };
+
+  const handleBusinessPress = () => {
+    if (!offer?.businesses?.id) return;
+    navigation.navigate('BusinessDetail', { businessId: offer.businesses.id });
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (!offer) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={styles.errorText}>Offer not found</Text>
+        <TouchableOpacity
+          style={styles.errorBackButton}
+          onPress={() => navigation.goBack()}
+        >
+          <Text style={styles.errorBackButtonText}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  const expired = isExpired();
+  const businessName = offer.business_name || offer.businesses?.name || 'Unknown Business';
+  const locationArea = offer.location_area || offer.businesses?.location_area || '';
+  const quantityRemaining = offer.quantity ? offer.quantity - offer.number_sold : null;
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+
+      <ScrollView
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        bounces={false}
+      >
+        {/* Hero Image Section */}
+        <View style={styles.heroContainer}>
+          <Image
+            source={offer.featured_image ? { uri: offer.featured_image } : placeholderImage}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+
+          {/* Top Navigation Buttons - positioned in safe area */}
+          <SafeAreaView style={styles.heroButtonsContainer} edges={['top']}>
+            <TouchableOpacity
+              style={styles.heroButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Text style={styles.heroButtonText}>{'<'}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.heroButton}>
+              <Text style={styles.heroButtonText}>♡</Text>
+            </TouchableOpacity>
+          </SafeAreaView>
+
+          {/* Quantity Badge - bottom left */}
+          {offer.quantity_item && quantityRemaining !== null && (
+            <View style={styles.quantityBadge}>
+              <Text style={styles.quantityText}>{quantityRemaining} Left!</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Content Section */}
+        <View style={styles.contentWrapper}>
+          {/* Left side - Title, Business, Location */}
+          <View style={styles.contentLeft}>
+            <Text style={styles.title} numberOfLines={2}>{offer.name}</Text>
+
+            <TouchableOpacity onPress={handleBusinessPress}>
+              <Text style={styles.businessName}>🏢 {businessName}</Text>
+            </TouchableOpacity>
+
+            {locationArea && (
+              <Text style={styles.location}>📍 {locationArea}</Text>
+            )}
+
+            {/* Category Tag */}
+            {offer.category && (
+              <View style={styles.tagContainer}>
+                <View style={styles.tag}>
+                  <Text style={styles.tagText}>{offer.category}</Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Right side - Price Box (overlapping image) */}
+          {!expired && (
+            <View style={styles.priceBox}>
+              <TouchableOpacity
+                style={styles.buyButton}
+                onPress={handleClaimPress}
+              >
+                <Text style={styles.buyButtonText}>{getButtonText()}</Text>
+              </TouchableOpacity>
+
+              {offer.price_discount && (
+                <View style={styles.priceRow}>
+                  <Text style={styles.price}>Price /...</Text>
+                  <Text style={styles.priceAmount}>£{offer.price_discount.toFixed(2)}</Text>
+                  {offer.unit_of_measurement && (
+                    <Text style={styles.priceUnit}>per {offer.unit_of_measurement}</Text>
+                  )}
+                </View>
+              )}
+
+              {offer.end_date && (
+                <Text style={styles.endDate}>Ends {formatDate(offer.end_date)}</Text>
+              )}
+            </View>
+          )}
+        </View>
+
+        {/* Expired Banner */}
+        {expired && (
+          <View style={styles.expiredBanner}>
+            <Text style={styles.expiredIcon}>⚠️</Text>
+            <View style={styles.expiredTextContainer}>
+              <Text style={styles.expiredTitle}>This Promotion ended {formatDate(offer.end_date)}</Text>
+              <Text style={styles.expiredSubtitle}>
+                Check out your feed for more great promotions, or add this business to your favourites to be notified!
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Promotion Details Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Promotion Details</Text>
+          {offer.summary && (
+            <Text style={styles.summaryText}>{offer.summary}</Text>
+          )}
+
+          {offer.full_description && (
+            <TouchableOpacity
+              style={styles.readMoreButton}
+              onPress={() => setShowDescriptionModal(true)}
+            >
+              <Text style={styles.readMoreText}>Read more...</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Special Notes */}
+        {offer.special_notes && (
+          <View style={styles.specialNotesSection}>
+            <Text style={styles.specialNotesIcon}>📋</Text>
+            <View style={styles.specialNotesContent}>
+              <Text style={styles.specialNotesTitle}>Special Note from {businessName}</Text>
+              <Text style={styles.specialNotesText}>{offer.special_notes}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Terms & Conditions */}
+        <TouchableOpacity style={styles.termsButton}>
+          <Text style={styles.termsIcon}>📄</Text>
+          <Text style={styles.termsText}>View Terms and Conditions</Text>
+        </TouchableOpacity>
+
+        {/* Image Gallery Placeholder */}
+        <View style={styles.gallerySection}>
+          <View style={styles.galleryRow}>
+            <View style={styles.galleryImagePlaceholder} />
+            <View style={styles.galleryImagePlaceholder} />
+            <View style={styles.galleryImagePlaceholder} />
+          </View>
+        </View>
+
+        {/* Business Card */}
+        {offer.businesses && (
+          <View style={styles.businessCard}>
+            <View style={styles.businessCardLeft}>
+              {offer.businesses.featured_image ? (
+                <Image
+                  source={{ uri: offer.businesses.featured_image }}
+                  style={styles.businessCardImage}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={[styles.businessCardImage, styles.businessCardImagePlaceholder]}>
+                  <Text style={styles.businessCardImageText}>
+                    {offer.businesses.name?.charAt(0) || 'B'}
+                  </Text>
+                </View>
+              )}
+            </View>
+
+            <View style={styles.businessCardRight}>
+              <View style={styles.businessCardHeader}>
+                <Text style={styles.businessCardIcon}>🏢</Text>
+                <Text style={styles.businessCardName}>{offer.businesses.name}</Text>
+              </View>
+              <Text style={styles.businessCardJoined}>
+                Joined {formatJoinedDate(offer.businesses.created)}
+              </Text>
+
+              <TouchableOpacity
+                style={styles.viewOnMapButton}
+                onPress={handleBusinessPress}
+              >
+                <Text style={styles.viewOnMapIcon}>📍</Text>
+                <Text style={styles.viewOnMapText}>View on Map</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {/* Bottom spacing */}
+        <View style={{ height: spacing.xxl }} />
+      </ScrollView>
+
+      {/* Description Modal */}
+      <Modal
+        visible={showDescriptionModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowDescriptionModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Full Description</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowDescriptionModal(false)}
+              >
+                <Text style={styles.modalCloseText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalBody}>
+              <Text style={styles.modalText}>{offer?.full_description}</Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.white,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+  },
+  errorContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.white,
+    padding: spacing.lg,
+  },
+  errorText: {
+    fontSize: fontSize.lg,
+    color: colors.grayDark,
+    marginBottom: spacing.md,
+  },
+  errorBackButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.full,
+  },
+  errorBackButtonText: {
+    color: colors.white,
+    fontWeight: fontWeight.semibold,
+  },
+
+  // Hero Section
+  heroContainer: {
+    height: 250,
+    backgroundColor: colors.grayLight,
+    position: 'relative',
+  },
+  heroImage: {
+    width: '100%',
+    height: '100%',
+  },
+  heroButtonsContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.sm,
+  },
+  heroButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...shadows.md,
+  },
+  heroButtonText: {
+    fontSize: fontSize.lg,
+    color: colors.white,
+    fontWeight: fontWeight.bold,
+  },
+  quantityBadge: {
+    position: 'absolute',
+    bottom: spacing.md,
+    left: spacing.md,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+  },
+  quantityText: {
+    color: colors.white,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+  },
+
+  // Content Section
+  contentWrapper: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    marginTop: -20, // Pull up slightly to overlap with price box
+  },
+  contentLeft: {
+    flex: 1,
+    paddingRight: spacing.md,
+    paddingTop: 20, // Compensate for the margin-top above
+  },
+  title: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+    marginBottom: spacing.xs,
+  },
+  businessName: {
+    fontSize: fontSize.sm,
+    color: colors.grayDark,
+    marginBottom: spacing.xs,
+  },
+  location: {
+    fontSize: fontSize.sm,
+    color: colors.grayMedium,
+    marginBottom: spacing.sm,
+  },
+  tagContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  tag: {
+    backgroundColor: colors.grayLight,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: colors.grayMedium,
+  },
+  tagText: {
+    fontSize: fontSize.xs,
+    color: colors.grayDark,
+  },
+
+  // Price Box
+  priceBox: {
+    width: 140,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginTop: -40, // Overlap with hero image
+    ...shadows.lg,
+    alignItems: 'center',
+  },
+  buyButton: {
+    backgroundColor: colors.accent,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    marginBottom: spacing.sm,
+    width: '100%',
+    alignItems: 'center',
+  },
+  buyButtonText: {
+    color: colors.primary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+  },
+  priceRow: {
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  price: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+  },
+  priceAmount: {
+    fontSize: fontSize.md,
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+  priceUnit: {
+    fontSize: fontSize.xs,
+    color: colors.grayMedium,
+  },
+  endDate: {
+    fontSize: fontSize.xs,
+    color: colors.grayMedium,
+    textAlign: 'center',
+  },
+
+  // Expired Banner
+  expiredBanner: {
+    backgroundColor: colors.accent,
+    flexDirection: 'row',
+    padding: spacing.md,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    borderRadius: borderRadius.md,
+  },
+  expiredIcon: {
+    fontSize: fontSize.xl,
+    marginRight: spacing.sm,
+  },
+  expiredTextContainer: {
+    flex: 1,
+  },
+  expiredTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+    marginBottom: spacing.xs,
+  },
+  expiredSubtitle: {
+    fontSize: fontSize.xs,
+    color: colors.grayDark,
+  },
+
+  // Sections
+  section: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+  },
+  sectionTitle: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+    marginBottom: spacing.sm,
+  },
+  summaryText: {
+    fontSize: fontSize.sm,
+    color: colors.grayDark,
+    lineHeight: fontSize.sm * 1.5,
+  },
+  readMoreButton: {
+    marginTop: spacing.sm,
+  },
+  readMoreText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontWeight: fontWeight.medium,
+  },
+
+  // Special Notes
+  specialNotesSection: {
+    backgroundColor: colors.accent,
+    flexDirection: 'row',
+    padding: spacing.md,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    borderRadius: borderRadius.md,
+  },
+  specialNotesIcon: {
+    fontSize: fontSize.lg,
+    marginRight: spacing.sm,
+  },
+  specialNotesContent: {
+    flex: 1,
+  },
+  specialNotesTitle: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+    marginBottom: spacing.xs,
+  },
+  specialNotesText: {
+    fontSize: fontSize.sm,
+    color: colors.grayDark,
+  },
+
+  // Terms
+  termsButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    marginTop: spacing.md,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: colors.grayLight,
+    marginHorizontal: spacing.md,
+  },
+  termsIcon: {
+    fontSize: fontSize.md,
+    marginRight: spacing.sm,
+  },
+  termsText: {
+    fontSize: fontSize.sm,
+    color: colors.grayMedium,
+  },
+
+  // Gallery
+  gallerySection: {
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.lg,
+  },
+  galleryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  galleryImagePlaceholder: {
+    width: (screenWidth - spacing.md * 4) / 3,
+    height: (screenWidth - spacing.md * 4) / 3,
+    backgroundColor: colors.grayLight,
+    borderRadius: borderRadius.md,
+  },
+
+  // Business Card
+  businessCard: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.md,
+    marginTop: spacing.lg,
+    padding: spacing.md,
+    backgroundColor: colors.grayLight,
+    borderRadius: borderRadius.lg,
+  },
+  businessCardLeft: {
+    marginRight: spacing.md,
+  },
+  businessCardImage: {
+    width: 60,
+    height: 60,
+    borderRadius: borderRadius.md,
+  },
+  businessCardImagePlaceholder: {
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  businessCardImageText: {
+    color: colors.white,
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+  },
+  businessCardRight: {
+    flex: 1,
+  },
+  businessCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  businessCardIcon: {
+    fontSize: fontSize.sm,
+    marginRight: spacing.xs,
+  },
+  businessCardName: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.primary,
+  },
+  businessCardJoined: {
+    fontSize: fontSize.xs,
+    color: colors.grayMedium,
+    marginBottom: spacing.sm,
+  },
+  viewOnMapButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    alignSelf: 'flex-start',
+  },
+  viewOnMapIcon: {
+    fontSize: fontSize.sm,
+    marginRight: spacing.xs,
+  },
+  viewOnMapText: {
+    color: colors.white,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.semibold,
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    width: '100%',
+    maxHeight: '80%',
+    overflow: 'hidden',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.grayLight,
+  },
+  modalTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.primary,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.grayLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseText: {
+    fontSize: fontSize.xl,
+    color: colors.grayDark,
+  },
+  modalBody: {
+    padding: spacing.md,
+  },
+  modalText: {
+    fontSize: fontSize.md,
+    color: colors.grayDark,
+    lineHeight: fontSize.md * 1.6,
+  },
+});

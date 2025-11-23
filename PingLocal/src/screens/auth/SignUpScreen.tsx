@@ -5,7 +5,6 @@ import {
   TextInput,
   TouchableOpacity,
   Image,
-  SafeAreaView,
   StatusBar,
   KeyboardAvoidingView,
   Platform,
@@ -13,6 +12,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { SignUpScreenProps } from '../../types/navigation';
@@ -44,8 +44,7 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
     setError('');
     setIsLoading(true);
 
-    const fullName = `${firstName} ${surname}`;
-    const { error: signUpError } = await signUp(email, password, fullName);
+    const { error: signUpError } = await signUp(email, password, firstName, surname);
 
     if (signUpError) {
       setError(signUpError.message || 'Failed to create account');
@@ -53,14 +52,14 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
       return;
     }
 
-    navigation.navigate('Verification', { email });
+    navigation.navigate('Verification', { email, isNewSignup: true });
     setIsLoading(false);
   };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}

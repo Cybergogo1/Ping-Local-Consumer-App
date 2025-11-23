@@ -3,16 +3,16 @@ import { View, Text, StyleSheet, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fontSize, fontWeight, spacing } from '../../theme';
 
-export default function FavoritesScreen() {
+export default function ClaimedScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Favourites</Text>
+          <Text style={styles.headerTitle}>Claimed</Text>
         </View>
         <View style={styles.content}>
-          <Text style={styles.title}>Your Favourites</Text>
+          <Text style={styles.title}>Your Claimed Offers</Text>
           <Text style={styles.subtitle}>Coming soon...</Text>
         </View>
       </SafeAreaView>

@@ -5,7 +5,17 @@
       "Bash(git config:*)",
       "Bash(git init:*)",
       "Bash(git add:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(ls:*)",
+      "Bash(npm ls:*)",
+      "Bash(nul)",
+      "Bash(del /f nul 2)",
+      "Bash(del \"\\?\\%cd%\\nul\")",
+      "Bash(.gitignore)",
+      "Bash(PingLocal/.gitignore)"
     ],
     "deny": [],
     "ask": []

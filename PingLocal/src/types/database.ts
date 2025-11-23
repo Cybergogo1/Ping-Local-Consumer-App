@@ -1,58 +1,79 @@
 export interface User {
   id: string;
   email: string;
-  name: string;
-  phone?: string;
+  first_name?: string;
+  surname?: string;
+  phone_no?: string;
   loyalty_points: number;
-  tier: 'member' | 'hero' | 'champion' | 'legend';
-  is_verified: boolean;
-  has_completed_onboarding: boolean;
-  notification_preferences?: {
-    push_enabled: boolean;
-    email_enabled: boolean;
-  };
-  created_at: string;
-  updated_at: string;
+  loyalty_tier: string;
+  verified: boolean;
+  profile_pic?: any;
+  activate_notifications?: boolean;
+  selected_location?: string;
+  selected_location_id?: number;
+  created: string;
+  updated: string;
 }
 
 export interface Business {
-  id: string;
+  id: number;
   name: string;
-  description: string;
-  category: string;
-  location_area_id: string;
-  address: string;
-  phone?: string;
-  website?: string;
-  featured_image_url?: string;
-  logo_url?: string;
-  latitude?: number;
-  longitude?: number;
+  email?: string;
+  description?: string;
+  description_summary?: string;
+  location?: string;
+  location_area?: string;
+  phone_number?: string;
+  opening_times?: string;
+  featured_image?: string;
+  category?: string;
+  sub_categories?: string;
   is_featured: boolean;
-  stripe_account_id?: string;
-  created_at: string;
+  is_signed_off: boolean;
+  currently_trading: boolean;
+  available_promotion_types?: string;
+  stripe_account_no?: string;
+  lead_rate?: number;
+  cut_percent?: number;
+  created: string;
+  updated: string;
 }
 
 export interface Offer {
-  id: string;
-  business_id: string;
-  title: string;
-  description: string;
-  original_price: number;
-  offer_price: number;
-  discount_percentage?: number;
-  payment_type: 'pay_upfront' | 'pay_on_day';
-  booking_required: boolean;
-  booking_type?: 'none' | 'external_url' | 'phone';
+  id: number;
+  name: string;
+  summary?: string;
+  full_description?: string;
+  special_notes?: string;
+  offer_type?: string; // 'Pay up front' or 'Pay on the day'
+  requires_booking: boolean;
+  booking_type?: string; // 'external', 'call', null
   booking_url?: string;
-  booking_phone?: string;
-  max_party_size?: number;
-  terms_and_conditions?: string;
-  image_url?: string;
-  start_date: string;
-  end_date: string;
-  status: 'draft' | 'signed_off' | 'expired';
-  created_at: string;
+  one_per_customer: boolean;
+  price_discount?: number;
+  unit_of_measurement?: string;
+  quantity?: number;
+  number_sold: number;
+  quantity_item: boolean;
+  status?: string; // 'Signed Off' = live, 'draft' = pending
+  start_date?: string;
+  end_date?: string;
+  finish_time?: string;
+  business_id?: number;
+  business_name?: string;
+  featured_image?: string;
+  category?: string;
+  customer_bill_input: boolean;
+  change_button_text?: string;
+  custom_feed_text?: string;
+  business_policy?: string;
+  policy_notes?: string;
+  location_area?: string;
+  business_location?: string;
+  created: string;
+  updated: string;
+  // Joined data
+  businesses?: Business;
 }
 
 export interface UserOffer {

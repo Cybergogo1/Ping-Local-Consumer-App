@@ -4,7 +4,6 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  SafeAreaView,
   StatusBar,
   KeyboardAvoidingView,
   Platform,
@@ -12,12 +11,16 @@ import {
   Image,
   StyleSheet,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
-import { VerificationScreenProps } from '../../types/navigation';
+import { VerificationScreenProps, RootStackParamList } from '../../types/navigation';
 
 export default function VerificationScreen({ navigation, route }: VerificationScreenProps) {
-  const { email } = route.params;
+  const { email, isNewSignup } = route.params;
+  const rootNavigation = useNavigation<StackNavigationProp<RootStackParamList>>();
   const { verifyEmail, resendVerification, signOut } = useAuth();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -39,6 +42,16 @@ export default function VerificationScreen({ navigation, route }: VerificationSc
 
     if (verifyError) {
       setError('Type in valid code');
+      setIsLoading(false);
+      return;
+    }
+
+    // Navigate to onboarding for new signups, otherwise the RootNavigator will handle it
+    if (isNewSignup) {
+      rootNavigation.reset({
+        index: 0,
+        routes: [{ name: 'Onboarding' }],
+      });
     }
 
     setIsLoading(false);
@@ -68,7 +81,7 @@ export default function VerificationScreen({ navigation, route }: VerificationSc
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
