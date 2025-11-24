@@ -12,9 +12,8 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
-import { useAuth } from '../../contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -55,37 +54,47 @@ const slides: OnboardingSlide[] = [
 ];
 
 export default function OnboardingScreen() {
-  const { completeOnboarding } = useAuth();
+  const navigation = useNavigation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
   const requestNotificationPermission = async () => {
-    if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
-      });
+    // Notifications are not supported in Expo Go (SDK 53+)
+    // This will work properly in a development build
+    try {
+      const Notifications = await import('expo-notifications');
+
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF231F7C',
+        });
+      }
+
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      if (finalStatus !== 'granted') {
+        Alert.alert(
+          'Notifications',
+          'You can enable notifications later in your device settings.',
+          [{ text: 'OK' }]
+        );
+      }
+
+      return finalStatus === 'granted';
+    } catch (error) {
+      // Notifications not available (e.g., in Expo Go)
+      console.log('Notifications not available:', error);
+      return false;
     }
-
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== 'granted') {
-      Alert.alert(
-        'Notifications',
-        'You can enable notifications later in your device settings.',
-        [{ text: 'OK' }]
-      );
-    }
-
-    return finalStatus === 'granted';
   };
 
   const handleNext = async () => {
@@ -93,9 +102,10 @@ export default function OnboardingScreen() {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
       setCurrentIndex(currentIndex + 1);
     } else {
-      // Last slide - request notifications and complete onboarding
+      // Last slide - request notifications and navigate to main app
       await requestNotificationPermission();
-      await completeOnboarding();
+      // Navigate back to main app (onboarding complete)
+      navigation.goBack();
     }
   };
 

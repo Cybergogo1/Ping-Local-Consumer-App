@@ -12,7 +12,9 @@ import {
   Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
 import { Offer } from '../../types/database';
 import { OfferDetailScreenProps } from '../../types/navigation';
@@ -22,34 +24,127 @@ const placeholderImage = require('../../../assets/images/placeholder_offer.jpg')
 
 export default function OfferDetailScreen({ navigation, route }: OfferDetailScreenProps) {
   const { offerId } = route.params;
+  const { user } = useAuth();
 
   const [offer, setOffer] = useState<Offer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showDescriptionModal, setShowDescriptionModal] = useState(false);
+  const [isFavourited, setIsFavourited] = useState(false);
+  const [favouriteId, setFavouriteId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchOffer();
-  }, [offerId]);
+    if (user) {
+      checkFavouriteStatus();
+    }
+  }, [offerId, user]);
 
   const fetchOffer = async () => {
     try {
-      const { data, error } = await supabase
+      // First fetch the offer
+      const { data: offerData, error: offerError } = await supabase
         .from('offers')
-        .select(`
-          *,
-          businesses (
-            id, name, location_area, featured_image, location, phone_number, description_summary, created
-          )
-        `)
+        .select('*')
         .eq('id', offerId)
         .single();
 
-      if (error) throw error;
-      setOffer(data);
+      if (offerError) throw offerError;
+
+      // If offer has a business_name, fetch the business details by name
+      // (businesses table has no 'id' column)
+      if (offerData?.business_name) {
+        const { data: businessData } = await supabase
+          .from('businesses')
+          .select('name, location_area, featured_image, location, phone_number, description_summary, created')
+          .eq('name', offerData.business_name)
+          .single();
+
+        setOffer({ ...offerData, businesses: businessData || undefined });
+      } else {
+        setOffer(offerData);
+      }
     } catch (error) {
       console.error('Error fetching offer:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const checkFavouriteStatus = async () => {
+    // Get the Supabase Auth user ID (UUID) for favorites
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('id')
+        .eq('user_id', authUser.id)
+        .eq('offer_id', offerId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking favourite status:', error);
+        return;
+      }
+
+      if (data) {
+        setIsFavourited(true);
+        setFavouriteId(data.id);
+      } else {
+        setIsFavourited(false);
+        setFavouriteId(null);
+      }
+    } catch (error) {
+      console.error('Error checking favourite status:', error);
+    }
+  };
+
+  const toggleFavourite = async () => {
+    // Get the Supabase Auth user ID (UUID) for favorites
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser) {
+      // Could show a login prompt here
+      console.log('User must be logged in to favorite offers');
+      return;
+    }
+
+    try {
+      if (isFavourited && favouriteId) {
+        // Remove favorite
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('id', favouriteId);
+
+        if (error) {
+          console.error('Error removing favourite:', error);
+          return;
+        }
+
+        setIsFavourited(false);
+        setFavouriteId(null);
+      } else {
+        // Add favorite
+        const { data, error } = await supabase
+          .from('favorites')
+          .insert({
+            user_id: authUser.id,
+            offer_id: offerId,
+          })
+          .select('id')
+          .single();
+
+        if (error) {
+          console.error('Error adding favourite:', error);
+          return;
+        }
+
+        setIsFavourited(true);
+        setFavouriteId(data.id);
+      }
+    } catch (error) {
+      console.error('Error toggling favourite:', error);
     }
   };
 
@@ -82,8 +177,8 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
     if (!offer) return 'Buy Now!';
 
     // Use custom button text if set (must be a non-empty string)
-    if (offer.custom_button_text && typeof offer.custom_button_text === 'string' && offer.custom_button_text.trim() !== '') {
-      return offer.custom_button_text;
+    if (offer.change_button_text && typeof offer.change_button_text === 'string' && offer.change_button_text.trim() !== '') {
+      return offer.change_button_text;
     }
 
     const isPayUpfront = offer.offer_type === 'Pay up front';
@@ -98,12 +193,24 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
 
   const handleClaimPress = () => {
     if (!offer) return;
-    console.log('Claim pressed for offer:', offer.id);
+
+    // Route based on booking type
+    if (offer.booking_type === 'online' || (offer.requires_booking && !offer.booking_type)) {
+      // Slot-based booking - go to calendar
+      navigation.navigate('SlotBooking', { offerId: offer.id, offer });
+    } else if (offer.booking_type === 'external' || offer.booking_type === 'call') {
+      // External/phone booking
+      navigation.navigate('ExternalBooking', { offerId: offer.id, offer });
+    } else {
+      // No booking required - go directly to claim
+      navigation.navigate('Claim', { offerId: offer.id, offer });
+    }
   };
 
   const handleBusinessPress = () => {
-    if (!offer?.businesses?.id) return;
-    navigation.navigate('BusinessDetail', { businessId: offer.businesses.id });
+    // Use business name as identifier since businesses table has no 'id' column
+    if (!offer?.businesses?.name) return;
+    navigation.navigate('BusinessDetail', { businessId: offer.businesses.name as any });
   };
 
   if (isLoading) {
@@ -159,8 +266,12 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
               <Text style={styles.heroButtonText}>{'<'}</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.heroButton}>
-              <Text style={styles.heroButtonText}>♡</Text>
+            <TouchableOpacity style={styles.heroButton} onPress={toggleFavourite}>
+              <Ionicons
+                name={isFavourited ? 'heart' : 'heart-outline'}
+                size={22}
+                color={isFavourited ? colors.error : colors.white}
+              />
             </TouchableOpacity>
           </SafeAreaView>
 

@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { supabase } from '../../lib/supabase';
-import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, fontWeight, shadows, fontFamily } from '../../theme';
 import { Offer, LocationArea, Tag } from '../../types/database';
 import { HomeStackParamList } from '../../types/navigation';
 import { useAuth } from '../../contexts/AuthContext';
@@ -94,12 +94,7 @@ export default function HomeScreen() {
     try {
       let query = supabase
         .from('offers')
-        .select(`
-          *,
-          businesses (
-            id, name, location_area, featured_image, location
-          )
-        `)
+        .select('*')
         .eq('status', 'Signed Off')
         .gte('end_date', new Date().toISOString());
 
@@ -310,8 +305,7 @@ export default function HomeScreen() {
   }
 
   const handleMapViewPress = () => {
-    // TODO: Navigate to map view
-    console.log('Map view pressed');
+    navigation.navigate('Map');
   };
 
   const userName = user?.first_name || 'Guest';
@@ -342,7 +336,10 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.headerIconButton}>
               <Text style={styles.headerIcon}>🔔</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.headerIconButton}>
+            <TouchableOpacity
+              style={styles.headerIconButton}
+              onPress={() => navigation.navigate('Settings')}
+            >
               <Text style={styles.headerIcon}>⚙️</Text>
             </TouchableOpacity>
           </View>
@@ -381,7 +378,6 @@ export default function HomeScreen() {
           style={styles.mapViewButton}
           onPress={handleMapViewPress}
         >
-          <Text style={styles.mapViewIcon}>📍</Text>
           <Text style={styles.mapViewText}>Map View</Text>
         </TouchableOpacity>
       </View>
@@ -419,6 +415,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     fontWeight: fontWeight.bold,
     color: colors.white,
+    fontFamily: fontFamily.heading,
   },
   tierName: {
     fontSize: fontSize.sm,
@@ -464,7 +461,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    ...shadows.medium,
+    ...shadows.md,
   },
   mapViewIcon: {
     fontSize: 16,
@@ -577,6 +574,7 @@ const styles = StyleSheet.create({
     fontWeight: fontWeight.semibold,
     color: colors.grayDark,
     marginBottom: spacing.sm,
+    fontFamily: fontFamily.heading,
   },
   emptySubtitle: {
     fontSize: fontSize.md,

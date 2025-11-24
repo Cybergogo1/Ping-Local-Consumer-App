@@ -6,6 +6,12 @@ import DirectoryScreen from '../screens/main/DirectoryScreen';
 import BusinessDetailScreen from '../screens/main/BusinessDetailScreen';
 import OfferDetailScreen from '../screens/main/OfferDetailScreen';
 
+// Claim flow screens
+import SlotBookingScreen from '../screens/claim/SlotBookingScreen';
+import ExternalBookingScreen from '../screens/claim/ExternalBookingScreen';
+import ClaimScreen from '../screens/claim/ClaimScreen';
+import ClaimSuccessScreen from '../screens/claim/ClaimSuccessScreen';
+
 const Stack = createStackNavigator<DirectoryStackParamList>();
 
 export default function DirectoryStackNavigator() {
@@ -18,6 +24,11 @@ export default function DirectoryStackNavigator() {
       <Stack.Screen name="DirectoryMain" component={DirectoryScreen} />
       <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} />
       <Stack.Screen name="OfferDetail" component={OfferDetailScreen} />
+      {/* Claim Flow */}
+      <Stack.Screen name="SlotBooking" component={SlotBookingScreen} />
+      <Stack.Screen name="ExternalBooking" component={ExternalBookingScreen} />
+      <Stack.Screen name="Claim" component={ClaimScreen} />
+      <Stack.Screen name="ClaimSuccess" component={ClaimSuccessScreen} />
     </Stack.Navigator>
   );
 }

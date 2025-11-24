@@ -1,0 +1,406 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  StatusBar,
+  ScrollView,
+  Switch,
+  Alert,
+  Linking,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { colors, fontSize, fontWeight, spacing, borderRadius, shadows, fontFamily } from '../../theme';
+import { useAuth } from '../../contexts/AuthContext';
+import { AccountStackParamList } from '../../types/navigation';
+
+type SettingsScreenNavigationProp = StackNavigationProp<AccountStackParamList, 'Settings'>;
+
+type SettingItemProps = {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  subtitle?: string;
+  onPress?: () => void;
+  showArrow?: boolean;
+  rightElement?: React.ReactNode;
+  danger?: boolean;
+};
+
+const SettingItem = ({
+  icon,
+  title,
+  subtitle,
+  onPress,
+  showArrow = true,
+  rightElement,
+  danger = false,
+}: SettingItemProps) => (
+  <TouchableOpacity
+    style={styles.settingItem}
+    onPress={onPress}
+    disabled={!onPress && !rightElement}
+    activeOpacity={onPress ? 0.7 : 1}
+  >
+    <View style={[styles.settingIconContainer, danger && styles.settingIconDanger]}>
+      <Ionicons
+        name={icon}
+        size={20}
+        color={danger ? colors.error : colors.primary}
+      />
+    </View>
+    <View style={styles.settingContent}>
+      <Text style={[styles.settingTitle, danger && styles.settingTitleDanger]}>
+        {title}
+      </Text>
+      {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
+    </View>
+    {rightElement}
+    {showArrow && !rightElement && (
+      <Ionicons name="chevron-forward" size={20} color={colors.grayMedium} />
+    )}
+  </TouchableOpacity>
+);
+
+const SectionHeader = ({ title }: { title: string }) => (
+  <Text style={styles.sectionHeader}>{title}</Text>
+);
+
+export default function SettingsScreen() {
+  const navigation = useNavigation<SettingsScreenNavigationProp>();
+  const { signOut, user } = useAuth();
+
+  // Settings state (these would typically come from user preferences/async storage)
+  const [pushNotifications, setPushNotifications] = useState(true);
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [locationServices, setLocationServices] = useState(true);
+
+  const handleEditProfile = () => {
+    navigation.navigate('EditProfile');
+  };
+
+  const handleNotifications = () => {
+    navigation.navigate('Notifications');
+  };
+
+  const handleFAQs = () => {
+    navigation.navigate('FAQs');
+  };
+
+  const handlePrivacyPolicy = () => {
+    Linking.openURL('https://pinglocal.co.uk/privacy-policy');
+  };
+
+  const handleTermsOfService = () => {
+    Linking.openURL('https://pinglocal.co.uk/terms-of-service');
+  };
+
+  const handleContactSupport = () => {
+    Linking.openURL('mailto:support@pinglocal.co.uk');
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently removed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            // TODO: Implement account deletion
+            Alert.alert(
+              'Account Deletion',
+              'Please contact support@pinglocal.co.uk to delete your account.'
+            );
+          },
+        },
+      ]
+    );
+  };
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Sign Out',
+          style: 'destructive',
+          onPress: signOut,
+        },
+      ]
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.backButton}
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Settings</Text>
+          <View style={styles.headerSpacer} />
+        </View>
+
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Account Section */}
+          <SectionHeader title="Account" />
+          <View style={styles.sectionCard}>
+            <SettingItem
+              icon="person-outline"
+              title="Edit Profile"
+              subtitle="Update your personal information"
+              onPress={handleEditProfile}
+            />
+            <View style={styles.divider} />
+            <SettingItem
+              icon="notifications-outline"
+              title="Notification Preferences"
+              subtitle="Manage how we contact you"
+              onPress={handleNotifications}
+            />
+          </View>
+
+          {/* Notifications Section */}
+          <SectionHeader title="Notifications" />
+          <View style={styles.sectionCard}>
+            <SettingItem
+              icon="phone-portrait-outline"
+              title="Push Notifications"
+              subtitle="Receive alerts on your device"
+              showArrow={false}
+              rightElement={
+                <Switch
+                  value={pushNotifications}
+                  onValueChange={setPushNotifications}
+                  trackColor={{ false: colors.grayLight, true: colors.primary }}
+                  thumbColor={colors.white}
+                />
+              }
+            />
+            <View style={styles.divider} />
+            <SettingItem
+              icon="mail-outline"
+              title="Email Notifications"
+              subtitle="Receive updates via email"
+              showArrow={false}
+              rightElement={
+                <Switch
+                  value={emailNotifications}
+                  onValueChange={setEmailNotifications}
+                  trackColor={{ false: colors.grayLight, true: colors.primary }}
+                  thumbColor={colors.white}
+                />
+              }
+            />
+          </View>
+
+          {/* Privacy Section */}
+          <SectionHeader title="Privacy" />
+          <View style={styles.sectionCard}>
+            <SettingItem
+              icon="location-outline"
+              title="Location Services"
+              subtitle="Allow access to your location"
+              showArrow={false}
+              rightElement={
+                <Switch
+                  value={locationServices}
+                  onValueChange={setLocationServices}
+                  trackColor={{ false: colors.grayLight, true: colors.primary }}
+                  thumbColor={colors.white}
+                />
+              }
+            />
+            <View style={styles.divider} />
+            <SettingItem
+              icon="shield-checkmark-outline"
+              title="Privacy Policy"
+              onPress={handlePrivacyPolicy}
+            />
+            <View style={styles.divider} />
+            <SettingItem
+              icon="document-text-outline"
+              title="Terms of Service"
+              onPress={handleTermsOfService}
+            />
+          </View>
+
+          {/* Support Section */}
+          <SectionHeader title="Support" />
+          <View style={styles.sectionCard}>
+            <SettingItem
+              icon="help-circle-outline"
+              title="FAQs"
+              subtitle="Frequently asked questions"
+              onPress={handleFAQs}
+            />
+            <View style={styles.divider} />
+            <SettingItem
+              icon="chatbubble-ellipses-outline"
+              title="Contact Support"
+              subtitle="Get help from our team"
+              onPress={handleContactSupport}
+            />
+          </View>
+
+          {/* Danger Zone */}
+          <SectionHeader title="Account Actions" />
+          <View style={styles.sectionCard}>
+            <SettingItem
+              icon="log-out-outline"
+              title="Sign Out"
+              onPress={handleSignOut}
+            />
+            <View style={styles.divider} />
+            <SettingItem
+              icon="trash-outline"
+              title="Delete Account"
+              subtitle="Permanently remove your account"
+              onPress={handleDeleteAccount}
+              danger
+            />
+          </View>
+
+          {/* App Version */}
+          <View style={styles.versionContainer}>
+            <Text style={styles.versionText}>Ping Local v1.0.0</Text>
+            <Text style={styles.versionSubtext}>Made with love in the UK</Text>
+          </View>
+
+          {/* Bottom Spacing */}
+          <View style={styles.bottomSpacing} />
+        </ScrollView>
+      </SafeAreaView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: colors.grayLight,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.accent,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.white,
+    fontFamily: fontFamily.heading,
+  },
+  headerSpacer: {
+    width: 40,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: spacing.md,
+  },
+  sectionHeader: {
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+    color: colors.grayMedium,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.sm,
+    fontFamily: fontFamily.heading,
+  },
+  sectionCard: {
+    backgroundColor: colors.white,
+    marginHorizontal: spacing.md,
+    borderRadius: borderRadius.lg,
+    ...shadows.sm,
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  settingIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.grayLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.md,
+  },
+  settingIconDanger: {
+    backgroundColor: '#FEE2E2',
+  },
+  settingContent: {
+    flex: 1,
+  },
+  settingTitle: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.medium,
+    color: colors.primary,
+  },
+  settingTitleDanger: {
+    color: colors.error,
+  },
+  settingSubtitle: {
+    fontSize: fontSize.sm,
+    color: colors.grayMedium,
+    marginTop: 2,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: colors.grayLight,
+    marginLeft: spacing.md + 36 + spacing.md,
+  },
+  versionContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+  },
+  versionText: {
+    fontSize: fontSize.sm,
+    color: colors.grayMedium,
+    marginBottom: spacing.xs,
+  },
+  versionSubtext: {
+    fontSize: fontSize.xs,
+    color: colors.grayMedium,
+  },
+  bottomSpacing: {
+    height: spacing.xl,
+  },
+});

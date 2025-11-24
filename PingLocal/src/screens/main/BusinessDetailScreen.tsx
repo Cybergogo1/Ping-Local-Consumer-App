@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
 import { Business, Offer } from '../../types/database';
@@ -27,7 +28,6 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
   const [business, setBusiness] = useState<Business | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isFavorite, setIsFavorite] = useState(false);
   const [showDescriptionModal, setShowDescriptionModal] = useState(false);
 
   useEffect(() => {
@@ -37,13 +37,28 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
 
   const fetchBusiness = async () => {
     try {
+      console.log('Fetching business with identifier:', businessId, 'type:', typeof businessId);
+
+      // Handle undefined businessId
+      if (businessId === undefined || businessId === null) {
+        console.error('businessId is undefined or null');
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch business by name (since there's no 'id' column in the businesses table)
       const { data, error } = await supabase
         .from('businesses')
         .select('*')
-        .eq('id', businessId)
+        .eq('name', businessId)
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Business fetch error details:', JSON.stringify(error));
+        throw error;
+      }
+
+      console.log('Business fetched successfully:', data?.name);
       setBusiness(data);
     } catch (error) {
       console.error('Error fetching business:', error);
@@ -54,15 +69,26 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
 
   const fetchOffers = async () => {
     try {
+      console.log('Fetching offers for business name:', businessId);
+
+      if (businessId === undefined || businessId === null) {
+        console.error('businessId is undefined or null for offers fetch');
+        return;
+      }
+
+      // Fetch offers by business_name since businesses table has no 'id' column
       const { data, error } = await supabase
         .from('offers')
         .select('*')
-        .eq('business_id', businessId)
+        .eq('business_name', businessId)
         .eq('status', 'Signed Off')
-        .gte('end_date', new Date().toISOString())
-        .order('created', { ascending: false });
+        .gte('end_date', new Date().toISOString());
 
-      if (error) throw error;
+      if (error) {
+        console.error('Offers fetch error details:', JSON.stringify(error));
+        throw error;
+      }
+      console.log('Offers fetched:', data?.length || 0, 'offers');
       if (data) setOffers(data);
     } catch (error) {
       console.error('Error fetching offers:', error);
@@ -79,9 +105,6 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
     navigation.navigate('OfferDetail', { offerId: offer.id });
   };
 
-  const toggleFavorite = () => {
-    setIsFavorite(!isFavorite);
-  };
 
   if (isLoading) {
     return (
@@ -137,16 +160,6 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
                 onPress={() => navigation.goBack()}
               >
                 <Text style={styles.heroBackButtonText}>‹</Text>
-              </TouchableOpacity>
-
-              {/* Favorite Button */}
-              <TouchableOpacity
-                style={styles.favoriteButton}
-                onPress={toggleFavorite}
-              >
-                <Text style={styles.favoriteButtonText}>
-                  {isFavorite ? '♥' : '♡'}
-                </Text>
               </TouchableOpacity>
             </View>
           </SafeAreaView>
@@ -353,19 +366,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: colors.grayDark,
     marginTop: -2,
-  },
-  favoriteButton: {
-    backgroundColor: colors.white,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.md,
-  },
-  favoriteButtonText: {
-    fontSize: 18,
-    color: colors.grayDark,
   },
   heroGradient: {
     position: 'absolute',

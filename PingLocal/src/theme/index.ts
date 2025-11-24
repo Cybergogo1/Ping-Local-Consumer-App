@@ -65,13 +65,13 @@ export const fontWeight = {
 // Font families (to be loaded with expo-font)
 export const fontFamily = {
   // Headers/Titles
-  heading: 'Geologica-Bold',
+  heading: 'Geologica',
   // Body/Buttons
-  body: 'Montserrat-SemiBold',
+  body: 'Montserrat',
   // Labels/Small text
-  label: 'Montserrat-Medium',
+  label: 'Montserrat',
   // Regular text
-  regular: 'Montserrat-Regular',
+  regular: 'Montserrat',
 };
 
 // Shadow presets

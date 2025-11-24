@@ -1,6 +1,6 @@
 import React from 'react';
 import { createStackNavigator } from '@react-navigation/stack';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, View, StyleSheet } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
 import { RootStackParamList } from '../types/navigation';
 
@@ -11,11 +11,11 @@ import MainTabNavigator from './MainTabNavigator';
 const Stack = createStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
-  const { session, user, isLoading } = useAuth();
+  const { session, isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <View className="flex-1 items-center justify-center bg-white">
+      <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#36566F" />
       </View>
     );
@@ -36,3 +36,12 @@ export default function RootNavigator() {
     </Stack.Navigator>
   );
 }
+
+const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
+  },
+});

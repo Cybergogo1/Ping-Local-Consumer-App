@@ -41,29 +41,53 @@ export default function DirectoryScreen() {
 
   const fetchBusinesses = async () => {
     try {
-      // Fetch all businesses with their live offer counts
-      const { data, error } = await supabase
+      // Fetch all businesses
+      const { data: businessData, error: businessError } = await supabase
         .from('businesses')
-        .select(`
-          *,
-          offers!left(id)
-        `)
+        .select('*')
         .eq('is_signed_off', true)
         .order('is_featured', { ascending: false })
         .order('name');
 
-      if (error) throw error;
+      if (businessError) throw businessError;
 
-      if (data) {
-        // Calculate offer counts
-        const businessesWithCounts = data.map(business => ({
+      // Fetch offer counts per business (using business_name since businesses table has no id column)
+      const { data: offersData, error: offersError } = await supabase
+        .from('offers')
+        .select('business_name')
+        .eq('status', 'Signed Off')
+        .gte('end_date', new Date().toISOString());
+
+      if (offersError) throw offersError;
+
+      // Count offers per business name
+      const offerCounts: Record<string, number> = {};
+      (offersData || []).forEach(offer => {
+        if (offer.business_name) {
+          offerCounts[offer.business_name] = (offerCounts[offer.business_name] || 0) + 1;
+        }
+      });
+
+      if (businessData) {
+        console.log('Fetched', businessData.length, 'businesses');
+        // Log first business to see column names and how to identify it
+        if (businessData.length > 0) {
+          console.log('First business keys:', Object.keys(businessData[0]));
+          console.log('First business name:', businessData[0].name);
+          // Check if there's any ID-like field
+          console.log('owner_id:', businessData[0].owner_id);
+          console.log('primary_user:', businessData[0].primary_user);
+        }
+
+        // Add offer counts to businesses (using name as identifier)
+        const businessesWithCounts = businessData.map(business => ({
           ...business,
-          offers_count: Array.isArray(business.offers) ? business.offers.length : 0,
-          offers: undefined, // Remove the offers array from the object
+          offers_count: offerCounts[business.name] || 0,
         }));
 
         // Separate featured and regular businesses
-        const featured = businessesWithCounts.filter(b => b.is_featured);
+        const featured = businessesWithCounts.filter(b => b.is_featured === true);
+        console.log('Featured businesses:', featured.length, featured.map(b => b.name));
         const all = businessesWithCounts;
 
         setFeaturedBusinesses(featured);
@@ -83,11 +107,12 @@ export default function DirectoryScreen() {
   }, []);
 
   const handleBusinessPress = (business: Business) => {
-    navigation.navigate('BusinessDetail', { businessId: business.id });
+    // Use business name as identifier since there's no 'id' column in the table
+    navigation.navigate('BusinessDetail', { businessId: business.name as any });
   };
 
   const filteredBusinesses = businesses.filter(business =>
-    business.name.toLowerCase().includes(searchQuery.toLowerCase())
+    business?.name?.toLowerCase()?.includes(searchQuery.toLowerCase()) ?? false
   );
 
   const renderFeaturedSection = () => {
@@ -103,7 +128,7 @@ export default function DirectoryScreen() {
         >
           {featuredBusinesses.map((business) => (
             <BusinessCard
-              key={business.id}
+              key={business.name}
               business={business}
               onPress={() => handleBusinessPress(business)}
               liveOffersCount={business.offers_count}
@@ -191,7 +216,7 @@ export default function DirectoryScreen() {
 
         <FlatList
           data={filteredBusinesses}
-          keyExtractor={(item) => item.id.toString()}
+          keyExtractor={(item, index) => item?.name || `business-${index}`}
           renderItem={renderBusinessItem}
           ListHeaderComponent={renderHeader}
           ListEmptyComponent={renderEmpty}

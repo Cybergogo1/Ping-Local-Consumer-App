@@ -15,7 +15,11 @@
       "Bash(del /f nul 2)",
       "Bash(del \"\\?\\%cd%\\nul\")",
       "Bash(.gitignore)",
-      "Bash(PingLocal/.gitignore)"
+      "Bash(PingLocal/.gitignore)",
+      "Bash(find:*)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(mkdir:*)",
+      "Bash(npx expo install:*)"
     ],
     "deny": [],
     "ask": []

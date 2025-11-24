@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setSession(session);
       setSupabaseUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserProfile(session.user.id);
+        fetchUserProfile(session.user.id, session.user.email);
       } else {
         setIsLoading(false);
       }
@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setSession(session);
         setSupabaseUser(session?.user ?? null);
         if (session?.user) {
-          await fetchUserProfile(session.user.id);
+          await fetchUserProfile(session.user.id, session.user.email);
         } else {
           setUser(null);
           setIsLoading(false);
@@ -53,12 +53,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const fetchUserProfile = async (userId: string) => {
+  const fetchUserProfile = async (userId: string, email?: string) => {
     try {
+      // Query by email since the users table (from Adalo) uses numeric IDs
+      // while Supabase Auth uses UUIDs
+      if (!email) {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        email = authUser?.email;
+      }
+
+      if (!email) {
+        console.error('No email available to fetch user profile');
+        setIsLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('users')
         .select('*')
-        .eq('id', userId)
+        .eq('email', email)
         .single();
 
       if (error) throw error;
@@ -72,6 +85,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, firstName: string, surname: string) => {
     try {
+      console.log('Starting signup for:', email);
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -80,25 +95,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Auth signup error:', error);
+        throw error;
+      }
 
-      // Create user profile in users table
+      console.log('Auth signup successful, user:', data.user?.id);
+
+      // Create user profile in users table (Adalo format - uses auto-increment integer ID)
+      // Don't specify 'id' - let the database auto-generate it
       if (data.user) {
-        const { error: profileError } = await supabase.from('users').insert({
-          id: data.user.id,
+        console.log('Inserting into users table...');
+        const { data: insertData, error: profileError } = await supabase.from('users').insert({
           email,
           first_name: firstName,
           surname,
           loyalty_points: 0,
           loyalty_tier: 'Ping Local Member',
           verified: false,
-        });
+        }).select();
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Profile insert error:', profileError);
+          throw profileError;
+        }
+
+        console.log('Profile insert successful:', insertData);
       }
 
       return { error: null };
     } catch (error) {
+      console.error('SignUp caught error:', error);
       return { error: error as Error };
     }
   };

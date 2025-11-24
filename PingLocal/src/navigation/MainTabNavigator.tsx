@@ -6,9 +6,9 @@ import { colors, spacing, fontSize, fontWeight } from '../theme';
 
 import HomeStackNavigator from './HomeStackNavigator';
 import DirectoryStackNavigator from './DirectoryStackNavigator';
-import FavoritesScreen from '../screens/main/FavoritesScreen';
-import ClaimedScreen from '../screens/main/ClaimedScreen';
-import AccountScreen from '../screens/main/AccountScreen';
+import ClaimedStackNavigator from './ClaimedStackNavigator';
+import FavouritesStackNavigator from './FavouritesStackNavigator';
+import AccountStackNavigator from './AccountStackNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -111,10 +111,10 @@ export default function MainTabNavigator() {
       }}
     >
       <Tab.Screen name="Feed" component={HomeStackNavigator} />
-      <Tab.Screen name="Favourites" component={FavoritesScreen} />
-      <Tab.Screen name="Claimed" component={ClaimedScreen} />
+      <Tab.Screen name="Favourites" component={FavouritesStackNavigator} />
+      <Tab.Screen name="Claimed" component={ClaimedStackNavigator} />
       <Tab.Screen name="Businesses" component={DirectoryStackNavigator} />
-      <Tab.Screen name="Account" component={AccountScreen} />
+      <Tab.Screen name="Account" component={AccountStackNavigator} />
     </Tab.Navigator>
   );
 }

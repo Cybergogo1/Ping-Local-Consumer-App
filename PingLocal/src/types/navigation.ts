@@ -28,10 +28,26 @@ export type MainTabParamList = {
 // Home Stack (nested in Home tab)
 export type HomeStackParamList = {
   HomeFeed: undefined;
+  Map: undefined;
   OfferDetail: { offerId: number };
   BusinessDetail: { businessId: number };
   Notifications: undefined;
   LoyaltyInfo: undefined;
+  Settings: undefined;
+  // Claim flow screens
+  SlotBooking: { offerId: number; offer: import('./database').Offer };
+  ExternalBooking: { offerId: number; offer: import('./database').Offer };
+  Claim: {
+    offerId: number;
+    offer: import('./database').Offer;
+    selectedSlot?: import('./database').OfferSlot;
+    partySize?: number;
+  };
+  ClaimSuccess: {
+    purchaseTokenId: number;
+    offerName: string;
+    businessName: string;
+  };
 };
 
 // Directory Stack (nested in Directory tab)
@@ -39,15 +55,70 @@ export type DirectoryStackParamList = {
   DirectoryMain: undefined;
   BusinessDetail: { businessId: number };
   OfferDetail: { offerId: number };
+  // Claim flow screens (duplicated for directory navigation)
+  SlotBooking: { offerId: number; offer: import('./database').Offer };
+  ExternalBooking: { offerId: number; offer: import('./database').Offer };
+  Claim: {
+    offerId: number;
+    offer: import('./database').Offer;
+    selectedSlot?: import('./database').OfferSlot;
+    partySize?: number;
+  };
+  ClaimSuccess: {
+    purchaseTokenId: number;
+    offerName: string;
+    businessName: string;
+  };
+};
+
+// Claimed Stack (nested in Claimed tab)
+export type ClaimedStackParamList = {
+  ClaimedMain: undefined;
+  QRCode: {
+    purchaseToken: import('./database').PurchaseToken;
+  };
+  RedemptionSuccess: {
+    offerName: string;
+    businessName: string;
+  };
+  BillConfirmation: {
+    purchaseTokenId: number;
+    redemptionTokenId: string; // RedemptionToken uses string ID
+    billAmount: number;
+    offerName: string;
+    businessName: string;
+  };
 };
 
 // Account Stack (nested in Account tab)
 export type AccountStackParamList = {
   AccountMain: undefined;
-  ClaimedOffers: undefined;
+  LoyaltyTiers: undefined;
   Settings: undefined;
   FAQs: undefined;
   EditProfile: undefined;
+  Notifications: undefined;
+};
+
+// Favourites Stack (nested in Favourites tab)
+export type FavouritesStackParamList = {
+  FavouritesMain: undefined;
+  OfferDetail: { offerId: number };
+  BusinessDetail: { businessId: number };
+  // Claim flow screens for favourited offers
+  SlotBooking: { offerId: number; offer: import('./database').Offer };
+  ExternalBooking: { offerId: number; offer: import('./database').Offer };
+  Claim: {
+    offerId: number;
+    offer: import('./database').Offer;
+    selectedSlot?: import('./database').OfferSlot;
+    partySize?: number;
+  };
+  ClaimSuccess: {
+    purchaseTokenId: number;
+    offerName: string;
+    businessName: string;
+  };
 };
 
 // Root Navigator

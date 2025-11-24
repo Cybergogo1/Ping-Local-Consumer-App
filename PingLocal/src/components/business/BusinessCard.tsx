@@ -24,6 +24,11 @@ export default function BusinessCard({
 }: BusinessCardProps) {
   const isFeatured = variant === 'featured';
 
+  // Safety check - if business is invalid, don't render
+  if (!business || !business.name) {
+    return null;
+  }
+
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
       <View style={[styles.card, isFeatured && styles.featuredCard]}>
@@ -38,7 +43,7 @@ export default function BusinessCard({
           ) : (
             <View style={styles.placeholderImage}>
               <Text style={styles.placeholderText}>
-                {business.name.charAt(0).toUpperCase()}
+                {business.name?.charAt(0)?.toUpperCase() || 'B'}
               </Text>
             </View>
           )}

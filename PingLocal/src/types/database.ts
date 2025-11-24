@@ -76,6 +76,7 @@ export interface Offer {
   businesses?: Business;
 }
 
+// Legacy - keeping for reference but using PurchaseToken/RedemptionToken instead
 export interface UserOffer {
   id: string;
   user_id: string;
@@ -89,6 +90,61 @@ export interface UserOffer {
   claimed_at: string;
   redeemed_at?: string;
   created_at: string;
+}
+
+// Purchase Token - Created when user claims/buys an offer (QR code = this ID)
+// Column names match actual Supabase table
+export interface PurchaseToken {
+  id: number;
+  name?: string;
+  purchase_type?: string;
+  customer_price?: number;
+  ping_local_take?: number;
+  redeemed: boolean;
+  cancelled: boolean;
+  offer_slot?: number;
+  offer_name?: string;
+  offer_id?: number;
+  promotion_token?: string;
+  user_email?: string;
+  user_id?: number;
+  ping_invoiced: boolean;
+  ping_invoice_date?: string;
+  api_requires_sync: boolean;
+  api_last_sync_date?: string;
+  created: string;
+  updated: string;
+  // Joined data
+  offers?: Offer;
+  businesses?: Business;
+  offer_slots?: OfferSlot;
+}
+
+// Redemption Token - Created when business scans QR, tracks redemption process
+export interface RedemptionToken {
+  id: string;
+  purchase_token_id: string;
+  status: 'Pending' | 'In Progress' | 'Finished' | 'Cancelled';
+  bill_amount?: number;
+  points_awarded?: number;
+  redeemed_by?: string; // Business user who scanned
+  created_at: string;
+  updated_at: string;
+  // Joined data
+  purchase_tokens?: PurchaseToken;
+}
+
+// Offer Slot - Available booking slots for an offer
+export interface OfferSlot {
+  id: number;
+  offer_id: number;
+  date: string; // YYYY-MM-DD
+  time: string; // HH:MM
+  capacity: number;
+  booked_count: number;
+  created_at: string;
+  // Computed
+  available_capacity?: number;
 }
 
 export interface Tag {
