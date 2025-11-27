@@ -40,8 +40,10 @@ export default function HomeScreen() {
   // Filters
   const [locationAreas, setLocationAreas] = useState<LocationArea[]>([]);
   const [categories, setCategories] = useState<Tag[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
 
   // Fetch location areas and categories on mount
@@ -55,7 +57,7 @@ export default function HomeScreen() {
     setOffers([]);
     setHasMore(true);
     fetchOffers(0, true);
-  }, [selectedLocation, selectedCategory, sortBy]);
+  }, [selectedLocation, selectedCategory, selectedTag, sortBy]);
 
   const fetchFilters = async () => {
     try {
@@ -70,14 +72,25 @@ export default function HomeScreen() {
       }
 
       // Fetch category tags
-      const { data: tags } = await supabase
+      const { data: categoryTags } = await supabase
         .from('tags')
         .select('*')
         .eq('type', 'Category')
         .order('name');
 
-      if (tags) {
-        setCategories(tags);
+      if (categoryTags) {
+        setCategories(categoryTags);
+      }
+
+      // Fetch regular tags
+      const { data: regularTags } = await supabase
+        .from('tags')
+        .select('*')
+        .eq('type', 'tags')
+        .order('name');
+
+      if (regularTags) {
+        setTags(regularTags);
       }
     } catch (error) {
       console.error('Error fetching filters:', error);
@@ -92,20 +105,33 @@ export default function HomeScreen() {
     }
 
     try {
+      // Build the select query with joins for filtering
+      let selectQuery = '*, businesses!inner(location_area)';
+
+      // If filtering by category or tag, we need to join with offer_tags and tags
+      if (selectedCategory || selectedTag) {
+        selectQuery = '*, businesses!inner(location_area), offer_tags!inner(tag_id, tags!inner(name, type))';
+      }
+
       let query = supabase
         .from('offers')
-        .select('*')
+        .select(selectQuery)
         .eq('status', 'Signed Off')
         .gte('end_date', new Date().toISOString());
 
-      // Apply location filter
+      // Apply location filter using business's location_area
       if (selectedLocation) {
-        query = query.eq('location_area', selectedLocation);
+        query = query.eq('businesses.location_area', selectedLocation);
       }
 
-      // Apply category filter
+      // Apply category filter using the junction table
       if (selectedCategory) {
-        query = query.eq('category', selectedCategory);
+        query = query.eq('offer_tags.tags.name', selectedCategory).eq('offer_tags.tags.type', 'Category');
+      }
+
+      // Apply tag filter using the junction table
+      if (selectedTag) {
+        query = query.eq('offer_tags.tags.name', selectedTag).eq('offer_tags.tags.type', 'tags');
       }
 
       // Apply sorting
@@ -127,10 +153,28 @@ export default function HomeScreen() {
       if (error) throw error;
 
       if (data) {
+        // Transform the data to match the Offer interface
+        // Remove duplicates that may occur due to multiple tags
+        const uniqueOffers = data.reduce((acc: Offer[], curr: any) => {
+          const exists = acc.find(offer => offer.id === curr.id);
+          if (!exists) {
+            // Extract just the offer properties, excluding the joined data
+            const { businesses, offer_tags, tags, ...offerData } = curr;
+            acc.push(offerData as Offer);
+          }
+          return acc;
+        }, []);
+
         if (isInitial) {
-          setOffers(data);
+          setOffers(uniqueOffers);
         } else {
-          setOffers(prev => [...prev, ...data]);
+          setOffers(prev => {
+            const combined = [...prev, ...uniqueOffers];
+            // Remove duplicates from pagination
+            return combined.filter((offer, index, self) =>
+              index === self.findIndex(o => o.id === offer.id)
+            );
+          });
         }
         setHasMore(data.length === ITEMS_PER_PAGE);
       }
@@ -147,7 +191,7 @@ export default function HomeScreen() {
     setPage(0);
     await fetchOffers(0, true);
     setIsRefreshing(false);
-  }, [selectedLocation, selectedCategory, sortBy]);
+  }, [selectedLocation, selectedCategory, selectedTag, sortBy]);
 
   const handleLoadMore = () => {
     if (!isLoadingMore && hasMore) {
@@ -244,6 +288,49 @@ export default function HomeScreen() {
               selectedCategory === cat.name && styles.categoryChipTextActive,
             ]}>
               {cat.name}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      {/* Tag Filter */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.categoryScroll}
+        contentContainerStyle={styles.filterContent}
+      >
+        <TouchableOpacity
+          style={[
+            styles.categoryChip,
+            !selectedTag && styles.categoryChipActive,
+          ]}
+          onPress={() => setSelectedTag(null)}
+        >
+          <Text style={[
+            styles.categoryChipText,
+            !selectedTag && styles.categoryChipTextActive,
+          ]}>
+            All Tags
+          </Text>
+        </TouchableOpacity>
+
+        {tags.map((tag) => (
+          <TouchableOpacity
+            key={tag.id}
+            style={[
+              styles.categoryChip,
+              selectedTag === tag.name && styles.categoryChipActive,
+            ]}
+            onPress={() => setSelectedTag(
+              selectedTag === tag.name ? null : tag.name
+            )}
+          >
+            <Text style={[
+              styles.categoryChipText,
+              selectedTag === tag.name && styles.categoryChipTextActive,
+            ]}>
+              {tag.name}
             </Text>
           </TouchableOpacity>
         ))}

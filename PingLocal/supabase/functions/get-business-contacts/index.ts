@@ -1,10 +1,11 @@
-// supabase/functions/get-business-tags/index.ts
+// supabase/functions/get-business-contacts/index.ts
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
 }
 
 serve(async (req) => {
@@ -20,32 +21,24 @@ serve(async (req) => {
 
     const url = new URL(req.url)
     const businessId = url.searchParams.get('business_id')
-    const tagType = url.searchParams.get('type')
+    const id = url.searchParams.get('id')
 
-    // If no business_id provided, return empty array
-    if (!businessId) {
-      return new Response(
-        JSON.stringify({ records: [] }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+    let query = supabaseClient.from('business_contacts').select('*').order('created_at', { ascending: false })
+
+    if (id) {
+      // Get a single contact by ID
+      query = query.eq('id', id).single()
+    } else if (businessId) {
+      // Get all contacts for a specific business
+      query = query.eq('business_id', businessId)
     }
 
-    const { data, error } = await supabaseClient
-      .from('business_tags')
-      .select('tags(id, name, type)')
-      .eq('business_id', businessId)
+    const { data, error } = await query
 
     if (error) throw error
 
-    let tags = data?.map((bt: any) => bt.tags) || []
-
-    // If type filter provided, filter the tags by type (client-side)
-    if (tagType) {
-      tags = tags.filter((tag: any) => tag.type === tagType)
-    }
-
     return new Response(
-      JSON.stringify({ records: tags }),
+      JSON.stringify({ records: data }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {

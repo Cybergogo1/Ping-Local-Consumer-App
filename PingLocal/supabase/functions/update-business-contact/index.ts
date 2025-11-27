@@ -31,46 +31,17 @@ serve(async (req) => {
 
     const body = await req.json();
 
-    // Log incoming data for debugging
-    console.log("Received body:", JSON.stringify(body, null, 2));
-    console.log("Request URL:", req.url);
-
     const url = new URL(req.url);
-
-    // Extract ID from URL path (e.g., /update-offer/123 or /update-offer?id=123)
     let id = url.searchParams.get("id");
-    console.log("ID from query params:", id);
 
-    // Try extracting from URL path segments
-    if (!id) {
-      const pathSegments = url.pathname.split('/').filter(segment => segment);
-      const lastSegment = pathSegments[pathSegments.length - 1];
-      // Check if last segment is a number (the ID)
-      if (lastSegment && !isNaN(Number(lastSegment))) {
-        id = lastSegment;
-        console.log("ID from URL path:", id);
-      }
-    }
-
-    // Adalo might wrap data in a 'fields' object, check multiple formats
+    // If no ID in query params, try to get it from request body
     if (!id && body.id) {
       id = body.id;
-      console.log("ID from body.id:", id);
     }
-
-    if (!id && body.fields && body.fields.id) {
-      id = body.fields.id;
-      console.log("ID from body.fields.id:", id);
-    }
-
-    console.log("Final ID:", id);
 
     if (!id) {
       return new Response(
-        JSON.stringify({
-          data: null,
-          error: "Offer ID is required. URL: " + req.url + ", Body: " + JSON.stringify(body)
-        }),
+        JSON.stringify({ data: null, error: "Contact ID is required" }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 400,
@@ -81,8 +52,7 @@ serve(async (req) => {
     // Remove fields that shouldn't be updated directly
     const {
       id: _id,
-      created: _created,
-      number_sold: _numberSold,
+      created_at: _created,
       ...updateData
     } = body;
 
@@ -90,33 +60,10 @@ serve(async (req) => {
     const cleanedData: Record<string, unknown> = {};
     const allowedFields = [
       "name",
-      "summary",
-      "full_description",
-      "special_notes",
-      "offer_type",
-      "requires_booking",
-      "booking_type",
-      "booking_url",
-      "one_per_customer",
-      "price_discount",
-      "unit_of_measurement",
-      "quantity",
-      "quantity_item",
-      "status",
-      "start_date",
-      "end_date",
-      "finish_time",
+      "email",
+      "phone_no",
+      "role",
       "business_id",
-      "business_name",
-      "featured_image",
-      "category",
-      "customer_bill_input",
-      "change_button_text",
-      "custom_feed_text",
-      "business_policy",
-      "policy_notes",
-      "location_area",
-      "business_location",
     ];
 
     for (const field of allowedFields) {
@@ -135,21 +82,14 @@ serve(async (req) => {
       );
     }
 
+    // Add updated_at timestamp
+    cleanedData.updated_at = new Date().toISOString();
+
     const { data, error } = await supabaseClient
-      .from("offers")
+      .from("business_contacts")
       .update(cleanedData)
       .eq("id", id)
-      .select(`
-        *,
-        businesses!offers_business_id_fkey (
-          id,
-          name,
-          featured_image,
-          location_area,
-          location,
-          is_signed_off
-        )
-      `)
+      .select()
       .single();
 
     if (error) {
@@ -158,7 +98,7 @@ serve(async (req) => {
 
     if (!data) {
       return new Response(
-        JSON.stringify({ data: null, error: "Offer not found" }),
+        JSON.stringify({ data: null, error: "Contact not found" }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 404,
@@ -166,16 +106,7 @@ serve(async (req) => {
       );
     }
 
-    // Transform to Airtable-style format for Adalo compatibility
-    // This matches the format used by get-offers and create-offer
-    const { id: offerId, created, ...fields } = data;
-    const transformedData = {
-      id: String(offerId),
-      fields,
-      createdTime: created,
-    };
-
-    return new Response(JSON.stringify(transformedData), {
+    return new Response(JSON.stringify({ data, error: null }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

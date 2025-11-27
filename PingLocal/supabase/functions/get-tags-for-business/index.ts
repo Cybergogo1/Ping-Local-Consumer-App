@@ -22,7 +22,31 @@ serve(async (req) => {
     const businessId = url.searchParams.get('business_id')
     const tagType = url.searchParams.get('type')
 
-    if (!businessId) throw new Error('business_id is required')
+    // If no business_id provided, return all tags with is_selected = false
+    // This allows the collection to be loaded without filtering
+    if (!businessId) {
+      const { data: allTags, error: tagsError } = await supabaseClient
+        .from('tags')
+        .select('*')
+        .order('name')
+
+      if (tagsError) throw tagsError
+
+      const tagsWithSelection = allTags?.map(tag => ({
+        id: tag.id,
+        name: tag.name,
+        type: tag.type,
+        is_selected: false,
+        selected_text: 'false',
+        selected_icon: '',
+        business_id: null
+      })) || []
+
+      return new Response(
+        JSON.stringify(tagsWithSelection),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     // Get ALL tags
     let tagsQuery = supabaseClient.from('tags').select('*').order('name')

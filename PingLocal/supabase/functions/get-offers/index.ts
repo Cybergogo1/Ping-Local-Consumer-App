@@ -16,12 +16,7 @@ serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
-        },
-      }
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
     const url = new URL(req.url);
@@ -29,13 +24,27 @@ serve(async (req) => {
     const businessId = url.searchParams.get("business_id");
     const status = url.searchParams.get("status");
     const category = url.searchParams.get("category");
+    const tag = url.searchParams.get("tag");
     const locationArea = url.searchParams.get("location_area");
     const limit = url.searchParams.get("limit");
     const offset = url.searchParams.get("offset");
 
-    let query = supabaseClient
-      .from("offers")
-      .select(`
+    // Build select query with appropriate joins based on filters
+    let selectQuery = `
+      *,
+      businesses!offers_business_id_fkey (
+        id,
+        name,
+        featured_image,
+        location_area,
+        location,
+        is_signed_off
+      )
+    `;
+
+    // If filtering by category or tag, add joins for offer_tags and tags
+    if (category || tag) {
+      selectQuery = `
         *,
         businesses!offers_business_id_fkey (
           id,
@@ -44,8 +53,21 @@ serve(async (req) => {
           location_area,
           location,
           is_signed_off
+        ),
+        offer_tags!inner (
+          tag_id,
+          tags!inner (
+            id,
+            name,
+            type
+          )
         )
-      `);
+      `;
+    }
+
+    let query = supabaseClient
+      .from("offers")
+      .select(selectQuery);
 
     // Filter by specific offer ID
     if (id) {
@@ -62,14 +84,19 @@ serve(async (req) => {
       query = query.eq("status", status);
     }
 
-    // Filter by category
+    // Filter by category using the junction table
     if (category) {
-      query = query.eq("category", category);
+      query = query.eq("offer_tags.tags.name", category).eq("offer_tags.tags.type", "Category");
     }
 
-    // Filter by location area
+    // Filter by tag using the junction table
+    if (tag) {
+      query = query.eq("offer_tags.tags.name", tag).eq("offer_tags.tags.type", "tags");
+    }
+
+    // Filter by location area using business's location_area
     if (locationArea) {
-      query = query.eq("location_area", locationArea);
+      query = query.eq("businesses.location_area", locationArea);
     }
 
     // Order by created date descending (newest first)
@@ -92,6 +119,19 @@ serve(async (req) => {
       throw error;
     }
 
+    // Deduplicate results if filtering by category or tag (junction table can return duplicates)
+    let uniqueData = data;
+    if (Array.isArray(data) && (category || tag)) {
+      const seenIds = new Set();
+      uniqueData = data.filter((record: any) => {
+        if (seenIds.has(record.id)) {
+          return false;
+        }
+        seenIds.add(record.id);
+        return true;
+      });
+    }
+
     // Transform to Airtable-style format for Adalo compatibility
     const transformRecord = (record: Record<string, unknown>) => {
       const { id, created, ...fields } = record;
@@ -102,9 +142,9 @@ serve(async (req) => {
       };
     };
 
-    const records = Array.isArray(data)
-      ? data.map(transformRecord)
-      : [transformRecord(data)];
+    const records = Array.isArray(uniqueData)
+      ? uniqueData.map(transformRecord)
+      : [transformRecord(uniqueData)];
 
     return new Response(JSON.stringify({ records }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

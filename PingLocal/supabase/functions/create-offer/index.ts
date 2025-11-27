@@ -26,34 +26,21 @@ serve(async (req) => {
   try {
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      {
-        global: {
-          headers: { Authorization: req.headers.get("Authorization")! },
-        },
-      }
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
-
-    // Verify user is authenticated
-    const {
-      data: { user },
-      error: authError,
-    } = await supabaseClient.auth.getUser();
-
-    if (authError || !user) {
-      return new Response(
-        JSON.stringify({ data: null, error: "Unauthorized" }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 401,
-        }
-      );
-    }
 
     const body = await req.json();
 
+    // Log incoming data for debugging
+    console.log("Received body:", JSON.stringify(body, null, 2));
+
+    // Adalo might wrap data in a 'fields' object, so check both formats
+    const requestData = body.fields || body;
+
+    console.log("Extracted data:", JSON.stringify(requestData, null, 2));
+
     // Validate required fields
-    if (!body.name) {
+    if (!requestData.name) {
       return new Response(
         JSON.stringify({ data: null, error: "Offer name is required" }),
         {
@@ -63,7 +50,7 @@ serve(async (req) => {
       );
     }
 
-    if (!body.business_id) {
+    if (!requestData.business_id) {
       return new Response(
         JSON.stringify({ data: null, error: "Business ID is required" }),
         {
@@ -75,35 +62,35 @@ serve(async (req) => {
 
     // Prepare offer data with defaults
     const offerData = {
-      name: body.name,
-      summary: body.summary || null,
-      full_description: body.full_description || null,
-      special_notes: body.special_notes || null,
-      offer_type: body.offer_type || "Pay on the day",
-      requires_booking: body.requires_booking ?? false,
-      booking_type: body.booking_type || null,
-      booking_url: body.booking_url || null,
-      one_per_customer: body.one_per_customer ?? false,
-      price_discount: body.price_discount || null,
-      unit_of_measurement: body.unit_of_measurement || null,
-      quantity: body.quantity || null,
+      name: requestData.name,
+      summary: requestData.summary || null,
+      full_description: requestData.full_description || null,
+      special_notes: requestData.special_notes || null,
+      offer_type: requestData.offer_type || "Pay on the day",
+      requires_booking: requestData.requires_booking ?? false,
+      booking_type: requestData.booking_type || null,
+      booking_url: requestData.booking_url || null,
+      one_per_customer: requestData.one_per_customer ?? false,
+      price_discount: requestData.price_discount || null,
+      unit_of_measurement: requestData.unit_of_measurement || null,
+      quantity: requestData.quantity || null,
       number_sold: 0,
-      quantity_item: body.quantity_item ?? false,
-      status: body.status || "draft",
-      start_date: body.start_date || null,
-      end_date: body.end_date || null,
-      finish_time: body.finish_time || null,
-      business_id: body.business_id,
-      business_name: body.business_name || null,
-      featured_image: body.featured_image || null,
-      category: body.category || null,
-      customer_bill_input: body.customer_bill_input ?? false,
-      change_button_text: body.change_button_text || null,
-      custom_feed_text: body.custom_feed_text || null,
-      business_policy: body.business_policy || null,
-      policy_notes: body.policy_notes || null,
-      location_area: body.location_area || null,
-      business_location: body.business_location || null,
+      quantity_item: requestData.quantity_item ?? false,
+      status: requestData.status || "draft",
+      start_date: requestData.start_date || null,
+      end_date: requestData.end_date || null,
+      finish_time: requestData.finish_time || null,
+      business_id: requestData.business_id,
+      business_name: requestData.business_name || null,
+      featured_image: requestData.featured_image || null,
+      category: requestData.category || null,
+      customer_bill_input: requestData.customer_bill_input ?? false,
+      change_button_text: requestData.change_button_text || null,
+      custom_feed_text: requestData.custom_feed_text || null,
+      business_policy: requestData.business_policy || null,
+      policy_notes: requestData.policy_notes || null,
+      location_area: requestData.location_area || null,
+      business_location: requestData.business_location || null,
     };
 
     const { data, error } = await supabaseClient
@@ -111,7 +98,7 @@ serve(async (req) => {
       .insert(offerData)
       .select(`
         *,
-        businesses (
+        businesses!offers_business_id_fkey (
           id,
           name,
           featured_image,
@@ -126,7 +113,16 @@ serve(async (req) => {
       throw error;
     }
 
-    return new Response(JSON.stringify({ data, error: null }), {
+    // Transform to Airtable-style format for Adalo compatibility
+    // This matches the format used by get-offers
+    const { id, created, ...fields } = data;
+    const transformedData = {
+      id: String(id),
+      fields,
+      createdTime: created,
+    };
+
+    return new Response(JSON.stringify(transformedData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 201,
     });
