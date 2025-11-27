@@ -37,7 +37,7 @@ serve(async (req) => {
       .from("offers")
       .select(`
         *,
-        businesses (
+        businesses!offers_business_id_fkey (
           id,
           name,
           featured_image,

@@ -19,7 +19,9 @@
       "Bash(find:*)",
       "Bash(npx tsc --noEmit)",
       "Bash(mkdir:*)",
-      "Bash(npx expo install:*)"
+      "Bash(npx expo install:*)",
+      "Bash(npx supabase:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
