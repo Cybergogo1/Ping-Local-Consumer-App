@@ -132,13 +132,12 @@ serve(async (req) => {
       });
     }
 
-    // Transform to Airtable-style format for Adalo compatibility
+    // Return direct format (fields at top level) to match working collections
+    // Convert id to string for Adalo compatibility
     const transformRecord = (record: Record<string, unknown>) => {
-      const { id, created, ...fields } = record;
       return {
-        id: String(id),
-        fields,
-        createdTime: created,
+        ...record,
+        id: String(record.id),
       };
     };
 

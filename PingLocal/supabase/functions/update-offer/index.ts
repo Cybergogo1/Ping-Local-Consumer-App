@@ -33,35 +33,12 @@ serve(async (req) => {
 
     // Log incoming data for debugging
     console.log("Received body:", JSON.stringify(body, null, 2));
-    console.log("Request URL:", req.url);
 
+    // Get id from body OR from URL path (match update-business pattern exactly)
     const url = new URL(req.url);
-
-    // Extract ID from URL path (e.g., /update-offer/123 or /update-offer?id=123)
-    let id = url.searchParams.get("id");
-    console.log("ID from query params:", id);
-
-    // Try extracting from URL path segments
-    if (!id) {
-      const pathSegments = url.pathname.split('/').filter(segment => segment);
-      const lastSegment = pathSegments[pathSegments.length - 1];
-      // Check if last segment is a number (the ID)
-      if (lastSegment && !isNaN(Number(lastSegment))) {
-        id = lastSegment;
-        console.log("ID from URL path:", id);
-      }
-    }
-
-    // Adalo might wrap data in a 'fields' object, check multiple formats
-    if (!id && body.id) {
-      id = body.id;
-      console.log("ID from body.id:", id);
-    }
-
-    if (!id && body.fields && body.fields.id) {
-      id = body.fields.id;
-      console.log("ID from body.fields.id:", id);
-    }
+    const pathParts = url.pathname.split('/');
+    const urlId = pathParts[pathParts.length - 1];
+    const id = body.id || (urlId && urlId !== 'update-offer' ? urlId : null);
 
     console.log("Final ID:", id);
 
@@ -69,7 +46,7 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           data: null,
-          error: "Offer ID is required. URL: " + req.url + ", Body: " + JSON.stringify(body)
+          error: "Offer ID is required"
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -78,13 +55,16 @@ serve(async (req) => {
       );
     }
 
+    // Adalo sends data wrapped in 'fields' object, extract it
+    const requestData = body.fields || body;
+
     // Remove fields that shouldn't be updated directly
     const {
       id: _id,
       created: _created,
       number_sold: _numberSold,
       ...updateData
-    } = body;
+    } = requestData;
 
     // Only include fields that were provided
     const cleanedData: Record<string, unknown> = {};
@@ -113,10 +93,11 @@ serve(async (req) => {
       "customer_bill_input",
       "change_button_text",
       "custom_feed_text",
-      "business_policy",
+      "business_policy_id",
       "policy_notes",
       "location_area",
       "business_location",
+      "pricing_complete",
     ];
 
     for (const field of allowedFields) {
@@ -166,16 +147,14 @@ serve(async (req) => {
       );
     }
 
-    // Transform to Airtable-style format for Adalo compatibility
-    // This matches the format used by get-offers and create-offer
-    const { id: offerId, created, ...fields } = data;
-    const transformedData = {
-      id: String(offerId),
-      fields,
-      createdTime: created,
+    // Return direct format (fields at top level) to match working collections
+    // Convert id to string for Adalo compatibility
+    const responseData = {
+      ...data,
+      id: String(data.id),
     };
 
-    return new Response(JSON.stringify(transformedData), {
+    return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

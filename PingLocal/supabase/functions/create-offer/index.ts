@@ -87,7 +87,7 @@ serve(async (req) => {
       customer_bill_input: requestData.customer_bill_input ?? false,
       change_button_text: requestData.change_button_text || null,
       custom_feed_text: requestData.custom_feed_text || null,
-      business_policy: requestData.business_policy || null,
+      business_policy_id: requestData.business_policy_id || null,
       policy_notes: requestData.policy_notes || null,
       location_area: requestData.location_area || null,
       business_location: requestData.business_location || null,
@@ -113,16 +113,14 @@ serve(async (req) => {
       throw error;
     }
 
-    // Transform to Airtable-style format for Adalo compatibility
-    // This matches the format used by get-offers
-    const { id, created, ...fields } = data;
-    const transformedData = {
-      id: String(id),
-      fields,
-      createdTime: created,
+    // Return direct format (fields at top level) to match working collections
+    // Convert id to string for Adalo compatibility
+    const responseData = {
+      ...data,
+      id: String(data.id),
     };
 
-    return new Response(JSON.stringify(transformedData), {
+    return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 201,
     });
