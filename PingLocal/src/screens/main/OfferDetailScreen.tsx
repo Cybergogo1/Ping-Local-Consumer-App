@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, fontFamily, shadows } from '../../theme';
 import { Offer } from '../../types/database';
 import { OfferDetailScreenProps } from '../../types/navigation';
 
@@ -173,22 +173,24 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
     return new Date(offer.end_date) < new Date();
   };
 
+  const isSoldOut = () => {
+    if (!offer?.quantity) return false;
+    return offer.quantity - (offer.number_sold || 0) <= 0;
+  };
+
   const getButtonText = () => {
-    if (!offer) return 'Buy Now!';
+    if (!offer) return 'Buy Now';
 
-    // Use custom button text if set (must be a non-empty string)
-    if (offer.change_button_text && typeof offer.change_button_text === 'string' && offer.change_button_text.trim() !== '') {
-      return offer.change_button_text;
+    if (isSoldOut()) {
+      return 'Sold Out';
     }
 
-    const isPayUpfront = offer.offer_type === 'Pay up front';
-    const requiresBooking = offer.requires_booking;
-
-    if (isPayUpfront) {
-      return requiresBooking ? 'Book & Buy!' : 'Buy Now!';
-    } else {
-      return requiresBooking ? 'Book & Claim!' : 'Claim Now!';
+    // 'Pay on the day' means booking only, otherwise it's a purchase
+    if (offer.offer_type === 'Pay on the day') {
+      return 'Book Now';
     }
+
+    return 'Buy Now';
   };
 
   const handleClaimPress = () => {
@@ -236,9 +238,10 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
   }
 
   const expired = isExpired();
+  const soldOut = isSoldOut();
   const businessName = offer.business_name || offer.businesses?.name || 'Unknown Business';
   const locationArea = offer.location_area || offer.businesses?.location_area || '';
-  const quantityRemaining = offer.quantity ? offer.quantity - offer.number_sold : null;
+  const quantityRemaining = offer.quantity ? offer.quantity - (offer.number_sold || 0) : null;
 
   return (
     <View style={styles.container}>
@@ -263,14 +266,14 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
               style={styles.heroButton}
               onPress={() => navigation.goBack()}
             >
-              <Text style={styles.heroButtonText}>{'<'}</Text>
+              <Image source={require('../../../assets/images/iconback.png')} style={styles.heroButtonText}/>
             </TouchableOpacity>
 
             <TouchableOpacity style={styles.heroButton} onPress={toggleFavourite}>
               <Ionicons
                 name={isFavourited ? 'heart' : 'heart-outline'}
                 size={22}
-                color={isFavourited ? colors.error : colors.white}
+                color={isFavourited ? colors.white : colors.white}
               />
             </TouchableOpacity>
           </SafeAreaView>
@@ -311,20 +314,22 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
           {!expired && (
             <View style={styles.priceBox}>
               <TouchableOpacity
-                style={styles.buyButton}
+                style={[styles.buyButton, soldOut && styles.buyButtonSoldOut]}
                 onPress={handleClaimPress}
+                disabled={soldOut}
               >
-                <Text style={styles.buyButtonText}>{getButtonText()}</Text>
+                <Text style={[styles.buyButtonText, soldOut && styles.buyButtonTextSoldOut]}>{getButtonText()}</Text>
               </TouchableOpacity>
 
-              {offer.price_discount && (
-                <View style={styles.priceRow}>
-                  <Text style={styles.price}>Price /...</Text>
-                  <Text style={styles.priceAmount}>£{offer.price_discount.toFixed(2)}</Text>
-                  {offer.unit_of_measurement && (
-                    <Text style={styles.priceUnit}>per {offer.unit_of_measurement}</Text>
-                  )}
-                </View>
+              <Text style={styles.priceAmount}>
+                {offer.price_discount
+                  ? `£${offer.price_discount.toFixed(2)}`
+                  : offer.change_button_text
+                    ? offer.custom_feed_text
+                    : '2 slots left'}
+              </Text>
+              {offer.price_discount && offer.unit_of_measurement && (
+                <Text style={styles.priceUnit}>per {offer.unit_of_measurement}</Text>
               )}
 
               {offer.end_date && (
@@ -367,9 +372,8 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
         {/* Special Notes */}
         {offer.special_notes && (
           <View style={styles.specialNotesSection}>
-            <Text style={styles.specialNotesIcon}>📋</Text>
             <View style={styles.specialNotesContent}>
-              <Text style={styles.specialNotesTitle}>Special Note from {businessName}</Text>
+              <Text style={styles.specialNotesTitle}>📋 Special Note from {businessName}</Text>
               <Text style={styles.specialNotesText}>{offer.special_notes}</Text>
             </View>
           </View>
@@ -486,6 +490,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.lg,
     color: colors.grayDark,
     marginBottom: spacing.md,
+    fontFamily: fontFamily.body,
   },
   errorBackButton: {
     backgroundColor: colors.primary,
@@ -495,7 +500,7 @@ const styles = StyleSheet.create({
   },
   errorBackButtonText: {
     color: colors.white,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
   },
 
   // Hero Section
@@ -528,9 +533,10 @@ const styles = StyleSheet.create({
     ...shadows.md,
   },
   heroButtonText: {
-    fontSize: fontSize.lg,
+    width: 14,
+    height: 14,
     color: colors.white,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bodyBold,
   },
   quantityBadge: {
     position: 'absolute',
@@ -544,7 +550,7 @@ const styles = StyleSheet.create({
   quantityText: {
     color: colors.white,
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
   },
 
   // Content Section
@@ -561,21 +567,24 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
     marginBottom: spacing.xs,
   },
   businessName: {
     fontSize: fontSize.sm,
-    color: colors.grayDark,
+    color: colors.grayMedium,
     marginBottom: spacing.xs,
+    fontFamily: fontFamily.body,
   },
   location: {
     fontSize: fontSize.sm,
     color: colors.grayMedium,
     marginBottom: spacing.sm,
+    fontFamily: fontFamily.body,
   },
   tagContainer: {
+    paddingTop: '3%',
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
@@ -583,23 +592,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.grayLight,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.sm,
     borderWidth: 1,
-    borderColor: colors.grayMedium,
+    borderColor: '#eee',
   },
   tagText: {
     fontSize: fontSize.xs,
     color: colors.grayDark,
+    fontFamily: fontFamily.body,
   },
 
   // Price Box
   priceBox: {
     width: 140,
-    backgroundColor: colors.white,
+    backgroundColor: '#f9f9f9',
     borderRadius: borderRadius.lg,
-    padding: spacing.md,
+    padding: '3%',
     marginTop: -40, // Overlap with hero image
-    ...shadows.lg,
+    ...shadows.sm,
     alignItems: 'center',
   },
   buyButton: {
@@ -614,30 +624,31 @@ const styles = StyleSheet.create({
   buyButtonText: {
     color: colors.primary,
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bodySemiBold,
   },
-  priceRow: {
-    alignItems: 'center',
-    marginBottom: spacing.xs,
+  buyButtonSoldOut: {
+    backgroundColor: colors.grayLight,
   },
-  price: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
+  buyButtonTextSoldOut: {
+    color: colors.grayMedium,
   },
   priceAmount: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.xxl,
     color: colors.primary,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodyBold,
+    textAlign: 'center',
+    marginBottom: 3,
   },
   priceUnit: {
     fontSize: fontSize.xs,
     color: colors.grayMedium,
+    fontFamily: fontFamily.body,
   },
   endDate: {
     fontSize: fontSize.xs,
     color: colors.grayMedium,
     textAlign: 'center',
+    fontFamily: fontFamily.body,
   },
 
   // Expired Banner
@@ -658,13 +669,14 @@ const styles = StyleSheet.create({
   },
   expiredTitle: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bodySemiBold,
     color: colors.primary,
     marginBottom: spacing.xs,
   },
   expiredSubtitle: {
     fontSize: fontSize.xs,
     color: colors.grayDark,
+    fontFamily: fontFamily.body,
   },
 
   // Sections
@@ -673,15 +685,16 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   sectionTitle: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.headingSemiBold,
     color: colors.primary,
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
   },
   summaryText: {
     fontSize: fontSize.sm,
-    color: colors.grayDark,
-    lineHeight: fontSize.sm * 1.5,
+    color: colors.grayMedium,
+    lineHeight: fontSize.sm * 1.6,
+    fontFamily: fontFamily.body,
   },
   readMoreButton: {
     marginTop: spacing.sm,
@@ -689,17 +702,19 @@ const styles = StyleSheet.create({
   readMoreText: {
     fontSize: fontSize.sm,
     color: colors.primary,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.bodyMedium,
   },
 
   // Special Notes
   specialNotesSection: {
-    backgroundColor: colors.accent,
+    backgroundColor: '#F5FAFF',
     flexDirection: 'row',
     padding: spacing.md,
     marginHorizontal: spacing.md,
     marginTop: spacing.lg,
     borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: '#36566F24',
   },
   specialNotesIcon: {
     fontSize: fontSize.lg,
@@ -710,13 +725,14 @@ const styles = StyleSheet.create({
   },
   specialNotesTitle: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bodySemiBold,
     color: colors.primary,
     marginBottom: spacing.xs,
   },
   specialNotesText: {
     fontSize: fontSize.sm,
     color: colors.grayDark,
+    fontFamily: fontFamily.body,
   },
 
   // Terms
@@ -724,12 +740,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     marginTop: spacing.md,
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: colors.grayLight,
+    borderWidth: 1,
+    borderColor: '#eee',
     marginHorizontal: spacing.md,
+    backgroundColor: '#f9f9f9',
+    borderRadius: borderRadius.full,
+
   },
   termsIcon: {
     fontSize: fontSize.md,
@@ -737,7 +755,8 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontSize: fontSize.sm,
-    color: colors.grayMedium,
+    color: 'colors.grayMedium',
+    fontFamily: fontFamily.body,
   },
 
   // Gallery
@@ -781,7 +800,7 @@ const styles = StyleSheet.create({
   businessCardImageText: {
     color: colors.white,
     fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
   },
   businessCardRight: {
     flex: 1,
@@ -797,13 +816,14 @@ const styles = StyleSheet.create({
   },
   businessCardName: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.headingSemiBold,
     color: colors.primary,
   },
   businessCardJoined: {
     fontSize: fontSize.xs,
     color: colors.grayMedium,
     marginBottom: spacing.sm,
+    fontFamily: fontFamily.body,
   },
   viewOnMapButton: {
     flexDirection: 'row',
@@ -821,7 +841,7 @@ const styles = StyleSheet.create({
   viewOnMapText: {
     color: colors.white,
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
   },
 
   // Modal
@@ -849,7 +869,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
   },
   modalCloseButton: {
@@ -863,6 +883,7 @@ const styles = StyleSheet.create({
   modalCloseText: {
     fontSize: fontSize.xl,
     color: colors.grayDark,
+    fontFamily: fontFamily.body,
   },
   modalBody: {
     padding: spacing.md,
@@ -871,5 +892,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.grayDark,
     lineHeight: fontSize.md * 1.6,
+    fontFamily: fontFamily.body,
   },
 });

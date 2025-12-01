@@ -429,32 +429,34 @@ export default function HomeScreen() {
           {/* Right side - Icons */}
           <View style={styles.headerRight}>
             <TouchableOpacity style={styles.headerIconButton}>
-              <Text style={styles.headerIcon}>🔔</Text>
+              <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.headerIcon}/>
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerIconButton}
               onPress={() => navigation.navigate('Settings')}
             >
-              <Text style={styles.headerIcon}>⚙️</Text>
+              <Image source={require('../../../assets/images/iconsettings.png')} style={styles.headerIcon}/>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Filter Bar */}
         <View style={styles.filterBar}>
-          {/* Location Button */}
-          <TouchableOpacity
-            style={styles.locationButton}
-            onPress={openLocationModal}
-          >
-            <Ionicons name="location" size={16} color={colors.primary} />
-            <Text style={styles.locationButtonText}>Location</Text>
-          </TouchableOpacity>
+          <View style={styles.filterBarInner}>
+            {/* Location Button */}
+            <TouchableOpacity
+              style={styles.locationButton}
+              onPress={openLocationModal}
+            >
+              <Ionicons name="location" size={16} color={colors.primary} />
+              <Text style={styles.locationButtonText}>Location</Text>
+            </TouchableOpacity>
 
-          {/* Showing Text */}
-          <Text style={styles.showingText}>
-            Showing: {selectedLocation || 'All Locations'}
-          </Text>
+            {/* Showing Text */}
+            <Text style={styles.showingText}>
+              Showing: {selectedLocation || 'All Locations'}
+            </Text>
+          </View>
 
           {/* Filter Button */}
           <TouchableOpacity
@@ -477,44 +479,6 @@ export default function HomeScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-
-        {/* Sort Options */}
-        <View style={styles.sortContainer}>
-          <Text style={styles.sortLabel}>Sort by:</Text>
-          <TouchableOpacity
-            style={[styles.sortOption, sortBy === 'newest' && styles.sortOptionActive]}
-            onPress={() => setSortBy('newest')}
-          >
-            <Text style={[
-              styles.sortOptionText,
-              sortBy === 'newest' && styles.sortOptionTextActive,
-            ]}>
-              Newest
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.sortOption, sortBy === 'ending_soon' && styles.sortOptionActive]}
-            onPress={() => setSortBy('ending_soon')}
-          >
-            <Text style={[
-              styles.sortOptionText,
-              sortBy === 'ending_soon' && styles.sortOptionTextActive,
-            ]}>
-              Ending Soon
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.sortOption, sortBy === 'proximity' && styles.sortOptionActive]}
-            onPress={handleProximitySortSelect}
-          >
-            <Text style={[
-              styles.sortOptionText,
-              sortBy === 'proximity' && styles.sortOptionTextActive,
-            ]}>
-              Closest to Me
-            </Text>
-          </TouchableOpacity>
-        </View>
       </SafeAreaView>
 
       <View style={styles.contentArea}>
@@ -529,6 +493,44 @@ export default function HomeScreen() {
               userId={supabaseUser?.id}
             />
           )}
+          ListHeaderComponent={
+            <View style={styles.sortContainer}>
+              <Text style={styles.sortLabel}>Sort by:</Text>
+              <TouchableOpacity
+                style={[styles.sortOption, sortBy === 'newest' && styles.sortOptionActive]}
+                onPress={() => setSortBy('newest')}
+              >
+                <Text style={[
+                  styles.sortOptionText,
+                  sortBy === 'newest' && styles.sortOptionTextActive,
+                ]}>
+                  Newest
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortOption, sortBy === 'ending_soon' && styles.sortOptionActive]}
+                onPress={() => setSortBy('ending_soon')}
+              >
+                <Text style={[
+                  styles.sortOptionText,
+                  sortBy === 'ending_soon' && styles.sortOptionTextActive,
+                ]}>
+                  Ending Soon
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortOption, sortBy === 'proximity' && styles.sortOptionActive]}
+                onPress={handleProximitySortSelect}
+              >
+                <Text style={[
+                  styles.sortOptionText,
+                  sortBy === 'proximity' && styles.sortOptionTextActive,
+                ]}>
+                  Closest to Me
+                </Text>
+              </TouchableOpacity>
+            </View>
+          }
           ListEmptyComponent={isLoading ? (
             <View style={styles.emptyContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
@@ -554,6 +556,7 @@ export default function HomeScreen() {
           style={styles.mapViewButton}
           onPress={handleMapViewPress}
         >
+          <Image source={require('../../../assets/images/iconmap.png')} style={styles.mapViewIcon}/>
           <Text style={styles.mapViewText}>Map View</Text>
         </TouchableOpacity>
       </View>
@@ -789,20 +792,24 @@ const styles = StyleSheet.create({
     marginLeft: spacing.sm,
   },
   greeting: {
-    fontSize: fontSize.lg,
+    fontSize: fontSize.sm,
     color: colors.white,
-    fontFamily: fontFamily.headingBold,
+    fontFamily: fontFamily.bodyMedium,
+    marginBottom: -5,
   },
   tierName: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     color: colors.accent,
-    fontFamily: fontFamily.bodyMedium,
+    fontFamily: fontFamily.headingSemiBold,
   },
   avatarContainer: {
     width: 40,
     height: 40,
+    padding: 5,
+    borderWidth: 2,
+    borderColor: colors.accent,
     borderRadius: 20,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -824,13 +831,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#203C50',
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: spacing.sm,
   },
   headerIcon: {
-    fontSize: 18,
+    width: 18,
+    height: 18,
   },
   mapViewButton: {
     position: 'absolute',
@@ -838,19 +846,21 @@ const styles = StyleSheet.create({
     right: spacing.md,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.accent,
+    backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingVertical: 12,
     borderRadius: borderRadius.full,
     ...shadows.md,
   },
   mapViewIcon: {
-    fontSize: 16,
-    marginRight: spacing.xs,
+    width: 18,
+    height: 18,
+    marginTop: -4,
+    marginRight: spacing.sm,
   },
   mapViewText: {
-    fontSize: fontSize.sm,
-    color: colors.primary,
+    fontSize: fontSize.lg,
+    color: '#fff',
     fontFamily: fontFamily.bodySemiBold,
   },
   // Filter Bar Styles
@@ -859,15 +869,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingBottom: spacing.md,
     backgroundColor: colors.primary,
+  },
+  filterBarInner: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    maxWidth: '70%',
   },
   locationButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.accent,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: borderRadius.full,
     gap: spacing.xs,
   },
@@ -888,8 +904,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'transparent',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: borderRadius.full,
     borderWidth: 1,
     borderColor: colors.accent,
@@ -997,14 +1013,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.primary,
+    paddingBottom: 15,
+    backgroundColor: 'transparent',
   },
   sortLabel: {
     fontSize: fontSize.sm,
-    color: colors.white,
+    color: colors.grayDark,
     marginRight: spacing.sm,
-    opacity: 0.7,
     fontFamily: fontFamily.body,
   },
   sortOption: {
@@ -1014,17 +1029,15 @@ const styles = StyleSheet.create({
   },
   sortOptionActive: {
     borderBottomWidth: 2,
-    borderBottomColor: colors.accent,
+    borderBottomColor: colors.primary,
   },
   sortOptionText: {
     fontSize: fontSize.sm,
-    color: colors.white,
-    opacity: 0.7,
+    color: colors.grayMedium,
     fontFamily: fontFamily.bodyMedium,
   },
   sortOptionTextActive: {
-    color: colors.accent,
-    opacity: 1,
+    color: colors.primary,
   },
   listContent: {
     paddingTop: spacing.md,

@@ -192,11 +192,31 @@ export default function PromotionCard({ offer, onPress, userLocation, userId }: 
                 <Ionicons
                   name={isFavorite ? 'heart' : 'heart-outline'}
                   size={24}
-                  color={isFavorite ? colors.error : colors.white}
+                  color={isFavorite ? colors.white : colors.white}
                 />
               )}
             </TouchableOpacity>
           )}
+
+          {/* End Date Badge - Bottom Left */}
+          {offer.end_date && (
+            <View style={styles.endDateBadge}>
+              <Text style={styles.endDateBadgeText}>
+                Ends: {formatEndDate(offer.end_date)}
+              </Text>
+            </View>
+          )}
+
+          {/* Price/CTA Badge - Bottom Right */}
+          <View style={styles.priceBadge}>
+            <Text style={styles.priceBadgeText}>
+              {offer.price_discount
+                ? `£${offer.price_discount.toFixed(2)}`
+                : offer.change_button_text
+                  ? offer.custom_feed_text
+                  : 'Book Now'}
+            </Text>
+          </View>
         </View>
 
         {/* Content */}
@@ -206,38 +226,8 @@ export default function PromotionCard({ offer, onPress, userLocation, userId }: 
           </Text>
 
           <Text style={styles.businessName} numberOfLines={1}>
-            {businessName}
+            {businessName}{locationArea ? `, ${locationArea}` : ''}
           </Text>
-
-          <View style={styles.metaRow}>
-            {locationArea ? (
-              <Text style={styles.location}>{locationArea}</Text>
-            ) : null}
-
-            {locationArea && offer.end_date ? (
-              <Text style={styles.separator}>•</Text>
-            ) : null}
-
-            {offer.end_date && (
-              <Text style={styles.endDate}>
-                Ends: {formatEndDate(offer.end_date)}
-              </Text>
-            )}
-          </View>
-
-          {/* Price */}
-          {offer.price_discount && (
-            <View style={styles.priceRow}>
-              <Text style={styles.price}>
-                £{offer.price_discount.toFixed(2)}
-              </Text>
-              {offer.unit_of_measurement && (
-                <Text style={styles.unit}>
-                  {offer.unit_of_measurement}
-                </Text>
-              )}
-            </View>
-          )}
 
           {/* Category Tag */}
           {offer.category && (
@@ -256,14 +246,15 @@ export default function PromotionCard({ offer, onPress, userLocation, userId }: 
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.white,
-    borderRadius: borderRadius.lg,
+    borderRadius: borderRadius.sm,
     marginHorizontal: spacing.md,
     marginBottom: spacing.md,
     overflow: 'hidden',
-    ...shadows.md,
+    borderWidth: 1,
+    borderColor: '#eee'
   },
   imageContainer: {
-    height: 180,
+    height: 140,
     backgroundColor: colors.grayLight,
     position: 'relative',
   },
@@ -312,61 +303,54 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    backgroundColor: 'rgba(54, 86, 111, 1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  endDateBadge: {
+    position: 'absolute',
+    bottom: spacing.sm,
+    left: spacing.sm,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  endDateBadgeText: {
+    color: colors.white,
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.bodySemiBold,
+  },
+  priceBadge: {
+    position: 'absolute',
+    bottom: spacing.md,
+    right: spacing.md,
+    backgroundColor: colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.md,
+  },
+  priceBadgeText: {
+    color: colors.primary,
+    fontSize: fontSize.lg,
+    fontFamily: fontFamily.headingBold,
+  },
   content: {
-    padding: spacing.md,
+    paddingLeft: '4%',
+    paddingTop: '2.5%',
+    paddingBottom: '4%',
   },
   title: {
     fontSize: fontSize.lg,
     color: colors.primary,
-    marginBottom: spacing.xs,
-    fontFamily: fontFamily.headingBold,
+    marginBottom: 2,
+    fontFamily: fontFamily.headingSemiBold,
   },
   businessName: {
-    fontSize: fontSize.md,
-    color: colors.grayDark,
-    marginBottom: spacing.xs,
+    fontSize: fontSize.sm,
+    color: colors.grayMedium,
     fontFamily: fontFamily.bodyRegular,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  location: {
-    fontSize: fontSize.sm,
-    color: colors.grayMedium,
-    fontFamily: fontFamily.body,
-  },
-  separator: {
-    fontSize: fontSize.sm,
-    color: colors.grayMedium,
-    marginHorizontal: spacing.xs,
-    fontFamily: fontFamily.body,
-  },
-  endDate: {
-    fontSize: fontSize.sm,
-    color: colors.grayMedium,
-    fontFamily: fontFamily.body,
-  },
-  priceRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: spacing.sm,
-  },
-  price: {
-    fontSize: fontSize.xl,
-    color: colors.primary,
-    fontFamily: fontFamily.headingBold,
-  },
-  unit: {
-    fontSize: fontSize.sm,
-    color: colors.grayMedium,
-    marginLeft: spacing.xs,
-    fontFamily: fontFamily.body,
+    paddingBottom: 5,
   },
   tagContainer: {
     flexDirection: 'row',
