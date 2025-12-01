@@ -22,7 +22,30 @@ serve(async (req) => {
     const offerId = url.searchParams.get('offer_id')
     const tagType = url.searchParams.get('type')
 
-    if (!offerId) throw new Error('offer_id is required')
+    // If no offer_id provided, return all tags with is_selected: false
+    if (!offerId) {
+      let tagsQuery = supabaseClient.from('tags').select('*').order('name')
+      if (tagType) {
+        tagsQuery = tagsQuery.eq('type', tagType)
+      }
+      const { data: allTags, error: tagsError } = await tagsQuery
+      if (tagsError) throw tagsError
+
+      const tagsWithSelection = allTags?.map(tag => ({
+        id: tag.id,
+        name: tag.name,
+        type: tag.type,
+        is_selected: false,
+        selected_text: 'false',
+        selected_icon: '',
+        offer_id: null
+      })) || []
+
+      return new Response(
+        JSON.stringify(tagsWithSelection),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
 
     let tagsQuery = supabaseClient.from('tags').select('*').order('name')
     if (tagType) {
