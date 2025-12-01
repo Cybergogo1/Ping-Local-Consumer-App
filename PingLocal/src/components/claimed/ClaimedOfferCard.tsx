@@ -7,7 +7,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { format, parseISO } from 'date-fns';
-import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, shadows, fontFamily } from '../../theme';
 import { PurchaseToken } from '../../types/database';
 
 const placeholderImage = require('../../../assets/images/placeholder_offer.jpg');
@@ -119,22 +119,23 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
     color: colors.white,
+    fontFamily: fontFamily.bodySemiBold,
   },
   content: {
     padding: spacing.md,
   },
   offerName: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
     color: colors.primary,
     marginBottom: spacing.xs,
+    fontFamily: fontFamily.headingBold,
   },
   businessName: {
     fontSize: fontSize.sm,
     color: colors.grayDark,
     marginBottom: spacing.sm,
+    fontFamily: fontFamily.body,
   },
   slotInfo: {
     flexDirection: 'row',
@@ -148,7 +149,7 @@ const styles = StyleSheet.create({
   slotText: {
     fontSize: fontSize.sm,
     color: colors.primary,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.bodyMedium,
   },
   partyInfo: {
     flexDirection: 'row',
@@ -162,11 +163,13 @@ const styles = StyleSheet.create({
   partyText: {
     fontSize: fontSize.sm,
     color: colors.grayDark,
+    fontFamily: fontFamily.body,
   },
   claimedDate: {
     fontSize: fontSize.xs,
     color: colors.grayMedium,
     marginBottom: spacing.md,
+    fontFamily: fontFamily.body,
   },
   qrButton: {
     flexDirection: 'row',
@@ -183,7 +186,7 @@ const styles = StyleSheet.create({
   },
   qrButtonText: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
     color: colors.primary,
+    fontFamily: fontFamily.bodyBold,
   },
 });

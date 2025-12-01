@@ -55,6 +55,8 @@ export const fontSize = {
   display: 32,
 } as const;
 
+// Note: With static fonts, fontWeight should NOT be used with fontFamily
+// The weight is embedded in the font name itself
 export const fontWeight = {
   regular: '400' as const,
   medium: '500' as const,
@@ -62,16 +64,26 @@ export const fontWeight = {
   bold: '700' as const,
 };
 
-// Font families (to be loaded with expo-font)
+// Font families with weight variants (static fonts)
+// Use these directly - don't combine with fontWeight
 export const fontFamily = {
-  // Headers/Titles
-  heading: 'Geologica',
-  // Body/Buttons
-  body: 'Montserrat',
-  // Labels/Small text
-  label: 'Montserrat',
-  // Regular text
-  regular: 'Montserrat',
+  // Geologica variants (for headings/titles)
+  heading: 'Geologica-Bold',
+  headingRegular: 'Geologica-Regular',
+  headingMedium: 'Geologica-Medium',
+  headingSemiBold: 'Geologica-SemiBold',
+  headingBold: 'Geologica-Bold',
+
+  // Montserrat variants (for body/buttons/labels)
+  body: 'Montserrat-Regular',
+  bodyRegular: 'Montserrat-Regular',
+  bodyMedium: 'Montserrat-Medium',
+  bodySemiBold: 'Montserrat-SemiBold',
+  bodyBold: 'Montserrat-Bold',
+
+  // Convenience aliases
+  label: 'Montserrat-Medium',
+  regular: 'Montserrat-Regular',
 };
 
 // Shadow presets

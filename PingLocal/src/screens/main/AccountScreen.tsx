@@ -28,6 +28,13 @@ const TIER_DISPLAY_NAMES: Record<string, string> = {
   legend: 'Ping Local Legend',
 };
 
+const TIER_ICONS = {
+  member: require('../../../assets/images/loyaltytiericon_member.avif'),
+  hero: require('../../../assets/images/loyaltytiericon_hero.avif'),
+  champion: require('../../../assets/images/loyaltytiericon_champion.avif'),
+  legend: require('../../../assets/images/loyaltytiericon_legend.avif'),
+};
+
 const getNextTierInfo = (points: number) => {
   const currentTier = getTierFromPoints(points);
   const thresholds = TIER_THRESHOLDS;
@@ -195,13 +202,7 @@ export default function AccountScreen() {
           {/* Profile Section */}
           <View style={styles.profileSection}>
             <View style={styles.profileImageContainer}>
-              {user?.profile_pic ? (
-                <Image source={{ uri: user.profile_pic }} style={styles.profileImage} />
-              ) : (
-                <View style={styles.profileImagePlaceholder}>
-                  <Ionicons name="person" size={40} color={colors.grayMedium} />
-                </View>
-              )}
+              <Image source={TIER_ICONS[currentTier]} style={styles.profileImage} />
             </View>
             <Text style={styles.fullName}>{fullName}</Text>
             <Text style={styles.joinDate}>Joined {joinDate}</Text>

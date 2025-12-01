@@ -13,8 +13,16 @@ SplashScreen.preventAutoHideAsync();
 
 export default function App() {
   const [fontsLoaded, fontError] = useFonts({
-    'Geologica': require('./assets/fonts/Geologica-VariableFont_CRSV,SHRP,slnt,wght.ttf'),
-    'Montserrat': require('./assets/fonts/Montserrat-VariableFont_wght.ttf'),
+    // Geologica weights
+    'Geologica-Regular': require('./assets/fonts/Geologica-Regular.ttf'),
+    'Geologica-Medium': require('./assets/fonts/Geologica-Medium.ttf'),
+    'Geologica-SemiBold': require('./assets/fonts/Geologica-SemiBold.ttf'),
+    'Geologica-Bold': require('./assets/fonts/Geologica-Bold.ttf'),
+    // Montserrat weights
+    'Montserrat-Regular': require('./assets/fonts/Montserrat-Regular.ttf'),
+    'Montserrat-Medium': require('./assets/fonts/Montserrat-Medium.ttf'),
+    'Montserrat-SemiBold': require('./assets/fonts/Montserrat-SemiBold.ttf'),
+    'Montserrat-Bold': require('./assets/fonts/Montserrat-Bold.ttf'),
   });
 
   React.useEffect(() => {

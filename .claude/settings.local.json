@@ -21,7 +21,8 @@
       "Bash(mkdir:*)",
       "Bash(npx expo install:*)",
       "Bash(npx supabase:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "ask": []

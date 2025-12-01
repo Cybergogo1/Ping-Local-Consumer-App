@@ -7,7 +7,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, shadows, fontFamily } from '../../theme';
 import { Offer } from '../../types/database';
 
 const placeholderImage = require('../../../assets/images/placeholder_offer.jpg');
@@ -79,12 +79,12 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
     color: colors.white,
+    fontFamily: fontFamily.headingBold,
   },
   price: {
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
     color: colors.accent,
+    fontFamily: fontFamily.bodyMedium,
   },
 });

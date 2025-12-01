@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
 } from 'react-native';
-import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, shadows, fontFamily } from '../../theme';
 import { Business } from '../../types/database';
 
 interface BusinessCardProps {
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
   placeholderText: {
     color: colors.white,
     fontSize: fontSize.xxxl,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
   },
   featuredBadge: {
     position: 'absolute',
@@ -146,21 +146,22 @@ const styles = StyleSheet.create({
   featuredBadgeText: {
     color: colors.primary,
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
   },
   content: {
     padding: spacing.md,
   },
   name: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
     color: colors.primary,
     marginBottom: spacing.xs,
+    fontFamily: fontFamily.headingBold,
   },
   location: {
     fontSize: fontSize.sm,
     color: colors.grayMedium,
     marginBottom: spacing.sm,
+    fontFamily: fontFamily.body,
   },
   tagContainer: {
     flexDirection: 'row',
@@ -177,6 +178,7 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: fontSize.xs,
     color: colors.grayDark,
+    fontFamily: fontFamily.body,
   },
   offersRow: {
     flexDirection: 'row',
@@ -190,12 +192,13 @@ const styles = StyleSheet.create({
   offersText: {
     color: colors.white,
     fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
   },
   description: {
     fontSize: fontSize.sm,
     color: colors.grayDark,
     marginTop: spacing.sm,
     lineHeight: fontSize.sm * 1.4,
+    fontFamily: fontFamily.body,
   },
 });

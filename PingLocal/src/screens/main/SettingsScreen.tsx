@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { colors, fontSize, fontWeight, spacing, borderRadius, shadows, fontFamily } from '../../theme';
+import { colors, fontSize, spacing, borderRadius, shadows, fontFamily } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { AccountStackParamList } from '../../types/navigation';
 
@@ -318,9 +318,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
     color: colors.white,
-    fontFamily: fontFamily.heading,
+    fontFamily: fontFamily.headingBold,
   },
   headerSpacer: {
     width: 40,
@@ -333,14 +332,13 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
     color: colors.grayMedium,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginHorizontal: spacing.md,
     marginTop: spacing.md,
     marginBottom: spacing.sm,
-    fontFamily: fontFamily.heading,
+    fontFamily: fontFamily.headingSemiBold,
   },
   sectionCard: {
     backgroundColor: colors.white,
@@ -371,8 +369,8 @@ const styles = StyleSheet.create({
   },
   settingTitle: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.medium,
     color: colors.primary,
+    fontFamily: fontFamily.bodyMedium,
   },
   settingTitleDanger: {
     color: colors.error,
@@ -381,6 +379,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.grayMedium,
     marginTop: 2,
+    fontFamily: fontFamily.body,
   },
   divider: {
     height: 1,
@@ -395,10 +394,12 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.grayMedium,
     marginBottom: spacing.xs,
+    fontFamily: fontFamily.body,
   },
   versionSubtext: {
     fontSize: fontSize.xs,
     color: colors.grayMedium,
+    fontFamily: fontFamily.body,
   },
   bottomSpacing: {
     height: spacing.xl,
