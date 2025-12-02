@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,8 +14,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, spacing, borderRadius, shadows, fontFamily } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 import { AccountStackParamList } from '../../types/navigation';
 
 type SettingsScreenNavigationProp = StackNavigationProp<AccountStackParamList, 'Settings'>;
@@ -69,14 +71,88 @@ const SectionHeader = ({ title }: { title: string }) => (
   <Text style={styles.sectionHeader}>{title}</Text>
 );
 
+const STORAGE_KEYS = {
+  EMAIL_NOTIFICATIONS: '@ping_local_email_notifications',
+  LOCATION_SERVICES: '@ping_local_location_services',
+};
+
 export default function SettingsScreen() {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
-  const { signOut, user } = useAuth();
+  const { signOut, user, refreshUser } = useAuth();
 
-  // Settings state (these would typically come from user preferences/async storage)
-  const [pushNotifications, setPushNotifications] = useState(true);
+  // Settings state - push notifications from database, others from AsyncStorage
+  const [pushNotifications, setPushNotifications] = useState(user?.activate_notifications ?? true);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [locationServices, setLocationServices] = useState(true);
+
+  // Load preferences from storage on mount
+  useEffect(() => {
+    loadPreferences();
+  }, []);
+
+  // Sync push notifications state when user changes
+  useEffect(() => {
+    if (user?.activate_notifications !== undefined) {
+      setPushNotifications(user.activate_notifications);
+    }
+  }, [user?.activate_notifications]);
+
+  const loadPreferences = async () => {
+    try {
+      const [emailPref, locationPref] = await Promise.all([
+        AsyncStorage.getItem(STORAGE_KEYS.EMAIL_NOTIFICATIONS),
+        AsyncStorage.getItem(STORAGE_KEYS.LOCATION_SERVICES),
+      ]);
+
+      if (emailPref !== null) setEmailNotifications(emailPref === 'true');
+      if (locationPref !== null) setLocationServices(locationPref === 'true');
+    } catch (error) {
+      console.error('Error loading preferences:', error);
+    }
+  };
+
+  const handlePushNotificationsChange = async (value: boolean) => {
+    setPushNotifications(value);
+
+    if (!user) return;
+
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({ activate_notifications: value })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      // Refresh user data in context
+      if (refreshUser) {
+        await refreshUser();
+      }
+    } catch (error) {
+      console.error('Error updating push notification preference:', error);
+      // Revert on error
+      setPushNotifications(!value);
+      Alert.alert('Error', 'Failed to update notification preference. Please try again.');
+    }
+  };
+
+  const handleEmailNotificationsChange = async (value: boolean) => {
+    setEmailNotifications(value);
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.EMAIL_NOTIFICATIONS, String(value));
+    } catch (error) {
+      console.error('Error saving email notification preference:', error);
+    }
+  };
+
+  const handleLocationServicesChange = async (value: boolean) => {
+    setLocationServices(value);
+    try {
+      await AsyncStorage.setItem(STORAGE_KEYS.LOCATION_SERVICES, String(value));
+    } catch (error) {
+      console.error('Error saving location services preference:', error);
+    }
+  };
 
   const handleEditProfile = () => {
     navigation.navigate('EditProfile');
@@ -188,7 +264,7 @@ export default function SettingsScreen() {
               rightElement={
                 <Switch
                   value={pushNotifications}
-                  onValueChange={setPushNotifications}
+                  onValueChange={handlePushNotificationsChange}
                   trackColor={{ false: colors.grayLight, true: colors.primary }}
                   thumbColor={colors.white}
                 />
@@ -203,7 +279,7 @@ export default function SettingsScreen() {
               rightElement={
                 <Switch
                   value={emailNotifications}
-                  onValueChange={setEmailNotifications}
+                  onValueChange={handleEmailNotificationsChange}
                   trackColor={{ false: colors.grayLight, true: colors.primary }}
                   thumbColor={colors.white}
                 />
@@ -222,7 +298,7 @@ export default function SettingsScreen() {
               rightElement={
                 <Switch
                   value={locationServices}
-                  onValueChange={setLocationServices}
+                  onValueChange={handleLocationServicesChange}
                   trackColor={{ false: colors.grayLight, true: colors.primary }}
                   thumbColor={colors.white}
                 />

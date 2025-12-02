@@ -9,11 +9,11 @@ import {
   Image,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { colors, fontSize, fontWeight, spacing, borderRadius, shadows } from '../../theme';
+import { colors, fontSize, fontFamily, spacing, borderRadius, shadows } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { PurchaseToken, TIER_THRESHOLDS, getTierFromPoints } from '../../types/database';
@@ -74,6 +74,7 @@ const getProgressPercentage = (points: number) => {
 export default function AccountScreen() {
   const navigation = useNavigation<AccountScreenNavigationProp>();
   const { user, signOut } = useAuth();
+  const insets = useSafeAreaInsets();
   const [redeemedOffers, setRedeemedOffers] = useState<PurchaseToken[]>([]);
   const [claimedCount, setClaimedCount] = useState(0);
   const [sharedCount, setSharedCount] = useState(0);
@@ -169,35 +170,35 @@ export default function AccountScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Image source={require('../../../assets/images/iconback.png')} style={styles.accountBackButton}/>
+      {/* Header - extends edge to edge */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <Image source={require('../../../assets/images/iconback.png')} style={styles.accountBackButton}/>
+        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Notifications')}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
+            {/* Notification badge - could add unread count here */}
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>N..</Text>
+            </View>
           </TouchableOpacity>
-          <View style={styles.headerRight}>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Notifications')}
-              style={styles.headerButton}
-            >
-              <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
-              {/* Notification badge - could add unread count here */}
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>N..</Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => navigation.navigate('Settings')}
-              style={styles.headerButton}
-            >
-              <Image source={require('../../../assets/images/iconsettings.png')} style={styles.settingsButtonIcon}/>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={signOut} style={styles.headerButton}>
-              <Ionicons name="log-out-outline" size={24} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Settings')}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconsettings.png')} style={styles.settingsButtonIcon}/>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={signOut} style={[styles.headerButton, styles.signOutButton]}>
+            <Ionicons name="log-out-outline" size={24} color={colors.primary} />
+          </TouchableOpacity>
         </View>
+      </View>
 
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Profile Section */}
           <View style={styles.profileSection}>
@@ -247,9 +248,11 @@ export default function AccountScreen() {
               <Text style={styles.loyaltyCardTitle}>Our Loyalty Scheme</Text>
               <Text style={styles.loyaltyCardSubtitle}>How it works for you!</Text>
             </View>
-            <View style={styles.loyaltyCardIcon}>
-              <Ionicons name="trophy" size={40} color={colors.accent} />
-            </View>
+            <Image
+              source={require('../../../assets/images/account_loyaltyschemebutton_graphic.avif')}
+              style={styles.loyaltyCardImage}
+              resizeMode="cover"
+            />
           </TouchableOpacity>
 
           {/* Redeemed Promotions Section */}
@@ -300,7 +303,7 @@ export default function AccountScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.grayLight,
+    backgroundColor: colors.white,
   },
   safeArea: {
     flex: 1,
@@ -317,9 +320,12 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.accent,
+    backgroundColor: '#203C50',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  signOutButton: {
+    backgroundColor: colors.accent,
   },
   headerRight: {
     flexDirection: 'row',
@@ -338,20 +344,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   accountBackButton: {
-    width: 15,
-    height: 15,
+    width: 16,
+    height: 16,
   },
   notificationButtonIcon: {
-    width: 15,
-    height: 15,
+    width: 16,
+    height: 16,
   },
   settingsButtonIcon: {
-    width: 15,
-    height: 15,
+    width: 16,
+    height: 16,
   },
   notificationBadgeText: {
     fontSize: 10,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bodyBold,
     color: colors.primary,
   },
   scrollView: {
@@ -360,19 +366,20 @@ const styles = StyleSheet.create({
   profileSection: {
     backgroundColor: colors.primary,
     alignItems: 'center',
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-    borderBottomLeftRadius: borderRadius.xl,
-    borderBottomRightRadius: borderRadius.xl,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.xs,
   },
   profileImageContainer: {
     width: 100,
     height: 100,
-    borderRadius: 50,
-    borderWidth: 4,
+    borderRadius: borderRadius.full,
+    borderWidth: 6,
     borderColor: colors.accent,
     overflow: 'hidden',
     marginBottom: spacing.md,
+    padding: 15,
+    backgroundColor: colors.white,
   },
   profileImage: {
     width: '100%',
@@ -387,18 +394,19 @@ const styles = StyleSheet.create({
   },
   fullName: {
     fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.white,
     marginBottom: spacing.xs,
   },
   joinDate: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodyRegular,
     color: colors.grayMedium,
-    marginBottom: spacing.md,
+    marginBottom: spacing.sm,
   },
   tierTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontSize: fontSize.xxxl,
+    fontFamily: fontFamily.headingBold,
     color: colors.white,
     marginBottom: spacing.md,
   },
@@ -407,25 +415,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   progressBar: {
-    height: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderRadius: borderRadius.full,
+    height: 22,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.sm,
     overflow: 'hidden',
     marginBottom: spacing.xs,
+    borderWidth: 3,
+    borderColor: colors.accent,
   },
   progressFill: {
     height: '100%',
     backgroundColor: colors.accent,
-    borderRadius: borderRadius.full,
   },
   progressText: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodyRegular,
     color: colors.grayMedium,
     textAlign: 'right',
   },
   statsContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     gap: spacing.md,
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.md,
@@ -433,54 +443,56 @@ const styles = StyleSheet.create({
   statPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary,
-    paddingVertical: spacing.sm + 2,
+    justifyContent: 'center',
+    backgroundColor: '#042D44',
+    paddingVertical: spacing.md + 2,
     paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.lg,
     gap: spacing.xs,
+    width: '48%',
   },
   statPillOutline: {
-    backgroundColor: colors.white,
-    borderWidth: 2,
-    borderColor: colors.primary,
+    backgroundColor: '#042D44',
   },
   statText: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
     color: colors.white,
   },
   statTextOutline: {
-    color: colors.primary,
+    color: colors.white,
   },
   loyaltyCard: {
-    flexDirection: 'row',
-    backgroundColor: colors.white,
     marginHorizontal: spacing.md,
     marginBottom: spacing.lg,
     borderRadius: borderRadius.lg,
-    padding: spacing.md,
-    ...shadows.md,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#eee',
+    backgroundColor: '#f8f8f8',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignContent: 'center',
+  },
+  loyaltyCardImage: {
+    width: '40%',
+    height: '100%',
   },
   loyaltyCardContent: {
-    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'center',
+    padding: spacing.md,
   },
   loyaltyCardTitle: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
+    fontFamily: fontFamily.headingBold,
+    color: colors.grayDark,
     marginBottom: spacing.xs,
   },
   loyaltyCardSubtitle: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodyRegular,
     color: colors.grayMedium,
-  },
-  loyaltyCardIcon: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 60,
-    height: 60,
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.md,
   },
   redeemedSection: {
     paddingHorizontal: spacing.md,
@@ -488,8 +500,8 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
+    fontFamily: fontFamily.headingBold,
+    color: colors.grayDark,
     marginBottom: spacing.md,
   },
   loader: {
@@ -501,6 +513,7 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: fontSize.md,
+    fontFamily: fontFamily.bodyRegular,
     color: colors.grayMedium,
     marginTop: spacing.sm,
   },
@@ -510,7 +523,8 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     padding: spacing.sm,
     marginBottom: spacing.sm,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: '#eee',
   },
   redeemedImageContainer: {
     width: 60,
@@ -535,18 +549,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   redeemedName: {
-    fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodyBold,
     color: colors.primary,
-    marginBottom: 2,
+    marginBottom: 1,
   },
   redeemedDate: {
     fontSize: fontSize.xs,
+    fontFamily: fontFamily.bodyRegular,
     color: colors.grayMedium,
     marginBottom: 2,
   },
   redeemedBusiness: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.bodyRegular,
     color: colors.primary,
   },
 });

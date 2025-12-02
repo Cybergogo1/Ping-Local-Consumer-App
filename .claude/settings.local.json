@@ -22,7 +22,9 @@
       "Bash(npx expo install:*)",
       "Bash(npx supabase:*)",
       "Bash(curl:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(findstr:*)",
+      "Bash(npx expo start:*)"
     ],
     "deny": [],
     "ask": []
