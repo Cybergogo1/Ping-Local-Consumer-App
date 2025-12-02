@@ -58,17 +58,6 @@ export default function BillConfirmationScreen({ navigation, route }: BillConfir
     setIsConfirming(true);
 
     try {
-      // Update redemption token with points awarded
-      const { error: redemptionError } = await supabase
-        .from('redemption_tokens')
-        .update({
-          points_awarded: pointsEarned,
-          status: 'Finished',
-        })
-        .eq('id', redemptionTokenId);
-
-      if (redemptionError) throw redemptionError;
-
       // Add points to user
       const newPoints = (user.loyalty_points || 0) + pointsEarned;
       const { error: userError } = await supabase

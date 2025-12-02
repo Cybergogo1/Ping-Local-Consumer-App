@@ -5,9 +5,12 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
+import { StripeProvider } from '@stripe/stripe-react-native';
 
 import { AuthProvider } from './src/contexts/AuthContext';
 import RootNavigator from './src/navigation/RootNavigator';
+
+const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51S0jaTD2e561klM22nIBz5A3AOE9t87uHy1XBaeTNB5W0tufDp2bH0andFHnxpm9BfiafXJZBYsaN5vYc6IXDycs00bQob2628';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -37,14 +40,19 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <AuthProvider>
-          <NavigationContainer>
-            <StatusBar style="light" />
-            <RootNavigator />
-          </NavigationContainer>
-        </AuthProvider>
-      </SafeAreaProvider>
+      <StripeProvider
+        publishableKey={STRIPE_PUBLISHABLE_KEY}
+        merchantIdentifier="merchant.com.pinglocal"
+      >
+        <SafeAreaProvider>
+          <AuthProvider>
+            <NavigationContainer>
+              <StatusBar style="light" />
+              <RootNavigator />
+            </NavigationContainer>
+          </AuthProvider>
+        </SafeAreaProvider>
+      </StripeProvider>
     </GestureHandlerRootView>
   );
 }

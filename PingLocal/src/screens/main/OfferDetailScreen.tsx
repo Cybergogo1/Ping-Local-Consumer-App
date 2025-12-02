@@ -755,7 +755,7 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontSize: fontSize.sm,
-    color: 'colors.grayMedium',
+    color: colors.grayMedium,
     fontFamily: fontFamily.body,
   },
 

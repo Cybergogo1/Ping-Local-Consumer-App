@@ -173,14 +173,14 @@ export default function AccountScreen() {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.primary} />
+            <Image source={require('../../../assets/images/iconback.png')} style={styles.accountBackButton}/>
           </TouchableOpacity>
           <View style={styles.headerRight}>
             <TouchableOpacity
               onPress={() => navigation.navigate('Notifications')}
               style={styles.headerButton}
             >
-              <Ionicons name="notifications" size={24} color={colors.primary} />
+              <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
               {/* Notification badge - could add unread count here */}
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationBadgeText}>N..</Text>
@@ -190,7 +190,7 @@ export default function AccountScreen() {
               onPress={() => navigation.navigate('Settings')}
               style={styles.headerButton}
             >
-              <Ionicons name="settings-outline" size={24} color={colors.primary} />
+              <Image source={require('../../../assets/images/iconsettings.png')} style={styles.settingsButtonIcon}/>
             </TouchableOpacity>
             <TouchableOpacity onPress={signOut} style={styles.headerButton}>
               <Ionicons name="log-out-outline" size={24} color={colors.primary} />
@@ -336,6 +336,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
+  },
+  accountBackButton: {
+    width: 15,
+    height: 15,
+  },
+  notificationButtonIcon: {
+    width: 15,
+    height: 15,
+  },
+  settingsButtonIcon: {
+    width: 15,
+    height: 15,
   },
   notificationBadgeText: {
     fontSize: 10,

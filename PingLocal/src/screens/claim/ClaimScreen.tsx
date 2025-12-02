@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
+import { useStripe } from '@stripe/stripe-react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
@@ -27,7 +28,8 @@ type ClaimScreenProps = {
 
 export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
   const { offerId, offer, selectedSlot, partySize = 1 } = route.params;
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   const [quantity, setQuantity] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -35,6 +37,7 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
   const isPayUpfront = offer.offer_type === 'Pay up front';
   const hasSlot = !!selectedSlot;
   const businessName = offer.business_name || offer.businesses?.name || 'Unknown Business';
+  const businessId = offer.business_id || offer.businesses?.id;
 
   // Calculate total
   const unitPrice = offer.price_discount || 0;
@@ -71,6 +74,22 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
     setIsProcessing(true);
 
     try {
+      // For "Pay on the Day" offers, fetch business lead_rate to calculate ping_local_take
+      let pingLocalTake = null;
+      if (!isPayUpfront && businessId) {
+        const { data: business } = await supabase
+          .from('businesses')
+          .select('lead_rate')
+          .eq('id', businessId)
+          .single();
+
+        if (business?.lead_rate) {
+          // Calculate lead fee based on party size or quantity
+          const unitCount = partySize > 1 ? partySize : quantity;
+          pingLocalTake = business.lead_rate * unitCount;
+        }
+      }
+
       // Create purchase token - matching actual Supabase table columns
       const purchaseTokenData = {
         user_id: user.id,
@@ -79,6 +98,7 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         offer_name: offer.name,
         purchase_type: offer.offer_type || 'Pay on the day',
         customer_price: isPayUpfront ? total : null,
+        ping_local_take: pingLocalTake,
         offer_slot: selectedSlot?.id || null,
         redeemed: false,
         cancelled: false,
@@ -123,16 +143,139 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
   };
 
   const handlePayment = async () => {
-    // For now, this is a placeholder for Stripe integration
-    // Show a fake processing state and then claim
-    Alert.alert(
-      'Payment (Demo)',
-      'This is a demo payment. In production, Stripe payment sheet would appear here.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Simulate Payment', onPress: handleClaim },
-      ]
-    );
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to purchase offers');
+      return;
+    }
+
+    if (!businessId) {
+      Alert.alert('Error', 'Business information not found');
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // 1. Create payment intent via edge function
+      const { data: paymentData, error: paymentError } = await supabase.functions.invoke(
+        'create-payment-intent',
+        {
+          body: {
+            amount: total,
+            offer_id: offerId,
+            business_id: businessId,
+            user_id: user.id,
+            user_email: user.email,
+            offer_name: offer.name,
+            quantity: quantity,
+          },
+        }
+      );
+
+      if (paymentError || !paymentData?.clientSecret) {
+        throw new Error(paymentError?.message || 'Failed to create payment intent');
+      }
+
+      // 2. Initialize payment sheet
+      const { error: initError } = await initPaymentSheet({
+        paymentIntentClientSecret: paymentData.clientSecret,
+        merchantDisplayName: 'Ping Local',
+        defaultBillingDetails: {
+          email: user.email,
+        },
+      });
+
+      if (initError) {
+        throw new Error(initError.message);
+      }
+
+      // 3. Present payment sheet
+      const { error: presentError } = await presentPaymentSheet();
+
+      if (presentError) {
+        if (presentError.code === 'Canceled') {
+          // User cancelled - not an error
+          setIsProcessing(false);
+          return;
+        }
+        throw new Error(presentError.message);
+      }
+
+      // 4. Payment successful - create the purchase token with payment info
+      const purchaseTokenData = {
+        user_id: user.id,
+        user_email: user.email,
+        offer_id: offerId,
+        offer_name: offer.name,
+        purchase_type: offer.offer_type || 'Pay up front',
+        customer_price: total,
+        ping_local_take: paymentData.platformFee / 100, // Convert from cents
+        offer_slot: selectedSlot?.id || null,
+        redeemed: false,
+        cancelled: false,
+        ping_invoiced: false,
+        api_requires_sync: false,
+      };
+
+      const { data, error } = await supabase
+        .from('purchase_tokens')
+        .insert(purchaseTokenData)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // If there's a booking slot, increment the booked count
+      if (selectedSlot) {
+        await supabase
+          .from('offer_slots')
+          .update({ booked_count: selectedSlot.booked_count + partySize })
+          .eq('id', selectedSlot.id);
+      }
+
+      // Increment number_sold on the offer
+      await supabase
+        .from('offers')
+        .update({ number_sold: offer.number_sold + quantity })
+        .eq('id', offerId);
+
+      // Award loyalty points for Pay Up Front purchases (total × 10)
+      const pointsEarned = Math.floor(total * 10);
+      if (pointsEarned > 0) {
+        // Update user's loyalty points
+        const newPoints = (user.loyalty_points || 0) + pointsEarned;
+        await supabase
+          .from('users')
+          .update({ loyalty_points: newPoints })
+          .eq('id', user.id);
+
+        // Create loyalty points record
+        await supabase.from('loyalty_points').insert({
+          user_id: user.id,
+          points: pointsEarned,
+          reason: `Purchased: ${offer.name}`,
+          offer_id: offerId,
+        });
+
+        // Refresh user data to update points in context
+        if (refreshUser) {
+          await refreshUser();
+        }
+      }
+
+      // Navigate to success screen
+      navigation.navigate('ClaimSuccess', {
+        purchaseTokenId: data.id,
+        offerName: offer.name,
+        businessName,
+        pointsEarned, // Pass points to success screen
+      });
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      Alert.alert('Payment Failed', error.message || 'Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -172,12 +315,12 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
             <View style={styles.bookingRow}>
               <Text style={styles.bookingLabel}>📅 Date</Text>
               <Text style={styles.bookingValue}>
-                {format(parseISO(selectedSlot.date), 'EEEE, MMMM d, yyyy')}
+                {format(parseISO(selectedSlot.slot_date), 'EEEE, MMMM d, yyyy')}
               </Text>
             </View>
             <View style={styles.bookingRow}>
               <Text style={styles.bookingLabel}>🕐 Time</Text>
-              <Text style={styles.bookingValue}>{formatTime(selectedSlot.time)}</Text>
+              <Text style={styles.bookingValue}>{formatTime(selectedSlot.slot_time)}</Text>
             </View>
             <View style={styles.bookingRow}>
               <Text style={styles.bookingLabel}>👥 Party Size</Text>

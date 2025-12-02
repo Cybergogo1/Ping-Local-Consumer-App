@@ -43,9 +43,9 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
         .from('offer_slots')
         .select('*')
         .eq('offer_id', offerId)
-        .gte('date', today)
-        .order('date', { ascending: true })
-        .order('time', { ascending: true });
+        .gte('slot_date', today)
+        .order('slot_date', { ascending: true })
+        .order('slot_time', { ascending: true });
 
       if (error) throw error;
 
@@ -59,7 +59,7 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
 
       // Set initial selected date to first available date
       if (slotsWithCapacity.length > 0) {
-        setSelectedDate(parseISO(slotsWithCapacity[0].date));
+        setSelectedDate(parseISO(slotsWithCapacity[0].slot_date));
       }
     } catch (error) {
       console.error('Error fetching slots:', error);
@@ -73,7 +73,7 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
     const dates = new Set<string>();
     slots.forEach(slot => {
       if ((slot.available_capacity || 0) > 0) {
-        dates.add(slot.date);
+        dates.add(slot.slot_date);
       }
     });
     return Array.from(dates).map(d => parseISO(d));
@@ -82,7 +82,7 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
   // Get slots for selected date
   const slotsForSelectedDate = useMemo(() => {
     return slots.filter(slot =>
-      isSameDay(parseISO(slot.date), selectedDate) &&
+      isSameDay(parseISO(slot.slot_date), selectedDate) &&
       (slot.available_capacity || 0) > 0
     );
   }, [slots, selectedDate]);
@@ -258,7 +258,7 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
                       styles.slotTime,
                       isSelected && styles.slotTimeSelected,
                     ]}>
-                      {formatTime(slot.time)}
+                      {formatTime(slot.slot_time)}
                     </Text>
                     <Text style={[
                       styles.slotCapacity,
@@ -318,7 +318,7 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
         <View style={styles.bottomContainer}>
           <View style={styles.selectedInfo}>
             <Text style={styles.selectedInfoText}>
-              {format(selectedDate, 'EEE, MMM d')} at {formatTime(selectedSlot.time)}
+              {format(selectedDate, 'EEE, MMM d')} at {formatTime(selectedSlot.slot_time)}
             </Text>
             <Text style={styles.selectedInfoSubtext}>
               {partySize} {partySize === 1 ? 'person' : 'people'}

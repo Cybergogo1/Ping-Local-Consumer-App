@@ -120,16 +120,25 @@ export interface PurchaseToken {
   offer_slots?: OfferSlot;
 }
 
-// Redemption Token - Created when business scans QR, tracks redemption process
+// Redemption Token - Created when user opens QR, tracks redemption process
 export interface RedemptionToken {
-  id: string;
-  purchase_token_id: string;
+  id: number;
+  purchase_token_id: number;
+  scanned: boolean;
   status: 'Pending' | 'In Progress' | 'Finished' | 'Cancelled';
+  bill_input_total?: number; // Bill amount entered by business (Pay on Day)
+  customer_name?: string;
+  customer_id?: number;
+  offer_name?: string;
+  business_name?: string;
+  promotion_id?: number;
+  completed: boolean;
+  time_redeemed?: string;
+  date_redeemed?: string;
+  created: string;
+  updated: string;
+  // Legacy alias for bill_input_total (used in navigation)
   bill_amount?: number;
-  points_awarded?: number;
-  redeemed_by?: string; // Business user who scanned
-  created_at: string;
-  updated_at: string;
   // Joined data
   purchase_tokens?: PurchaseToken;
 }
@@ -138,11 +147,13 @@ export interface RedemptionToken {
 export interface OfferSlot {
   id: number;
   offer_id: number;
-  date: string; // YYYY-MM-DD
-  time: string; // HH:MM
+  slot_date: string; // YYYY-MM-DD
+  slot_time: string; // HH:MM
   capacity: number;
   booked_count: number;
-  created_at: string;
+  available: boolean;
+  created: string;
+  updated: string;
   // Computed
   available_capacity?: number;
 }
