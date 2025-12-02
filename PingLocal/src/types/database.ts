@@ -194,8 +194,8 @@ export interface Notification {
 export interface Favorite {
   id: string;
   user_id: string;
-  business_id?: string;
-  offer_id?: string;
+  business_id?: number;
+  offer_id?: number;
   created_at: string;
 }
 

@@ -10,14 +10,14 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { colors, fontSize, fontWeight, spacing, borderRadius, shadows } from '../../theme';
+import { colors, fontSize, fontFamily, spacing, borderRadius, shadows } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { Offer } from '../../types/database';
+import { Offer, Business } from '../../types/database';
 import { FavouritesStackParamList } from '../../types/navigation';
 
 type FavouritesScreenNavigationProp = StackNavigationProp<FavouritesStackParamList, 'FavouritesMain'>;
@@ -26,10 +26,17 @@ interface FavouritedOffer extends Offer {
   favourite_id: string;
 }
 
+interface FavouritedBusiness extends Business {
+  favourite_id: string;
+}
+
 export default function FavoritesScreen() {
   const navigation = useNavigation<FavouritesScreenNavigationProp>();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
+  const [activeTab, setActiveTab] = useState<'offers' | 'businesses'>('offers');
   const [favouriteOffers, setFavouriteOffers] = useState<FavouritedOffer[]>([]);
+  const [favouriteBusinesses, setFavouriteBusinesses] = useState<FavouritedBusiness[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -55,51 +62,60 @@ export default function FavoritesScreen() {
     }
 
     try {
-      // Fetch user's favorites
+      // Fetch user's favorites (both offers and businesses)
       const { data: favoritesData, error: favoritesError } = await supabase
         .from('favorites')
-        .select('id, offer_id')
+        .select('id, offer_id, business_id')
         .eq('user_id', authUser.id);
 
       if (favoritesError) {
         console.error('Error fetching favorites:', favoritesError);
         setFavouriteOffers([]);
+        setFavouriteBusinesses([]);
         return;
       }
 
-      if (!favoritesData || favoritesData.length === 0) {
-        setFavouriteOffers([]);
-        return;
-      }
-
-      // Get offer IDs
-      const offerIds = favoritesData.map(f => f.offer_id);
+      // Separate offer and business favorites
+      const offerFavorites = (favoritesData || []).filter(f => f.offer_id);
+      const businessFavorites = (favoritesData || []).filter(f => f.business_id);
 
       // Fetch offer details
-      const { data: offersData, error: offersError } = await supabase
-        .from('offers')
-        .select('*')
-        .in('id', offerIds);
+      if (offerFavorites.length > 0) {
+        const offerIds = offerFavorites.map(f => f.offer_id);
+        const { data: offersData } = await supabase
+          .from('offers')
+          .select('*')
+          .in('id', offerIds);
 
-      if (offersError) {
-        console.error('Error fetching offers:', offersError);
+        const combinedOffers: FavouritedOffer[] = (offersData || []).map(offer => ({
+          ...offer,
+          favourite_id: offerFavorites.find(f => f.offer_id === offer.id)?.id || '',
+        }));
+        setFavouriteOffers(combinedOffers);
+      } else {
         setFavouriteOffers([]);
-        return;
       }
 
-      // Combine favorites with offer details
-      const combinedOffers: FavouritedOffer[] = (offersData || []).map(offer => {
-        const favorite = favoritesData.find(f => f.offer_id === offer.id);
-        return {
-          ...offer,
-          favourite_id: favorite?.id || '',
-        };
-      });
+      // Fetch business details
+      if (businessFavorites.length > 0) {
+        const businessIds = businessFavorites.map(f => f.business_id);
+        const { data: businessesData } = await supabase
+          .from('businesses')
+          .select('*')
+          .in('id', businessIds);
 
-      setFavouriteOffers(combinedOffers);
+        const combinedBusinesses: FavouritedBusiness[] = (businessesData || []).map(business => ({
+          ...business,
+          favourite_id: businessFavorites.find(f => f.business_id === business.id)?.id || '',
+        }));
+        setFavouriteBusinesses(combinedBusinesses);
+      } else {
+        setFavouriteBusinesses([]);
+      }
     } catch (error) {
       console.error('Error fetching favourites:', error);
       setFavouriteOffers([]);
+      setFavouriteBusinesses([]);
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
@@ -122,8 +138,9 @@ export default function FavoritesScreen() {
         return;
       }
 
-      // Update local state
+      // Update local state for both offers and businesses
       setFavouriteOffers(prev => prev.filter(o => o.favourite_id !== favouriteId));
+      setFavouriteBusinesses(prev => prev.filter(b => b.favourite_id !== favouriteId));
     } catch (error) {
       console.error('Error removing favourite:', error);
     }
@@ -175,12 +192,45 @@ export default function FavoritesScreen() {
     </TouchableOpacity>
   );
 
+  const renderBusinessItem = ({ item }: { item: FavouritedBusiness }) => (
+    <TouchableOpacity
+      style={styles.card}
+      onPress={() => navigation.navigate('BusinessDetail', { businessId: item.name })}
+      activeOpacity={0.7}
+    >
+      <View style={styles.cardImageContainer}>
+        {item.featured_image ? (
+          <Image source={{ uri: item.featured_image }} style={styles.cardImage} />
+        ) : (
+          <View style={styles.cardImagePlaceholder}>
+            <Ionicons name="business" size={32} color={colors.grayMedium} />
+          </View>
+        )}
+      </View>
+      <View style={styles.cardContent}>
+        <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
+        <Text style={styles.cardSubtitle} numberOfLines={1}>
+          {item.location_area || 'No location'}
+        </Text>
+        {item.category && (
+          <Text style={styles.cardDate}>{item.category}</Text>
+        )}
+      </View>
+      <TouchableOpacity
+        style={styles.heartButton}
+        onPress={() => removeFavourite(item.favourite_id)}
+      >
+        <Ionicons name="heart" size={24} color={colors.error} />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
       <Ionicons name="heart-outline" size={64} color={colors.grayMedium} />
       <Text style={styles.emptyStateTitle}>No Favourites Yet</Text>
       <Text style={styles.emptyStateText}>
-        Tap the heart icon on any promotion to save it here for easy access later!
+        Tap the heart icon on any {activeTab === 'offers' ? 'promotion' : 'business'} to save it here for easy access later!
       </Text>
     </View>
   );
@@ -189,10 +239,32 @@ export default function FavoritesScreen() {
     return (
       <View style={styles.container}>
         <StatusBar barStyle="light-content" />
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>Favourites</Text>
+        {/* Header - extends edge to edge */}
+        <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+            <Image source={require('../../../assets/images/iconback.png')} style={styles.accountBackButton}/>
+          </TouchableOpacity>
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Notifications' as any)}
+              style={styles.headerButton}
+            >
+              <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
+              {/* Notification badge - could add unread count here */}
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>N..</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Settings' as any)}
+              style={styles.headerButton}
+            >
+              <Image source={require('../../../assets/images/iconsettings.png')} style={styles.settingsButtonIcon}/>
+            </TouchableOpacity>
           </View>
+        </View>
+
+        <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
           <View style={styles.emptyState}>
             <Ionicons name="person-outline" size={64} color={colors.grayMedium} />
             <Text style={styles.emptyStateTitle}>Sign In Required</Text>
@@ -208,15 +280,51 @@ export default function FavoritesScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Favourites</Text>
-          <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.headerButton}>
-              <Ionicons name="notifications-outline" size={24} color={colors.white} />
-            </TouchableOpacity>
-          </View>
+      {/* Header - extends edge to edge */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <Image source={require('../../../assets/images/iconback.png')} style={styles.accountBackButton}/>
+        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Notifications' as any)}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
+            {/* Notification badge - could add unread count here */}
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>N..</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Settings' as any)}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconsettings.png')} style={styles.settingsButtonIcon}/>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
+
+        {/* Tab Navigation */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'offers' && styles.tabActive]}
+            onPress={() => setActiveTab('offers')}
+          >
+            <Text style={[styles.tabText, activeTab === 'offers' && styles.tabTextActive]}>
+              Offers ({favouriteOffers.length})
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === 'businesses' && styles.tabActive]}
+            onPress={() => setActiveTab('businesses')}
+          >
+            <Text style={[styles.tabText, activeTab === 'businesses' && styles.tabTextActive]}>
+              Businesses ({favouriteBusinesses.length})
+            </Text>
+          </TouchableOpacity>
         </View>
 
         {/* Content */}
@@ -226,12 +334,12 @@ export default function FavoritesScreen() {
           </View>
         ) : (
           <FlatList
-            data={favouriteOffers}
-            renderItem={renderOfferItem}
-            keyExtractor={(item) => item.favourite_id}
+            data={activeTab === 'offers' ? favouriteOffers : favouriteBusinesses}
+            renderItem={activeTab === 'offers' ? renderOfferItem : renderBusinessItem}
+            keyExtractor={(item) => (item as any).favourite_id}
             contentContainerStyle={[
               styles.listContent,
-              favouriteOffers.length === 0 && styles.listContentEmpty,
+              (activeTab === 'offers' ? favouriteOffers : favouriteBusinesses).length === 0 && styles.listContentEmpty,
             ]}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={renderEmptyState}
@@ -262,25 +370,50 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
     backgroundColor: colors.primary,
-  },
-  headerTitle: {
-    fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
-    color: colors.white,
   },
   headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: '#203C50',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerRight: {
     flexDirection: 'row',
     gap: spacing.sm,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  accountBackButton: {
+    width: 16,
+    height: 16,
+  },
+  notificationButtonIcon: {
+    width: 16,
+    height: 16,
+  },
+  settingsButtonIcon: {
+    width: 16,
+    height: 16,
+  },
+  notificationBadgeText: {
+    fontSize: 10,
+    fontFamily: fontFamily.bodyBold,
+    color: colors.primary,
   },
   loadingContainer: {
     flex: 1,
@@ -327,17 +460,19 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
     color: colors.primary,
     marginBottom: 2,
   },
   cardDate: {
     fontSize: fontSize.xs,
+    fontFamily: fontFamily.body,
     color: colors.grayMedium,
     marginBottom: 2,
   },
   cardSubtitle: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.grayMedium,
   },
   heartButton: {
@@ -352,15 +487,43 @@ const styles = StyleSheet.create({
   },
   emptyStateTitle: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
     color: colors.primary,
     marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
   emptyStateText: {
     fontSize: fontSize.md,
+    fontFamily: fontFamily.body,
     color: colors.grayMedium,
     textAlign: 'center',
     lineHeight: 22,
+  },
+  tabContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.white,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.grayLight,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabActive: {
+    borderBottomColor: colors.primary,
+  },
+  tabText: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.body,
+    color: colors.grayMedium,
+  },
+  tabTextActive: {
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.primary,
   },
 });

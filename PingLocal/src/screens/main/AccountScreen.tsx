@@ -18,7 +18,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 import { PurchaseToken, TIER_THRESHOLDS, getTierFromPoints } from '../../types/database';
 import { AccountStackParamList } from '../../types/navigation';
-
+ 
 type AccountScreenNavigationProp = StackNavigationProp<AccountStackParamList, 'AccountMain'>;
 
 const TIER_DISPLAY_NAMES: Record<string, string> = {

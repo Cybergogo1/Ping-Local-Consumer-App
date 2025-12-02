@@ -10,12 +10,13 @@ import {
   ScrollView,
   StyleSheet,
   StatusBar,
+  Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { supabase } from '../../lib/supabase';
-import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, fontWeight, fontFamily } from '../../theme';
 import { Business } from '../../types/database';
 import { DirectoryStackParamList } from '../../types/navigation';
 import BusinessCard from '../../components/business/BusinessCard';
@@ -28,6 +29,7 @@ interface BusinessWithOfferCount extends Business {
 
 export default function DirectoryScreen() {
   const navigation = useNavigation<NavigationProp>();
+  const insets = useSafeAreaInsets();
 
   const [businesses, setBusinesses] = useState<BusinessWithOfferCount[]>([]);
   const [featuredBusinesses, setFeaturedBusinesses] = useState<BusinessWithOfferCount[]>([]);
@@ -207,17 +209,39 @@ export default function DirectoryScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Directory</Text>
+      <StatusBar barStyle="light-content" />
+      {/* Header - extends edge to edge */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <Image source={require('../../../assets/images/iconback.png')} style={styles.accountBackButton}/>
+        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Notifications' as any)}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
+            {/* Notification badge - could add unread count here */}
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>N..</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Settings' as any)}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconsettings.png')} style={styles.settingsButtonIcon}/>
+          </TouchableOpacity>
         </View>
+      </View>
 
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
         <FlatList
           data={filteredBusinesses}
           keyExtractor={(item, index) => item?.name || `business-${index}`}
           renderItem={renderBusinessItem}
+          numColumns={2}
+          columnWrapperStyle={styles.columnWrapper}
           ListHeaderComponent={renderHeader}
           ListEmptyComponent={renderEmpty}
           refreshControl={
@@ -239,21 +263,59 @@ export default function DirectoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.grayLight,
+    backgroundColor: colors.white,
   },
   safeArea: {
     flex: 1,
   },
   header: {
-    backgroundColor: colors.white,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.grayLight,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.primary,
   },
-  headerTitle: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#203C50',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  accountBackButton: {
+    width: 16,
+    height: 16,
+  },
+  notificationButtonIcon: {
+    width: 16,
+    height: 16,
+  },
+  settingsButtonIcon: {
+    width: 16,
+    height: 16,
+  },
+  notificationBadgeText: {
+    fontSize: 10,
+    fontFamily: fontFamily.bodyBold,
     color: colors.primary,
   },
   loadingContainer: {
@@ -307,14 +369,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginTop: spacing.lg,
-    paddingHorizontal: spacing.md,
   },
   businessCount: {
     fontSize: fontSize.sm,
     color: colors.grayMedium,
   },
+  columnWrapper: {
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+  },
   businessItemContainer: {
-    marginHorizontal: spacing.md,
+    flex: 1,
+    marginHorizontal: spacing.xs,
     marginBottom: spacing.md,
   },
   listContent: {

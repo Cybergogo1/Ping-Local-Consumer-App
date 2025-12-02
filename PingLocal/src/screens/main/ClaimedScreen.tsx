@@ -10,11 +10,11 @@ import {
   RefreshControl,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, fontSize, fontWeight, spacing, borderRadius, shadows } from '../../theme';
+import { colors, fontSize, fontWeight, spacing, borderRadius, shadows, fontFamily } from '../../theme';
 import { PurchaseToken } from '../../types/database';
 import ClaimedOfferCard from '../../components/claimed/ClaimedOfferCard';
 
@@ -23,6 +23,7 @@ type FilterType = 'active' | 'redeemed' | 'all';
 export default function ClaimedScreen() {
   const { user } = useAuth();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
 
   const [purchaseTokens, setPurchaseTokens] = useState<PurchaseToken[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -181,13 +182,33 @@ export default function ClaimedScreen() {
 
   return (
     <View style={styles.container}>
-      <StatusBar barStyle="dark-content" />
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>My Claims</Text>
+      <StatusBar barStyle="light-content" />
+      {/* Header - extends edge to edge */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <Image source={require('../../../assets/images/iconback.png')} style={styles.accountBackButton}/>
+        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Notifications' as any)}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
+            {/* Notification badge - could add unread count here */}
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>N..</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Settings' as any)}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconsettings.png')} style={styles.settingsButtonIcon}/>
+          </TouchableOpacity>
         </View>
+      </View>
 
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
         {/* Filter Tabs */}
         <View style={styles.filterContainer}>
           <TouchableOpacity
@@ -271,15 +292,54 @@ const styles = StyleSheet.create({
 
   // Header
   header: {
-    backgroundColor: colors.white,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.grayLight,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.primary,
+    marginBottom: spacing.md,
   },
-  headerTitle: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#203C50',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  accountBackButton: {
+    width: 16,
+    height: 16,
+  },
+  notificationButtonIcon: {
+    width: 16,
+    height: 16,
+  },
+  settingsButtonIcon: {
+    width: 16,
+    height: 16,
+  },
+  notificationBadgeText: {
+    fontSize: 10,
+    fontFamily: fontFamily.bodyBold,
     color: colors.primary,
   },
 

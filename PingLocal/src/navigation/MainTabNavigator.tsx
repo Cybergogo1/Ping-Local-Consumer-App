@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MainTabParamList } from '../types/navigation';
-import { colors, spacing, fontSize, fontWeight } from '../theme';
+import { colors, spacing, fontSize, fontFamily } from '../theme';
 
 import HomeStackNavigator from './HomeStackNavigator';
 import DirectoryStackNavigator from './DirectoryStackNavigator';
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: colors.white,
     marginTop: 4,
-    fontWeight: fontWeight.medium,
+    fontFamily: fontFamily.bodyMedium,
   },
   centerTabPlaceholder: {
     flex: 1, // Takes up same space as other tabs for proper 5-column layout

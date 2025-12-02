@@ -29,6 +29,7 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
   const [offer, setOffer] = useState<Offer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showDescriptionModal, setShowDescriptionModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [isFavourited, setIsFavourited] = useState(false);
   const [favouriteId, setFavouriteId] = useState<string | null>(null);
 
@@ -380,7 +381,10 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
         )}
 
         {/* Terms & Conditions */}
-        <TouchableOpacity style={styles.termsButton}>
+        <TouchableOpacity
+          style={styles.termsButton}
+          onPress={() => setShowTermsModal(true)}
+        >
           <Text style={styles.termsIcon}>📄</Text>
           <Text style={styles.termsText}>View Terms and Conditions</Text>
         </TouchableOpacity>
@@ -457,6 +461,73 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
             </View>
             <ScrollView style={styles.modalBody}>
               <Text style={styles.modalText}>{offer?.full_description}</Text>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Terms & Conditions Modal */}
+      <Modal
+        visible={showTermsModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowTermsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Terms & Conditions</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowTermsModal(false)}
+              >
+                <Text style={styles.modalCloseText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalBody}>
+              {/* Business Policy */}
+              {offer?.business_policy && (
+                <>
+                  <Text style={styles.modalSectionTitle}>Business Policy</Text>
+                  <Text style={styles.modalText}>{offer.business_policy}</Text>
+                </>
+              )}
+
+              {/* Policy Notes */}
+              {offer?.policy_notes && (
+                <>
+                  <Text style={[styles.modalSectionTitle, { marginTop: spacing.md }]}>
+                    Additional Notes
+                  </Text>
+                  <Text style={styles.modalText}>{offer.policy_notes}</Text>
+                </>
+              )}
+
+              {/* Fallback if no policy exists */}
+              {!offer?.business_policy && !offer?.policy_notes && (
+                <>
+                  <Text style={styles.modalSectionTitle}>Standard Terms</Text>
+                  <Text style={styles.modalText}>
+                    • This offer is subject to availability{'\n'}
+                    • Cannot be used in conjunction with other offers{'\n'}
+                    • Non-transferable and non-refundable{'\n'}
+                    • Valid until the end date specified{'\n'}
+                    • {offer?.businesses?.name || 'The business'} reserves the right to refuse service{'\n'}
+                    • Please present your QR code when claiming this offer
+                  </Text>
+                </>
+              )}
+
+              {/* Business Contact Info */}
+              <Text style={[styles.modalSectionTitle, { marginTop: spacing.md }]}>
+                Business Contact
+              </Text>
+              <Text style={styles.modalText}>
+                {offer?.businesses?.name || 'Business'}
+                {'\n'}
+                {offer?.businesses?.location ? `${offer.businesses.location}\n` : ''}
+                {offer?.businesses?.phone_number ? `Phone: ${offer.businesses.phone_number}` : ''}
+              </Text>
             </ScrollView>
           </View>
         </View>
@@ -893,5 +964,11 @@ const styles = StyleSheet.create({
     color: colors.grayDark,
     lineHeight: fontSize.md * 1.6,
     fontFamily: fontFamily.body,
+  },
+  modalSectionTitle: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.primary,
+    marginBottom: spacing.xs,
   },
 });

@@ -15,7 +15,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
-import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
+import { useAuth } from '../../contexts/AuthContext';
+import { colors, spacing, borderRadius, fontSize, fontFamily, shadows } from '../../theme';
 import { Business, Offer } from '../../types/database';
 import { BusinessDetailScreenProps } from '../../types/navigation';
 import OfferCardLandscape from '../../components/promotions/OfferCardLandscape';
@@ -24,16 +25,22 @@ const mapPinIcon = require('../../../assets/images/logo_icondark.avif');
 
 export default function BusinessDetailScreen({ navigation, route }: BusinessDetailScreenProps) {
   const { businessId } = route.params;
+  const { user } = useAuth();
 
   const [business, setBusiness] = useState<Business | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showDescriptionModal, setShowDescriptionModal] = useState(false);
+  const [isFavourited, setIsFavourited] = useState(false);
+  const [favouriteId, setFavouriteId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBusiness();
     fetchOffers();
-  }, [businessId]);
+    if (user && business) {
+      checkFavouriteStatus();
+    }
+  }, [businessId, user, business?.id]);
 
   const fetchBusiness = async () => {
     try {
@@ -92,6 +99,81 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
       if (data) setOffers(data);
     } catch (error) {
       console.error('Error fetching offers:', error);
+    }
+  };
+
+  const checkFavouriteStatus = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser || !business?.id) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('favorites')
+        .select('id')
+        .eq('user_id', authUser.id)
+        .eq('business_id', business.id)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking favourite status:', error);
+        return;
+      }
+
+      if (data) {
+        setIsFavourited(true);
+        setFavouriteId(data.id);
+      } else {
+        setIsFavourited(false);
+        setFavouriteId(null);
+      }
+    } catch (error) {
+      console.error('Error checking favourite status:', error);
+    }
+  };
+
+  const toggleFavourite = async () => {
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (!authUser || !business?.id) {
+      console.log('User must be logged in to favorite businesses');
+      return;
+    }
+
+    try {
+      if (isFavourited && favouriteId) {
+        // Remove favorite
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('id', favouriteId);
+
+        if (error) {
+          console.error('Error removing favourite:', error);
+          return;
+        }
+
+        setIsFavourited(false);
+        setFavouriteId(null);
+      } else {
+        // Add favorite
+        const { data, error } = await supabase
+          .from('favorites')
+          .insert({
+            user_id: authUser.id,
+            business_id: business.id,
+          })
+          .select('id')
+          .single();
+
+        if (error) {
+          console.error('Error adding favourite:', error);
+          return;
+        }
+
+        setIsFavourited(true);
+        setFavouriteId(data.id);
+      }
+    } catch (error) {
+      console.error('Error toggling favourite:', error);
     }
   };
 
@@ -159,7 +241,19 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
                 style={styles.heroBackButton}
                 onPress={() => navigation.goBack()}
               >
-                <Text style={styles.heroBackButtonText}>‹</Text>
+                <Image source={require('../../../assets/images/iconback.png')} style={styles.heroBackButtonText}/>
+              </TouchableOpacity>
+
+              {/* Favorite Button */}
+              <TouchableOpacity
+                style={styles.heroFavoriteButton}
+                onPress={toggleFavourite}
+              >
+                <Ionicons
+                  name={isFavourited ? 'heart' : 'heart-outline'}
+                  size={22}
+                  color={isFavourited ? colors.white : colors.white}
+                />
               </TouchableOpacity>
             </View>
           </SafeAreaView>
@@ -319,7 +413,7 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     color: colors.white,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
   },
   heroContainer: {
     height: 280,
@@ -339,7 +433,7 @@ const styles = StyleSheet.create({
   heroPlaceholderText: {
     color: colors.grayMedium,
     fontSize: 60,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
   },
   heroButtonsContainer: {
     position: 'absolute',
@@ -354,18 +448,24 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
   },
   heroBackButton: {
-    backgroundColor: colors.white,
-    width: 36,
-    height: 36,
+    backgroundColor: colors.primary,
+    width: 38,
+    height: 38,
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    ...shadows.md,
   },
   heroBackButtonText: {
-    fontSize: 24,
-    color: colors.grayDark,
-    marginTop: -2,
+    width: 16,
+    height: 16,
+  },
+  heroFavoriteButton: {
+    backgroundColor: colors.primary,
+    width: 38,
+    height: 38,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heroGradient: {
     position: 'absolute',
@@ -378,11 +478,12 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: fontSize.xl,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.white,
   },
   heroLocation: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.white,
     marginTop: spacing.xs,
     opacity: 0.9,
@@ -414,12 +515,13 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.black,
     marginBottom: spacing.sm,
   },
   descriptionText: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.grayMedium,
     lineHeight: fontSize.sm * 1.6,
   },
@@ -459,12 +561,13 @@ const styles = StyleSheet.create({
   },
   mapTitle: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bodySemiBold,
     color: colors.black,
     textAlign: 'center',
   },
   mapAddress: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
     textAlign: 'center',
     marginTop: spacing.xs,
@@ -518,7 +621,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.black,
     flex: 1,
   },
@@ -532,6 +635,7 @@ const styles = StyleSheet.create({
   },
   modalCloseText: {
     fontSize: fontSize.md,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
   },
   modalScrollView: {
@@ -539,6 +643,7 @@ const styles = StyleSheet.create({
   },
   modalDescription: {
     fontSize: fontSize.md,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
     lineHeight: fontSize.md * 1.6,
   },

@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { colors, fontSize, fontWeight, spacing, borderRadius, shadows } from '../../theme';
+import { colors, fontSize, fontFamily, spacing, borderRadius, shadows } from '../../theme';
 import { TIER_THRESHOLDS } from '../../types/database';
 
 const TIERS = [
@@ -71,16 +71,11 @@ export default function LoyaltyTiersScreen() {
 
           {/* Trophy Illustration */}
           <View style={styles.trophyContainer}>
-            <View style={styles.sparkle1}>
-              <Ionicons name="sparkles" size={16} color={colors.accent} />
-            </View>
-            <View style={styles.sparkle2}>
-              <Ionicons name="sparkles" size={12} color={colors.accent} />
-            </View>
-            <Ionicons name="trophy" size={80} color={colors.accent} />
-            <View style={styles.handsContainer}>
-              <Text style={styles.handEmoji}>🙌</Text>
-            </View>
+            <Image
+              source={require('../../../assets/images/loyaltylandingpage_graphic.avif')}
+              style={styles.loyaltyTierImage}
+              resizeMode="cover"
+            />
           </View>
 
           <Text style={styles.headerTitle}>Our Loyalty Scheme</Text>
@@ -202,40 +197,29 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     position: 'relative',
   },
-  sparkle1: {
-    position: 'absolute',
-    top: -10,
-    right: -20,
-  },
-  sparkle2: {
-    position: 'absolute',
-    top: 10,
-    left: -15,
-  },
-  handsContainer: {
-    position: 'absolute',
-    bottom: -10,
-  },
-  handEmoji: {
-    fontSize: 40,
+  loyaltyTierImage: {
+    width: 200,
+    height: 200,
+    marginLeft: spacing.lg,
   },
   headerTitle: {
     fontSize: fontSize.xxxl,
-    fontWeight: fontWeight.bold,
-    color: colors.white,
+    fontFamily: fontFamily.headingBold,
+    color: colors.accent,
     marginBottom: spacing.xs,
     textAlign: 'center',
   },
   headerSubtitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.accent,
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.headingMedium,
+    color: colors.white,
     marginBottom: spacing.md,
     textAlign: 'center',
   },
   headerDescription: {
     fontSize: fontSize.sm,
-    color: colors.grayMedium,
+    fontFamily: fontFamily.bodyRegular,
+    color: colors.grayLight,
     textAlign: 'center',
     lineHeight: 20,
     paddingHorizontal: spacing.md,
@@ -268,12 +252,13 @@ const styles = StyleSheet.create({
   },
   tierName: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.white,
     marginBottom: spacing.xs,
   },
   tierPoints: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodyRegular,
     color: colors.grayMedium,
   },
   viewButton: {
@@ -284,7 +269,7 @@ const styles = StyleSheet.create({
   },
   viewButtonText: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
     color: colors.primary,
   },
   howItWorksSection: {
@@ -292,7 +277,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.white,
     marginBottom: spacing.md,
   },
@@ -313,12 +298,13 @@ const styles = StyleSheet.create({
   },
   pointsRowTitle: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
     color: colors.primary,
     marginBottom: 2,
   },
   pointsRowDescription: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodyRegular,
     color: colors.grayMedium,
   },
   divider: {
