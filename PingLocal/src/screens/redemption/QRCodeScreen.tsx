@@ -10,7 +10,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg';
 import { supabase } from '../../lib/supabase';
-import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, fontWeight, shadows, fontFamily } from '../../theme';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { ClaimedStackParamList } from '../../types/navigation';
@@ -278,7 +278,7 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
       <View style={styles.content}>
         {/* Instructions */}
         <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>Show this QR code</Text>
+          <Text style={styles.instructionsTitle}>Here's your QR Code!</Text>
           <Text style={styles.instructionsText}>
             Present this to staff at {businessName} to redeem your offer
           </Text>
@@ -309,6 +309,7 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
 
         {/* Offer Details */}
         <View style={styles.offerDetails}>
+          <Text style={{ fontFamily: fontFamily.bodyMedium, color: colors.grayLight }}>Redeeming</Text> 
           <Text style={styles.offerName}>{offerName}</Text>
           <Text style={styles.businessName}>{businessName}</Text>
 
@@ -349,7 +350,7 @@ const styles = StyleSheet.create({
   closeButtonText: {
     fontSize: 28,
     color: colors.white,
-    fontWeight: fontWeight.regular,
+    fontFamily: fontFamily.body,
     marginTop: -2,
   },
   content: {
@@ -364,13 +365,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xl,
   },
   instructionsTitle: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
-    color: colors.white,
+    fontSize: fontSize.xxxl,
+    fontFamily: fontFamily.headingBold,
+    color: colors.accent,
     marginBottom: spacing.sm,
   },
   instructionsText: {
     fontSize: fontSize.md,
+    fontFamily: fontFamily.body,
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
   },
@@ -397,6 +399,7 @@ const styles = StyleSheet.create({
   },
   scanningText: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.white,
     marginLeft: spacing.sm,
   },
@@ -408,13 +411,14 @@ const styles = StyleSheet.create({
   },
   offerName: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.white,
     textAlign: 'center',
     marginBottom: spacing.xs,
   },
   businessName: {
     fontSize: fontSize.md,
+    fontFamily: fontFamily.body,
     color: colors.accent,
     marginBottom: spacing.sm,
   },
@@ -449,6 +453,7 @@ const styles = StyleSheet.create({
   helpText: {
     flex: 1,
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: 'rgba(255,255,255,0.8)',
     lineHeight: fontSize.sm * 1.5,
   },

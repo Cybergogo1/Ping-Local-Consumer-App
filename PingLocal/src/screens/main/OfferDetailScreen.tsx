@@ -400,7 +400,11 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
 
         {/* Business Card */}
         {offer.businesses && (
-          <View style={styles.businessCard}>
+          <TouchableOpacity
+            style={styles.businessCard}
+            onPress={handleBusinessPress}
+            activeOpacity={0.7}
+          >
             <View style={styles.businessCardLeft}>
               {offer.businesses.featured_image ? (
                 <Image
@@ -434,7 +438,7 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
                 <Text style={styles.viewOnMapText}>View on Map</Text>
               </TouchableOpacity>
             </View>
-          </View>
+          </TouchableOpacity>
         )}
 
         {/* Bottom spacing */}

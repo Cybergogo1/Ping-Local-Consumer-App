@@ -584,7 +584,7 @@ export default function HomeScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Location</Text>
                 <TouchableOpacity onPress={closeLocationModal}>
-                  <Ionicons name="close" size={24} color={colors.grayDark} />
+                  <Ionicons name="close" size={24} color={colors.white} />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalContent}>
@@ -657,7 +657,7 @@ export default function HomeScreen() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Filters</Text>
                 <TouchableOpacity onPress={closeFilterModal}>
-                  <Ionicons name="close" size={24} color={colors.grayDark} />
+                  <Ionicons name="close" size={24} color={colors.white} />
                 </TouchableOpacity>
               </View>
               <ScrollView style={styles.modalContent}>
@@ -939,7 +939,7 @@ const styles = StyleSheet.create({
     top: 0,
     bottom: 0,
     width: MODAL_WIDTH,
-    backgroundColor: colors.white,
+    backgroundColor: colors.primary,
     ...shadows.lg,
   },
   modalSafeArea: {
@@ -952,11 +952,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.grayLight,
+    borderBottomColor: '#fff2',
   },
   modalTitle: {
-    fontSize: fontSize.lg,
-    color: colors.grayDark,
+    fontSize: fontSize.xl,
+    color: colors.white,
     fontFamily: fontFamily.headingBold,
   },
   modalContent: {
@@ -970,14 +970,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: colors.grayLight,
+    borderBottomColor: '#fff1',
   },
   modalItemActive: {
-    backgroundColor: colors.grayLight,
+    backgroundColor: colors.accent,
   },
   modalItemText: {
     fontSize: fontSize.md,
-    color: colors.grayDark,
+    color: colors.grayLight,
     fontFamily: fontFamily.body,
   },
   modalItemTextActive: {
@@ -985,12 +985,11 @@ const styles = StyleSheet.create({
     color: colors.primary,
   },
   filterSectionTitle: {
-    fontSize: fontSize.sm,
-    color: colors.grayMedium,
+    fontSize: fontSize.lg,
+    color: colors.white,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    backgroundColor: colors.grayLight,
-    textTransform: 'uppercase',
+    backgroundColor: colors.primary,
     letterSpacing: 1,
     fontFamily: fontFamily.bodyBold,
   },
@@ -1000,7 +999,7 @@ const styles = StyleSheet.create({
     borderTopColor: colors.grayLight,
   },
   clearButton: {
-    backgroundColor: colors.grayLight,
+    backgroundColor: colors.accent,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.md,
     alignItems: 'center',

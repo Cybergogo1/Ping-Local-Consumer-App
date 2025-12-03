@@ -13,18 +13,72 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.pinglocal.app",
+      "buildNumber": "1",
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "PingLocal needs your location to show nearby businesses and offers",
+        "NSLocationAlwaysAndWhenInUseUsageDescription": "PingLocal needs your location to show nearby businesses and offers",
+        "NSCameraUsageDescription": "PingLocal needs camera access to scan QR codes for offer redemption",
+        "NSPhotoLibraryUsageDescription": "PingLocal needs access to your photos to upload images",
+        "NSUserTrackingUsageDescription": "This allows us to provide personalized offers based on your activity"
+      },
+      "config": {
+        "googleMapsApiKey": "AIzaSyA3UvWRia-94eCIGPuyr4mMm3p-UJVpeGQ"
+      },
+      "entitlements": {
+        "aps-environment": "production",
+        "com.apple.developer.in-app-payments": ["merchant.com.pinglocal"]
+      }
     },
     "android": {
+      "package": "com.pinglocal.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyA3UvWRia-94eCIGPuyr4mMm3p-UJVpeGQ"
+        }
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Allow PingLocal to use your location to find nearby businesses and offers."
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ffffff",
+          "sounds": []
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "YOUR_EAS_PROJECT_ID"
+      }
     }
   }
 }

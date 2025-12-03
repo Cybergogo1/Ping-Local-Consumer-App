@@ -24,7 +24,9 @@
       "Bash(curl:*)",
       "Bash(cat:*)",
       "Bash(findstr:*)",
-      "Bash(npx expo start:*)"
+      "Bash(npx expo start:*)",
+      "Bash(npx expo:*)",
+      "Bash(npx expo-doctor)"
     ],
     "deny": [],
     "ask": []
