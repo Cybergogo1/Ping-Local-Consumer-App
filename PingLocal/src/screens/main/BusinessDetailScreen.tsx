@@ -356,7 +356,7 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>About {business?.name}</Text>
+              <Text style={styles.modalTitle}>About {business?.name || 'this business'}</Text>
               <TouchableOpacity
                 style={styles.modalCloseButton}
                 onPress={() => setShowDescriptionModal(false)}

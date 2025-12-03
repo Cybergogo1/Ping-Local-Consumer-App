@@ -325,11 +325,9 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
               <Text style={styles.priceAmount}>
                 {offer.price_discount
                   ? `£${offer.price_discount.toFixed(2)}`
-                  : offer.change_button_text
-                    ? offer.custom_feed_text
-                    : '2 slots left'}
+                  : offer.custom_feed_text || 'Book Now'}
               </Text>
-              {offer.price_discount && offer.unit_of_measurement && (
+              {!!offer.price_discount && offer.unit_of_measurement && (
                 <Text style={styles.priceUnit}>per {offer.unit_of_measurement}</Text>
               )}
 
@@ -463,7 +461,7 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
               </TouchableOpacity>
             </View>
             <ScrollView style={styles.modalBody}>
-              <Text style={styles.modalText}>{offer?.full_description}</Text>
+              <Text style={styles.modalText}>{offer?.full_description || ''}</Text>
             </ScrollView>
           </View>
         </View>

@@ -284,7 +284,7 @@ export default function MapScreen() {
               {selectedBusiness.name}
             </Text>
             <Text style={styles.businessLocation} numberOfLines={1}>
-              {selectedBusiness.location_area || selectedBusiness.location}
+              {selectedBusiness.location_area || selectedBusiness.location || 'Unknown Location'}
             </Text>
             <View style={styles.businessOffers}>
               <Ionicons name="pricetag" size={14} color={colors.accent} />

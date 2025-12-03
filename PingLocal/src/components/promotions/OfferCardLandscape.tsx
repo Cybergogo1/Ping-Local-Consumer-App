@@ -18,11 +18,6 @@ interface OfferCardLandscapeProps {
 }
 
 export default function OfferCardLandscape({ offer, onPress }: OfferCardLandscapeProps) {
-  const formatPrice = (price?: number) => {
-    if (!price) return null;
-    return `£${price.toFixed(2)}`;
-  };
-
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={styles.container}>
       <View style={styles.card}>
@@ -42,7 +37,7 @@ export default function OfferCardLandscape({ offer, onPress }: OfferCardLandscap
           </Text>
           <Text style={styles.price}>
             {offer.price_discount
-              ? `${formatPrice(offer.price_discount)}${offer.unit_of_measurement ? ` ${offer.unit_of_measurement}` : ''}`
+              ? `£${offer.price_discount.toFixed(2)}${offer.unit_of_measurement ? ` ${offer.unit_of_measurement}` : ''}`
               : 'Book Now'}
           </Text>
         </LinearGradient>

@@ -118,14 +118,14 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
       if (selectedSlot) {
         await supabase
           .from('offer_slots')
-          .update({ booked_count: selectedSlot.booked_count + partySize })
+          .update({ booked_count: (selectedSlot.booked_count || 0) + partySize })
           .eq('id', selectedSlot.id);
       }
 
       // Increment number_sold on the offer
       await supabase
         .from('offers')
-        .update({ number_sold: offer.number_sold + quantity })
+        .update({ number_sold: (offer.number_sold || 0) + quantity })
         .eq('id', offerId);
 
       // Navigate to success screen
@@ -229,14 +229,14 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
       if (selectedSlot) {
         await supabase
           .from('offer_slots')
-          .update({ booked_count: selectedSlot.booked_count + partySize })
+          .update({ booked_count: (selectedSlot.booked_count || 0) + partySize })
           .eq('id', selectedSlot.id);
       }
 
       // Increment number_sold on the offer
       await supabase
         .from('offers')
-        .update({ number_sold: offer.number_sold + quantity })
+        .update({ number_sold: (offer.number_sold || 0) + quantity })
         .eq('id', offerId);
 
       // Award loyalty points for Pay Up Front purchases (total × 10)
@@ -382,7 +382,7 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
             <>
               <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>
-                  {offer.name} {offer.quantity_item && `x ${quantity}`}
+                  {offer.name}{offer.quantity_item ? ` x ${quantity}` : ''}
                 </Text>
                 <Text style={styles.priceValue}>£{(unitPrice * quantity).toFixed(2)}</Text>
               </View>

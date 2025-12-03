@@ -176,11 +176,11 @@ export default function FavoritesScreen() {
       </View>
       <View style={styles.cardContent}>
         <Text style={styles.cardTitle} numberOfLines={1}>{item.name}</Text>
-        {item.end_date && (
+        {item.end_date && getTimeRemaining(item.end_date) && (
           <Text style={styles.cardDate}>{getTimeRemaining(item.end_date)}</Text>
         )}
         <Text style={styles.cardSubtitle} numberOfLines={1}>
-          {item.business_name}{item.location_area ? `, ${item.location_area}` : ''}
+          {item.business_name || 'Unknown Business'}{item.location_area ? `, ${item.location_area}` : ''}
         </Text>
       </View>
       <TouchableOpacity

@@ -76,7 +76,9 @@ export default function ClaimedOfferCard({
         {/* Booking Slot Info - not available without joining */}
 
         {/* Claimed Date */}
-        <Text style={styles.claimedDate}>Claimed {claimedDate}</Text>
+        {claimedDate && (
+          <Text style={styles.claimedDate}>Claimed {claimedDate}</Text>
+        )}
 
         {/* Action Button */}
         {isRedeemable && (

@@ -173,7 +173,7 @@ export default function PromotionCard({ offer, onPress, userLocation, userId }: 
               distanceText && styles.quantityBadgeWithProximity
             ]}>
               <Text style={styles.quantityText}>
-                {(offer.quantity - offer.number_sold)} remaining
+                {(offer.quantity - (offer.number_sold || 0))} remaining
               </Text>
             </View>
           )}
@@ -212,9 +212,7 @@ export default function PromotionCard({ offer, onPress, userLocation, userId }: 
             <Text style={styles.priceBadgeText}>
               {offer.price_discount
                 ? `£${offer.price_discount.toFixed(2)}`
-                : offer.change_button_text
-                  ? offer.custom_feed_text
-                  : 'Book Now'}
+                : offer.custom_feed_text || 'Book Now'}
             </Text>
           </View>
         </View>

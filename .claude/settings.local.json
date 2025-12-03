@@ -28,7 +28,8 @@
       "Bash(npx expo:*)",
       "Bash(npx expo-doctor)",
       "Bash(copy \"c:\\Users\\cyber\\OneDrive\\Documents\\Claude\\Ping-Local-Consumer-App\\PingLocal\\assets\\icon.png\" \"c:\\Users\\cyber\\OneDrive\\Documents\\Claude\\Ping-Local-Consumer-App\\PingLocal\\assets\\notification-icon.png\")",
-      "Bash(where:*)"
+      "Bash(where:*)",
+      "Bash(npx eas:*)"
     ],
     "deny": [],
     "ask": []
