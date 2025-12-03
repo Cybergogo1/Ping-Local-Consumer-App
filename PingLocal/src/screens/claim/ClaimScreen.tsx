@@ -8,13 +8,15 @@ import {
   Image,
   ActivityIndicator,
   Alert,
+  StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
 import { useStripe } from '@stripe/stripe-react-native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
-import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, fontFamily, shadows } from '../../theme';
+import { getTierFromPoints } from '../../types/database';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { HomeStackParamList } from '../../types/navigation';
@@ -30,6 +32,7 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
   const { offerId, offer, selectedSlot, partySize = 1 } = route.params;
   const { user, refreshUser } = useAuth();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const insets = useSafeAreaInsets();
 
   const [quantity, setQuantity] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -241,9 +244,15 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
 
       // Award loyalty points for Pay Up Front purchases (total × 10)
       const pointsEarned = Math.floor(total * 10);
+      const oldPoints = user.loyalty_points || 0;
+      const newPoints = oldPoints + pointsEarned;
+
+      // Detect tier change
+      const previousTier = getTierFromPoints(oldPoints);
+      const newTier = getTierFromPoints(newPoints);
+
       if (pointsEarned > 0) {
         // Update user's loyalty points
-        const newPoints = (user.loyalty_points || 0) + pointsEarned;
         await supabase
           .from('users')
           .update({ loyalty_points: newPoints })
@@ -263,12 +272,15 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         }
       }
 
-      // Navigate to success screen
+      // Navigate to success screen with tier info
       navigation.navigate('ClaimSuccess', {
         purchaseTokenId: data.id,
         offerName: offer.name,
         businessName,
-        pointsEarned, // Pass points to success screen
+        pointsEarned,
+        previousTier,
+        newTier,
+        totalPoints: newPoints,
       });
     } catch (error: any) {
       console.error('Payment error:', error);
@@ -279,18 +291,33 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>{'<'}</Text>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      {/* Header - extends edge to edge */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <Image source={require('../../../assets/images/iconback.png')} style={styles.headerButtonIcon} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>
-          {isPayUpfront ? 'Complete Purchase' : 'Confirm Claim'}
-        </Text>
-        <View style={styles.headerSpacer} />
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Notifications' as any)}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.headerButtonIcon} />
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>N..</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Settings' as any)}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconsettings.png')} style={styles.headerButtonIcon} />
+          </TouchableOpacity>
+        </View>
       </View>
 
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Offer Summary Card */}
         <View style={styles.offerCard}>
@@ -457,7 +484,8 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
           </TouchableOpacity>
         )}
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -466,38 +494,52 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.grayLight,
   },
+  safeArea: {
+    flex: 1,
+  },
 
   // Header
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.grayLight,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.primary,
   },
-  backButton: {
+  headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
+    backgroundColor: '#203C50',
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: fontSize.lg,
-    color: colors.white,
-    fontWeight: fontWeight.bold,
+  headerRight: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
-  headerTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+  headerButtonIcon: {
+    width: 16,
+    height: 16,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  notificationBadgeText: {
+    fontSize: 10,
+    fontFamily: fontFamily.bodyBold,
     color: colors.primary,
-  },
-  headerSpacer: {
-    width: 40,
   },
 
   scrollView: {
@@ -525,17 +567,19 @@ const styles = StyleSheet.create({
   },
   offerName: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
     marginBottom: spacing.xs,
   },
   offerBusiness: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
     marginBottom: spacing.xs,
   },
   offerLocation: {
     fontSize: fontSize.xs,
+    fontFamily: fontFamily.body,
     color: colors.grayMedium,
   },
 
@@ -550,7 +594,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
     marginBottom: spacing.md,
   },
@@ -562,11 +606,12 @@ const styles = StyleSheet.create({
   },
   bookingLabel: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
   },
   bookingValue: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
     color: colors.primary,
   },
 
@@ -599,7 +644,7 @@ const styles = StyleSheet.create({
   quantityButtonText: {
     fontSize: fontSize.xl,
     color: colors.white,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bodyBold,
   },
   quantityValue: {
     alignItems: 'center',
@@ -607,7 +652,7 @@ const styles = StyleSheet.create({
   },
   quantityNumber: {
     fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
   },
 
@@ -628,12 +673,13 @@ const styles = StyleSheet.create({
   },
   priceLabel: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
     flex: 1,
   },
   priceValue: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
     color: colors.primary,
   },
   priceDivider: {
@@ -643,12 +689,12 @@ const styles = StyleSheet.create({
   },
   totalLabel: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
   },
   totalValue: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
   },
   payOnDayNote: {
@@ -666,6 +712,7 @@ const styles = StyleSheet.create({
   payOnDayText: {
     flex: 1,
     fontSize: fontSize.xs,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
   },
 
@@ -676,11 +723,13 @@ const styles = StyleSheet.create({
   },
   termsText: {
     fontSize: fontSize.xs,
+    fontFamily: fontFamily.body,
     color: colors.grayMedium,
     textAlign: 'center',
   },
   termsLink: {
     color: colors.primary,
+    fontFamily: fontFamily.bodySemiBold,
     textDecorationLine: 'underline',
   },
 
@@ -708,11 +757,12 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bodyBold,
     color: colors.primary,
   },
   actionButtonSubtext: {
     fontSize: fontSize.xs,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
     marginTop: 2,
   },

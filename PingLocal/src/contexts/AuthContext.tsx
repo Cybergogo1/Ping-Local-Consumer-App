@@ -1,7 +1,10 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { User } from '../types/database';
+
+const ONBOARDING_COMPLETE_KEY = 'onboarding_completed';
 
 interface AuthContextType {
   session: Session | null;
@@ -78,8 +81,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) throw error;
-      console.log('Fetched user profile:', { id: data?.id, email: data?.email, onboarding_completed: data?.onboarding_completed });
-      setUser(data);
+
+      // Check local storage for onboarding completion as fallback
+      const localOnboardingKey = `${ONBOARDING_COMPLETE_KEY}_${email}`;
+      const localOnboardingComplete = await AsyncStorage.getItem(localOnboardingKey);
+
+      // Use local storage value if DB says false but local says true
+      // This handles cases where DB update failed but user did complete onboarding
+      const effectiveOnboardingComplete = data?.onboarding_completed || localOnboardingComplete === 'true';
+
+      console.log('Fetched user profile:', {
+        id: data?.id,
+        email: data?.email,
+        db_onboarding_completed: data?.onboarding_completed,
+        local_onboarding_completed: localOnboardingComplete,
+        effective_onboarding_completed: effectiveOnboardingComplete
+      });
+
+      // Set user with effective onboarding status
+      setUser({
+        ...data,
+        onboarding_completed: effectiveOnboardingComplete
+      });
     } catch (error) {
       console.error('Error fetching user profile:', error);
     } finally {
@@ -206,16 +229,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       if (!user) return { error: new Error('No user logged in') };
 
-      console.log('Completing onboarding for user:', user.id);
-      const { error } = await supabase
+      console.log('Completing onboarding for user:', user.id, 'email:', user.email);
+
+      // Save to local storage FIRST as reliable fallback
+      const localOnboardingKey = `${ONBOARDING_COMPLETE_KEY}_${user.email}`;
+      await AsyncStorage.setItem(localOnboardingKey, 'true');
+      console.log('Onboarding saved to local storage');
+
+      // Then try to save to database
+      const { data, error } = await supabase
         .from('users')
         .update({ onboarding_completed: true })
-        .eq('id', user.id);
+        .eq('email', user.email)
+        .select();
 
-      if (error) throw error;
-      console.log('Onboarding marked complete in DB, refreshing user...');
-      await refreshUser();
-      console.log('User refresh complete - state will update on next render');
+      if (error) {
+        console.error('Database update failed (but local storage saved):', error);
+        // Don't throw - local storage will handle persistence
+      } else {
+        console.log('Onboarding marked complete in DB:', data);
+      }
+
+      // Update local state immediately
+      setUser(prev => prev ? { ...prev, onboarding_completed: true } : prev);
+
+      console.log('User state updated - onboarding complete');
       return { error: null };
     } catch (error) {
       console.error('Error completing onboarding:', error);
@@ -230,10 +268,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase
         .from('users')
         .update({ notification_permission_status: status })
-        .eq('id', user.id);
+        .eq('email', user.email);
 
       if (error) throw error;
-      await refreshUser();
+
+      // Update local state immediately
+      setUser(prev => prev ? { ...prev, notification_permission_status: status } : prev);
     } catch (error) {
       console.error('Error updating notification permission:', error);
     }

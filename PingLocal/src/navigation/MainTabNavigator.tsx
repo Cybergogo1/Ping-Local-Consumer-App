@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
 import { MainTabParamList } from '../types/navigation';
 import { colors, spacing, fontSize, fontFamily } from '../theme';
 
@@ -11,6 +12,18 @@ import FavouritesStackNavigator from './FavouritesStackNavigator';
 import AccountStackNavigator from './AccountStackNavigator';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
+
+// Screens where the tab bar should be hidden
+const HIDDEN_TAB_BAR_SCREENS = ['QRCode', 'RedemptionSuccess', 'BillConfirmation'];
+
+// Helper to check if tab bar should be hidden for a route
+const getTabBarVisibility = (route: any) => {
+  const routeName = getFocusedRouteNameFromRoute(route);
+  if (routeName && HIDDEN_TAB_BAR_SCREENS.includes(routeName)) {
+    return 'none';
+  }
+  return 'flex';
+};
 
 // Tab icon images
 const tabIcons = {
@@ -23,6 +36,15 @@ const tabIcons = {
 
 // Custom Tab Bar Component
 function CustomTabBar({ state, descriptors, navigation }: any) {
+  // Check if we should hide the tab bar based on the current route
+  const currentRoute = state.routes[state.index];
+  const { options } = descriptors[currentRoute.key];
+
+  // If tabBarStyle has display: 'none', don't render the tab bar
+  if (options.tabBarStyle?.display === 'none') {
+    return null;
+  }
+
   return (
     <View style={styles.tabBar}>
       {state.routes.map((route: any, index: number) => {
@@ -112,7 +134,13 @@ export default function MainTabNavigator() {
     >
       <Tab.Screen name="Feed" component={HomeStackNavigator} />
       <Tab.Screen name="Favourites" component={FavouritesStackNavigator} />
-      <Tab.Screen name="Claimed" component={ClaimedStackNavigator} />
+      <Tab.Screen
+        name="Claimed"
+        component={ClaimedStackNavigator}
+        options={({ route }) => ({
+          tabBarStyle: { display: getTabBarVisibility(route) },
+        })}
+      />
       <Tab.Screen name="Businesses" component={DirectoryStackNavigator} />
       <Tab.Screen name="Account" component={AccountStackNavigator} />
     </Tab.Navigator>

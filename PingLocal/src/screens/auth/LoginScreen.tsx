@@ -12,14 +12,15 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, spacing, borderRadius, fontSize, fontFamily } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoginScreenProps } from '../../types/navigation';
 import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
   const { signIn } = useAuth();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -60,7 +61,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <SafeAreaView style={styles.safeArea} edges={[]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={styles.keyboardView}
@@ -69,6 +70,14 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
           >
+            {/* Back button */}
+            <TouchableOpacity
+              onPress={() => navigation.goBack()}
+              style={[styles.backButton, { top: insets.top + spacing.sm }]}
+            >
+              <Image source={require('../../../assets/images/iconback.png')} style={styles.backButtonIcon} />
+            </TouchableOpacity>
+
             {/* Header image */}
             <View style={styles.headerImage}>
               <Image
@@ -164,9 +173,27 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
   },
+  backButton: {
+    position: 'absolute',
+    top: spacing.md,
+    left: spacing.lg,
+    zIndex: 10,
+    backgroundColor: '#203C50',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  backButtonIcon: {
+    width: 16,
+    height: 16,
+  },
   headerImage: {
-    height: 224,
+    height: '30%',
     overflow: 'hidden',
+    borderBottomLeftRadius: borderRadius.xl,
+    borderBottomRightRadius: borderRadius.xl,
   },
   backgroundImage: {
     width: '100%',
@@ -179,15 +206,16 @@ const styles = StyleSheet.create({
   },
   headline: {
     fontSize: 30,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.white,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: fontSize.md,
+    fontFamily: fontFamily.bodyMedium,
     color: colors.white,
     textAlign: 'center',
-    marginTop: spacing.sm,
+    marginTop: spacing.xs,
   },
   form: {
     marginTop: spacing.xl,
@@ -196,13 +224,14 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: borderRadius.full,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
   },
   inputMargin: {
     marginTop: spacing.md,
   },
   input: {
     fontSize: fontSize.md,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
   },
   forgotPassword: {
@@ -212,12 +241,14 @@ const styles = StyleSheet.create({
     color: colors.white,
     textAlign: 'center',
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     textDecorationLine: 'underline',
   },
   errorText: {
     color: colors.accent,
     textAlign: 'center',
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     marginTop: spacing.sm,
   },
   loginButton: {
@@ -229,7 +260,7 @@ const styles = StyleSheet.create({
   loginButtonText: {
     color: colors.primary,
     textAlign: 'center',
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodyBold,
     fontSize: fontSize.md,
   },
   signUpContainer: {
@@ -240,10 +271,11 @@ const styles = StyleSheet.create({
   signUpText: {
     color: colors.white,
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
   },
   signUpLink: {
     color: colors.accent,
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodyBold,
   },
 });

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Animated,
+  ImageBackground,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg';
@@ -267,15 +268,21 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.closeButtonText}>×</Text>
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <ImageBackground
+        source={require('../../../assets/images/onboardbg.jpg')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+        <SafeAreaView style={styles.safeArea}>
+          {/* Header */}
+          <View style={styles.header}>
+            <TouchableOpacity style={styles.closeButton} onPress={() => navigation.goBack()}>
+              <Text style={styles.closeButtonText}>×</Text>
+            </TouchableOpacity>
+          </View>
 
-      <View style={styles.content}>
+          <View style={styles.content}>
         {/* Instructions */}
         <View style={styles.instructionsContainer}>
           <Text style={styles.instructionsTitle}>Here's your QR Code!</Text>
@@ -316,15 +323,17 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
           {/* Note: party_size and slot details would need to be fetched separately or stored on purchase_token */}
         </View>
 
-        {/* Help Text */}
-        <View style={styles.helpContainer}>
-          <Text style={styles.helpIcon}>ℹ️</Text>
-          <Text style={styles.helpText}>
-            Keep this screen visible until staff confirm your redemption. The screen will automatically update when complete.
-          </Text>
-        </View>
-      </View>
-    </SafeAreaView>
+          {/* Help Text */}
+          <View style={styles.helpContainer}>
+            <Text style={styles.helpIcon}>ℹ️</Text>
+            <Text style={styles.helpText}>
+              Keep this screen visible until staff confirm your redemption. The screen will automatically update when complete.
+            </Text>
+          </View>
+          </View>
+        </SafeAreaView>
+      </ImageBackground>
+    </View>
   );
 }
 
@@ -332,6 +341,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.primary,
+  },
+  backgroundImage: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
@@ -343,15 +358,14 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   closeButtonText: {
-    fontSize: 28,
-    color: colors.white,
+    fontSize: 35,
+    color: colors.primary,
     fontFamily: fontFamily.body,
-    marginTop: -2,
   },
   content: {
     flex: 1,

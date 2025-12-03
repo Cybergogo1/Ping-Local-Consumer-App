@@ -4,6 +4,7 @@ import {
   Text,
   TouchableOpacity,
   Image,
+  ImageBackground,
   SafeAreaView,
   StatusBar,
   Dimensions,
@@ -13,7 +14,8 @@ import {
   StyleSheet,
 } from 'react-native';
 import { useNavigation, CommonActions } from '@react-navigation/native';
-import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import * as Notifications from 'expo-notifications';
+import { colors, spacing, borderRadius, fontSize, fontFamily } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
@@ -61,11 +63,7 @@ export default function OnboardingScreen() {
   const flatListRef = useRef<FlatList>(null);
 
   const requestNotificationPermission = async () => {
-    // Notifications are not supported in Expo Go (SDK 53+)
-    // This will work properly in a development build
     try {
-      const Notifications = await import('expo-notifications');
-
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
           name: 'default',
@@ -181,8 +179,13 @@ export default function OnboardingScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.carouselContainer}>
+      <ImageBackground
+        source={require('../../../assets/images/onboardbg.jpg')}
+        style={styles.backgroundImage}
+        resizeMode="cover"
+      >
+        <SafeAreaView style={styles.safeArea}>
+          <View style={styles.carouselContainer}>
           <FlatList
             ref={flatListRef}
             data={slides}
@@ -220,7 +223,7 @@ export default function OnboardingScreen() {
                 onPress={handleBack}
                 style={styles.backButton}
               >
-                <Text style={styles.backButtonText}>←</Text>
+                <Image source={require('../../../assets/images/iconback.png')} style={styles.backButtonIcon} />
               </TouchableOpacity>
             ) : (
               <View style={styles.spacer} />
@@ -235,12 +238,10 @@ export default function OnboardingScreen() {
                 {currentIndex === slides.length - 1 ? 'Get Started' : 'Next'}
               </Text>
             </TouchableOpacity>
-
-            {/* Spacer for alignment */}
-            <View style={styles.spacer} />
           </View>
         </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </ImageBackground>
     </View>
   );
 }
@@ -249,6 +250,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.primary,
+  },
+  backgroundImage: {
+    flex: 1,
   },
   safeArea: {
     flex: 1,
@@ -266,25 +270,27 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxl,
   },
   slideImage: {
-    width: 256,
-    height: 256,
+    width: 300,
+    height: 300,
   },
   slideTitle: {
-    fontSize: 30,
-    fontWeight: fontWeight.bold,
+    fontSize: 45,
+    fontFamily: fontFamily.headingBold,
     color: colors.accent,
     textAlign: 'center',
     marginBottom: spacing.md,
   },
   slideDescription: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.lg,
+    fontFamily: fontFamily.bodyMedium,
     color: colors.white,
     textAlign: 'center',
-    lineHeight: 24,
+    lineHeight: 30,
   },
   slideSecondaryText: {
     fontSize: fontSize.sm,
-    color: colors.grayMedium,
+    fontFamily: fontFamily.body,
+    color: colors.accent,
     textAlign: 'center',
     marginTop: spacing.md,
   },
@@ -315,19 +321,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   backButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    backgroundColor: '#203C50',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backButtonText: {
-    color: colors.white,
-    fontSize: fontSize.xl,
+  backButtonIcon: {
+    width: 16,
+    height: 16,
   },
   spacer: {
-    width: 48,
+    width: 40,
   },
   nextButton: {
     backgroundColor: colors.accent,
@@ -337,7 +343,7 @@ const styles = StyleSheet.create({
   },
   nextButtonText: {
     color: colors.primary,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodyBold,
     fontSize: fontSize.md,
   },
 });

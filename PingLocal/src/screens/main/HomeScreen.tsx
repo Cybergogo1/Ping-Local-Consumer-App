@@ -73,8 +73,13 @@ export default function HomeScreen() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>('newest');
+
+  // Available filters (dynamic based on current selections)
+  const [availableLocations, setAvailableLocations] = useState<string[]>([]);
+  const [availableCategories, setAvailableCategories] = useState<Tag[]>([]);
+  const [availableTags, setAvailableTags] = useState<Tag[]>([]);
 
   // Modal states
   const [showLocationModal, setShowLocationModal] = useState(false);
@@ -89,14 +94,25 @@ export default function HomeScreen() {
   // Fetch location areas and categories on mount
   useEffect(() => {
     fetchFilters();
+    // Also fetch initial available filters (all available)
+    fetchAvailableLocations();
+    fetchAvailableCategories();
+    fetchAvailableTags();
   }, []);
+
+  // Fetch available filters when selections change
+  useEffect(() => {
+    fetchAvailableLocations();
+    fetchAvailableCategories();
+    fetchAvailableTags();
+  }, [selectedLocation, selectedCategory, selectedTags]);
 
   // Fetch offers when filters change
   useEffect(() => {
     setPage(0);
     setHasMore(true);
     fetchOffers(0, true);
-  }, [selectedLocation, selectedCategory, selectedTag, sortBy, userLocation]);
+  }, [selectedLocation, selectedCategory, selectedTags, sortBy, userLocation]);
 
   const fetchFilters = async () => {
     try {
@@ -136,6 +152,198 @@ export default function HomeScreen() {
     }
   };
 
+  // Fetch available locations based on current category/tags selections
+  const fetchAvailableLocations = async () => {
+    try {
+      let query = supabase
+        .from('offers')
+        .select('*, businesses!inner(location_area), offer_tags(tags(id, name, type))')
+        .eq('status', 'Signed Off')
+        .gte('end_date', new Date().toISOString());
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      if (data) {
+        // Filter client-side to only include offers matching category AND all selected tags
+        const filteredOffers = data.filter((offer: any) => {
+          let includeOffer = true;
+
+          // Check category filter
+          if (selectedCategory && offer.offer_tags) {
+            const offerTagsArray = Array.isArray(offer.offer_tags) ? offer.offer_tags : [offer.offer_tags];
+            const hasCategory = offerTagsArray.some((ot: any) =>
+              ot.tags?.name === selectedCategory && ot.tags?.type === 'Category'
+            );
+            if (!hasCategory) includeOffer = false;
+          }
+
+          // Check all selected tags (AND logic)
+          if (selectedTags.length > 0 && offer.offer_tags) {
+            const offerTagsArray = Array.isArray(offer.offer_tags) ? offer.offer_tags : [offer.offer_tags];
+            const offerTagNames = offerTagsArray
+              .filter((ot: any) => ot.tags?.type === 'tags')
+              .map((ot: any) => ot.tags?.name);
+
+            const hasAllTags = selectedTags.every(selectedTag =>
+              offerTagNames.includes(selectedTag)
+            );
+            if (!hasAllTags) includeOffer = false;
+          }
+
+          return includeOffer;
+        });
+
+        // Extract unique location areas from filtered offers
+        const locationSet = new Set<string>();
+        filteredOffers.forEach((offer: any) => {
+          if (offer.businesses?.location_area) {
+            locationSet.add(offer.businesses.location_area);
+          }
+        });
+
+        const uniqueLocations = Array.from(locationSet).sort();
+        setAvailableLocations(uniqueLocations);
+      }
+    } catch (error) {
+      console.error('Error fetching available locations:', error);
+    }
+  };
+
+  // Fetch available categories based on current location/tags selections
+  const fetchAvailableCategories = async () => {
+    try {
+      let query = supabase
+        .from('offers')
+        .select('*, businesses!inner(location_area), offer_tags(tags(id, name, type))')
+        .eq('status', 'Signed Off')
+        .gte('end_date', new Date().toISOString());
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      if (data) {
+        // Filter client-side to only include offers matching location AND all selected tags
+        const filteredOffers = data.filter((offer: any) => {
+          let includeOffer = true;
+
+          // Check location filter
+          if (selectedLocation && offer.businesses?.location_area !== selectedLocation) {
+            includeOffer = false;
+          }
+
+          // Check all selected tags (AND logic)
+          if (selectedTags.length > 0 && offer.offer_tags) {
+            const offerTagsArray = Array.isArray(offer.offer_tags) ? offer.offer_tags : [offer.offer_tags];
+            const offerTagNames = offerTagsArray
+              .filter((ot: any) => ot.tags?.type === 'tags')
+              .map((ot: any) => ot.tags?.name);
+
+            const hasAllTags = selectedTags.every(selectedTag =>
+              offerTagNames.includes(selectedTag)
+            );
+            if (!hasAllTags) includeOffer = false;
+          }
+
+          return includeOffer;
+        });
+
+        // Extract unique categories from filtered offers
+        const categoryMap = new Map<number, Tag>();
+        filteredOffers.forEach((offer: any) => {
+          if (offer.offer_tags) {
+            const offerTagsArray = Array.isArray(offer.offer_tags) ? offer.offer_tags : [offer.offer_tags];
+            offerTagsArray.forEach((ot: any) => {
+              if (ot.tags && ot.tags.type === 'Category') {
+                categoryMap.set(ot.tags.id, ot.tags);
+              }
+            });
+          }
+        });
+
+        const uniqueCategories = Array.from(categoryMap.values()).sort((a, b) =>
+          a.name.localeCompare(b.name)
+        );
+        setAvailableCategories(uniqueCategories);
+      }
+    } catch (error) {
+      console.error('Error fetching available categories:', error);
+    }
+  };
+
+  // Fetch available tags based on current location/category/selectedTags
+  const fetchAvailableTags = async () => {
+    try {
+      let query = supabase
+        .from('offers')
+        .select('*, businesses!inner(location_area), offer_tags(tags(id, name, type))')
+        .eq('status', 'Signed Off')
+        .gte('end_date', new Date().toISOString());
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      if (data) {
+        // Filter client-side to only include offers matching location, category AND all currently selected tags
+        const filteredOffers = data.filter((offer: any) => {
+          let includeOffer = true;
+
+          // Check location filter
+          if (selectedLocation && offer.businesses?.location_area !== selectedLocation) {
+            includeOffer = false;
+          }
+
+          // Check category filter
+          if (selectedCategory && offer.offer_tags) {
+            const offerTagsArray = Array.isArray(offer.offer_tags) ? offer.offer_tags : [offer.offer_tags];
+            const hasCategory = offerTagsArray.some((ot: any) =>
+              ot.tags?.name === selectedCategory && ot.tags?.type === 'Category'
+            );
+            if (!hasCategory) includeOffer = false;
+          }
+
+          // Check all currently selected tags (AND logic)
+          if (selectedTags.length > 0 && offer.offer_tags) {
+            const offerTagsArray = Array.isArray(offer.offer_tags) ? offer.offer_tags : [offer.offer_tags];
+            const offerTagNames = offerTagsArray
+              .filter((ot: any) => ot.tags?.type === 'tags')
+              .map((ot: any) => ot.tags?.name);
+
+            const hasAllTags = selectedTags.every(selectedTag =>
+              offerTagNames.includes(selectedTag)
+            );
+            if (!hasAllTags) includeOffer = false;
+          }
+
+          return includeOffer;
+        });
+
+        // Extract unique tags from filtered offers (these are tags available to add to the filter)
+        const tagMap = new Map<number, Tag>();
+        filteredOffers.forEach((offer: any) => {
+          if (offer.offer_tags) {
+            const offerTagsArray = Array.isArray(offer.offer_tags) ? offer.offer_tags : [offer.offer_tags];
+            offerTagsArray.forEach((ot: any) => {
+              if (ot.tags && ot.tags.type === 'tags') {
+                tagMap.set(ot.tags.id, ot.tags);
+              }
+            });
+          }
+        });
+
+        const uniqueTags = Array.from(tagMap.values()).sort((a, b) =>
+          a.name.localeCompare(b.name)
+        );
+        setAvailableTags(uniqueTags);
+      }
+    } catch (error) {
+      console.error('Error fetching available tags:', error);
+    }
+  };
+
   const fetchOffers = async (pageNum: number, isInitial: boolean = false) => {
     // Only show full-screen loading on first ever load (no existing data)
     if (isInitial && offers.length === 0) {
@@ -148,9 +356,9 @@ export default function HomeScreen() {
       // Build the select query with joins for filtering
       let selectQuery = '*, businesses!inner(location_area)';
 
-      // If filtering by category or tag, we need to join with offer_tags and tags
-      if (selectedCategory || selectedTag) {
-        selectQuery = '*, businesses!inner(location_area), offer_tags!inner(tag_id, tags!inner(name, type))';
+      // If filtering by category or tags, we need to join with offer_tags and tags
+      if (selectedCategory || selectedTags.length > 0) {
+        selectQuery = '*, businesses!inner(location_area), offer_tags(tag_id, tags(id, name, type))';
       }
 
       let query = supabase
@@ -164,15 +372,8 @@ export default function HomeScreen() {
         query = query.eq('businesses.location_area', selectedLocation);
       }
 
-      // Apply category filter using the junction table
-      if (selectedCategory) {
-        query = query.eq('offer_tags.tags.name', selectedCategory).eq('offer_tags.tags.type', 'Category');
-      }
-
-      // Apply tag filter using the junction table
-      if (selectedTag) {
-        query = query.eq('offer_tags.tags.name', selectedTag).eq('offer_tags.tags.type', 'tags');
-      }
+      // For category and tags, we'll fetch all candidates and filter client-side for AND logic
+      // This is because Supabase doesn't easily support "offers with ALL of these tags"
 
       // Apply sorting (for non-proximity sorts)
       if (sortBy !== 'proximity') {
@@ -209,7 +410,35 @@ export default function HomeScreen() {
               ...offerData,
               location_area: businesses?.location_area || offerData.location_area,
             } as Offer;
-            acc.push(offerWithLocation);
+
+            // Apply client-side filtering for category and tags (AND logic)
+            let includeOffer = true;
+
+            // Check if offer has the selected category (if any)
+            if (selectedCategory && curr.offer_tags) {
+              const offerTagsArray = Array.isArray(curr.offer_tags) ? curr.offer_tags : [curr.offer_tags];
+              const hasCategory = offerTagsArray.some((ot: any) =>
+                ot.tags?.name === selectedCategory && ot.tags?.type === 'Category'
+              );
+              if (!hasCategory) includeOffer = false;
+            }
+
+            // Check if offer has ALL selected tags (if any)
+            if (selectedTags.length > 0 && curr.offer_tags) {
+              const offerTagsArray = Array.isArray(curr.offer_tags) ? curr.offer_tags : [curr.offer_tags];
+              const offerTagNames = offerTagsArray
+                .filter((ot: any) => ot.tags?.type === 'tags')
+                .map((ot: any) => ot.tags?.name);
+
+              const hasAllTags = selectedTags.every(selectedTag =>
+                offerTagNames.includes(selectedTag)
+              );
+              if (!hasAllTags) includeOffer = false;
+            }
+
+            if (includeOffer) {
+              acc.push(offerWithLocation);
+            }
           }
           return acc;
         }, []);
@@ -268,7 +497,7 @@ export default function HomeScreen() {
     setPage(0);
     await fetchOffers(0, true);
     setIsRefreshing(false);
-  }, [selectedLocation, selectedCategory, selectedTag, sortBy, userLocation]);
+  }, [selectedLocation, selectedCategory, selectedTags, sortBy, userLocation]);
 
   const handleLoadMore = () => {
     if (!isLoadingMore && hasMore) {
@@ -376,11 +605,52 @@ export default function HomeScreen() {
   // Clear all filters
   const clearAllFilters = () => {
     setSelectedCategory(null);
-    setSelectedTag(null);
+    setSelectedTags([]);
+  };
+
+  // Handle tag selection (multi-select)
+  const handleTagToggle = (tagName: string) => {
+    setSelectedTags(prev => {
+      if (prev.includes(tagName)) {
+        // Remove tag from selection
+        return prev.filter(t => t !== tagName);
+      } else {
+        // Add tag to selection
+        return [...prev, tagName];
+      }
+    });
+  };
+
+  // Determine pill state for a tag
+  const getTagPillState = (tagName: string): 'active' | 'available' | 'inactive' => {
+    // If tag is selected, it's active
+    if (selectedTags.includes(tagName)) {
+      return 'active';
+    }
+    // If tag is in availableTags, it's available (can be selected)
+    if (availableTags.some(t => t.name === tagName)) {
+      return 'available';
+    }
+    // Otherwise it's inactive (would produce 0 results)
+    return 'inactive';
+  };
+
+  // Determine pill state for a category
+  const getCategoryPillState = (categoryName: string): 'active' | 'available' | 'inactive' => {
+    // If category is selected, it's active
+    if (selectedCategory === categoryName) {
+      return 'active';
+    }
+    // If category is in availableCategories, it's available
+    if (availableCategories.some(c => c.name === categoryName)) {
+      return 'available';
+    }
+    // Otherwise it's inactive
+    return 'inactive';
   };
 
   // Calculate active filter count
-  const activeFilterCount = (selectedCategory ? 1 : 0) + (selectedTag ? 1 : 0);
+  const activeFilterCount = (selectedCategory ? 1 : 0) + selectedTags.length;
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
@@ -607,27 +877,29 @@ export default function HomeScreen() {
                   )}
                 </TouchableOpacity>
 
-                {/* Location Areas */}
-                {locationAreas.map((area) => (
-                  <TouchableOpacity
-                    key={area.id}
-                    style={[
-                      styles.modalItem,
-                      selectedLocation === area.name && styles.modalItemActive,
-                    ]}
-                    onPress={() => handleLocationSelect(area.name)}
-                  >
-                    <Text style={[
-                      styles.modalItemText,
-                      selectedLocation === area.name && styles.modalItemTextActive,
-                    ]}>
-                      {area.name}
-                    </Text>
-                    {selectedLocation === area.name && (
-                      <Ionicons name="checkmark" size={20} color={colors.primary} />
-                    )}
-                  </TouchableOpacity>
-                ))}
+                {/* Location Areas - Only show available locations */}
+                {locationAreas
+                  .filter((area) => availableLocations.includes(area.name))
+                  .map((area) => (
+                    <TouchableOpacity
+                      key={area.id}
+                      style={[
+                        styles.modalItem,
+                        selectedLocation === area.name && styles.modalItemActive,
+                      ]}
+                      onPress={() => handleLocationSelect(area.name)}
+                    >
+                      <Text style={[
+                        styles.modalItemText,
+                        selectedLocation === area.name && styles.modalItemTextActive,
+                      ]}>
+                        {area.name}
+                      </Text>
+                      {selectedLocation === area.name && (
+                        <Ionicons name="checkmark" size={20} color={colors.primary} />
+                      )}
+                    </TouchableOpacity>
+                  ))}
               </ScrollView>
             </SafeAreaView>
           </Animated.View>
@@ -663,87 +935,95 @@ export default function HomeScreen() {
               <ScrollView style={styles.modalContent}>
                 {/* Categories Section */}
                 <Text style={styles.filterSectionTitle}>Categories</Text>
-                <TouchableOpacity
-                  style={[
-                    styles.modalItem,
-                    !selectedCategory && styles.modalItemActive,
-                  ]}
-                  onPress={() => setSelectedCategory(null)}
-                >
-                  <Text style={[
-                    styles.modalItemText,
-                    !selectedCategory && styles.modalItemTextActive,
-                  ]}>
-                    All Categories
-                  </Text>
-                  {!selectedCategory && (
-                    <Ionicons name="checkmark" size={20} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-                {categories.map((cat) => (
+                <View style={styles.pillsContainer}>
+                  {/* All Categories pill */}
                   <TouchableOpacity
-                    key={cat.id}
                     style={[
-                      styles.modalItem,
-                      selectedCategory === cat.name && styles.modalItemActive,
+                      styles.pill,
+                      !selectedCategory ? styles.pillActive : styles.pillAvailable,
                     ]}
-                    onPress={() => setSelectedCategory(
-                      selectedCategory === cat.name ? null : cat.name
-                    )}
+                    onPress={() => setSelectedCategory(null)}
                   >
                     <Text style={[
-                      styles.modalItemText,
-                      selectedCategory === cat.name && styles.modalItemTextActive,
+                      styles.pillText,
+                      !selectedCategory ? styles.pillTextActive : styles.pillTextAvailable,
                     ]}>
-                      {cat.name}
+                      All
                     </Text>
-                    {selectedCategory === cat.name && (
-                      <Ionicons name="checkmark" size={20} color={colors.primary} />
-                    )}
                   </TouchableOpacity>
-                ))}
+
+                  {/* Category pills - show all categories */}
+                  {categories.map((cat) => {
+                    const pillState = getCategoryPillState(cat.name);
+                    const isActive = pillState === 'active';
+                    const isInactive = pillState === 'inactive';
+
+                    return (
+                      <TouchableOpacity
+                        key={cat.id}
+                        style={[
+                          styles.pill,
+                          isActive && styles.pillActive,
+                          !isActive && !isInactive && styles.pillAvailable,
+                          isInactive && styles.pillInactive,
+                        ]}
+                        onPress={() => {
+                          if (!isInactive) {
+                            setSelectedCategory(isActive ? null : cat.name);
+                          }
+                        }}
+                        disabled={isInactive}
+                      >
+                        <Text style={[
+                          styles.pillText,
+                          isActive && styles.pillTextActive,
+                          !isActive && !isInactive && styles.pillTextAvailable,
+                          isInactive && styles.pillTextInactive,
+                        ]}>
+                          {cat.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
 
                 {/* Tags Section */}
                 <Text style={[styles.filterSectionTitle, { marginTop: spacing.lg }]}>Tags</Text>
-                <TouchableOpacity
-                  style={[
-                    styles.modalItem,
-                    !selectedTag && styles.modalItemActive,
-                  ]}
-                  onPress={() => setSelectedTag(null)}
-                >
-                  <Text style={[
-                    styles.modalItemText,
-                    !selectedTag && styles.modalItemTextActive,
-                  ]}>
-                    All Tags
-                  </Text>
-                  {!selectedTag && (
-                    <Ionicons name="checkmark" size={20} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-                {tags.map((tag) => (
-                  <TouchableOpacity
-                    key={tag.id}
-                    style={[
-                      styles.modalItem,
-                      selectedTag === tag.name && styles.modalItemActive,
-                    ]}
-                    onPress={() => setSelectedTag(
-                      selectedTag === tag.name ? null : tag.name
-                    )}
-                  >
-                    <Text style={[
-                      styles.modalItemText,
-                      selectedTag === tag.name && styles.modalItemTextActive,
-                    ]}>
-                      {tag.name}
-                    </Text>
-                    {selectedTag === tag.name && (
-                      <Ionicons name="checkmark" size={20} color={colors.primary} />
-                    )}
-                  </TouchableOpacity>
-                ))}
+                <View style={styles.pillsContainer}>
+                  {/* Tag pills - show all tags, multi-select */}
+                  {tags.map((tag) => {
+                    const pillState = getTagPillState(tag.name);
+                    const isActive = pillState === 'active';
+                    const isInactive = pillState === 'inactive';
+
+                    return (
+                      <TouchableOpacity
+                        key={tag.id}
+                        style={[
+                          styles.pill,
+                          isActive && styles.pillActive,
+                          !isActive && !isInactive && styles.pillAvailable,
+                          isInactive && styles.pillInactive,
+                        ]}
+                        onPress={() => {
+                          if (!isInactive) {
+                            handleTagToggle(tag.name);
+                          }
+                        }}
+                        disabled={isInactive}
+                      >
+                        <Text style={[
+                          styles.pillText,
+                          isActive && styles.pillTextActive,
+                          !isActive && !isInactive && styles.pillTextAvailable,
+                          isInactive && styles.pillTextInactive,
+                        ]}>
+                          {tag.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
               </ScrollView>
 
               {/* Clear All Button */}
@@ -1065,5 +1345,43 @@ const styles = StyleSheet.create({
   footerLoader: {
     paddingVertical: spacing.lg,
     alignItems: 'center',
+  },
+  // Pill/Chip styles for category and tag filters
+  pillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  pill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pillAvailable: {
+    backgroundColor: colors.primaryLight,
+  },
+  pillActive: {
+    backgroundColor: colors.accent,
+  },
+  pillInactive: {
+    backgroundColor: colors.primaryLight,
+    opacity: 0.4,
+  },
+  pillText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodySemiBold,
+  },
+  pillTextAvailable: {
+    color: colors.white,
+  },
+  pillTextActive: {
+    color: colors.primary,
+  },
+  pillTextInactive: {
+    color: colors.white,
   },
 });

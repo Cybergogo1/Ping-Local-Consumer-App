@@ -48,6 +48,16 @@ export type HomeStackParamList = {
     purchaseTokenId: number;
     offerName: string;
     businessName: string;
+    pointsEarned?: number;
+    previousTier?: string;
+    newTier?: string;
+    totalPoints?: number;
+  };
+  LevelUp: {
+    previousTier: string;
+    newTier: string;
+    pointsEarned: number;
+    totalPoints: number;
   };
 };
 
@@ -69,6 +79,16 @@ export type DirectoryStackParamList = {
     purchaseTokenId: number;
     offerName: string;
     businessName: string;
+    pointsEarned?: number;
+    previousTier?: string;
+    newTier?: string;
+    totalPoints?: number;
+  };
+  LevelUp: {
+    previousTier: string;
+    newTier: string;
+    pointsEarned: number;
+    totalPoints: number;
   };
 };
 
@@ -119,6 +139,16 @@ export type FavouritesStackParamList = {
     purchaseTokenId: number;
     offerName: string;
     businessName: string;
+    pointsEarned?: number;
+    previousTier?: string;
+    newTier?: string;
+    totalPoints?: number;
+  };
+  LevelUp: {
+    previousTier: string;
+    newTier: string;
+    pointsEarned: number;
+    totalPoints: number;
   };
 };
 

@@ -8,9 +8,10 @@ import {
   Linking,
   Alert,
   Image,
+  StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, spacing, borderRadius, fontSize, fontFamily, shadows } from '../../theme';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { HomeStackParamList } from '../../types/navigation';
@@ -24,6 +25,7 @@ type ExternalBookingScreenProps = {
 
 export default function ExternalBookingScreen({ navigation, route }: ExternalBookingScreenProps) {
   const { offerId, offer } = route.params;
+  const insets = useSafeAreaInsets();
 
   const [partySize, setPartySize] = useState(1);
   const [hasBooked, setHasBooked] = useState(false);
@@ -86,16 +88,33 @@ export default function ExternalBookingScreen({ navigation, route }: ExternalBoo
   const businessName = offer.business_name || offer.businesses?.name || 'the business';
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>{'<'}</Text>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      {/* Header - extends edge to edge */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <Image source={require('../../../assets/images/iconback.png')} style={styles.headerButtonIcon} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Book Your Slot</Text>
-        <View style={styles.headerSpacer} />
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Notifications' as any)}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.headerButtonIcon} />
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>N..</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Settings' as any)}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconsettings.png')} style={styles.headerButtonIcon} />
+          </TouchableOpacity>
+        </View>
       </View>
 
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Offer Card */}
         <View style={styles.offerCard}>
@@ -220,46 +239,62 @@ export default function ExternalBookingScreen({ navigation, route }: ExternalBoo
           </Text>
         )}
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.white,
+    backgroundColor: colors.grayLight,
+  },
+  safeArea: {
+    flex: 1,
   },
 
   // Header
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.grayLight,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.primary,
   },
-  backButton: {
+  headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
+    backgroundColor: '#203C50',
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: fontSize.lg,
-    color: colors.white,
-    fontWeight: fontWeight.bold,
+  headerRight: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
-  headerTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+  headerButtonIcon: {
+    width: 16,
+    height: 16,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  notificationBadgeText: {
+    fontSize: 10,
+    fontFamily: fontFamily.bodyBold,
     color: colors.primary,
-  },
-  headerSpacer: {
-    width: 40,
   },
 
   scrollView: {
@@ -286,18 +321,19 @@ const styles = StyleSheet.create({
   },
   offerName: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
     marginBottom: spacing.xs,
   },
   offerBusiness: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
     marginBottom: spacing.xs,
   },
   offerPrice: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
     color: colors.primary,
   },
 
@@ -306,8 +342,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: spacing.lg,
     marginHorizontal: spacing.md,
-    backgroundColor: colors.accent,
+    backgroundColor: colors.white,
     borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#eee',
   },
   instructionsIcon: {
     fontSize: 48,
@@ -315,12 +353,13 @@ const styles = StyleSheet.create({
   },
   instructionsTitle: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
     marginBottom: spacing.sm,
   },
   instructionsText: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
     textAlign: 'center',
     lineHeight: fontSize.sm * 1.5,
@@ -348,11 +387,12 @@ const styles = StyleSheet.create({
   },
   bookingButtonText: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bodyBold,
     color: colors.white,
   },
   phoneNumber: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.grayMedium,
     marginTop: spacing.md,
   },
@@ -364,7 +404,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
     marginBottom: spacing.md,
     textAlign: 'center',
@@ -389,7 +429,7 @@ const styles = StyleSheet.create({
   partySizeButtonText: {
     fontSize: fontSize.xl,
     color: colors.white,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bodyBold,
   },
   partySizeValue: {
     alignItems: 'center',
@@ -397,11 +437,12 @@ const styles = StyleSheet.create({
   },
   partySizeNumber: {
     fontSize: fontSize.xxxl,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
   },
   partySizeLabel: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.grayMedium,
   },
 
@@ -430,11 +471,12 @@ const styles = StyleSheet.create({
   },
   checkmark: {
     color: colors.white,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bodyBold,
   },
   confirmationText: {
     flex: 1,
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
   },
 
@@ -461,7 +503,7 @@ const styles = StyleSheet.create({
   },
   continueButtonText: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bodyBold,
     color: colors.primary,
   },
   continueButtonTextDisabled: {
@@ -469,6 +511,7 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: fontSize.xs,
+    fontFamily: fontFamily.body,
     color: colors.grayMedium,
     textAlign: 'center',
     marginTop: spacing.sm,

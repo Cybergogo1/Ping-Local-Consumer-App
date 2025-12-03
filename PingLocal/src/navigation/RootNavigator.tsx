@@ -21,8 +21,8 @@ export default function RootNavigator() {
     );
   }
 
-  const isEmailVerified = supabaseUser?.email_confirmed_at !== null;
-  const isOnboardingComplete = user?.onboarding_completed ?? false;
+  const isEmailVerified = Boolean(supabaseUser?.email_confirmed_at);
+  const isOnboardingComplete = user?.onboarding_completed === true;
 
   console.log('RootNavigator state:', {
     hasSession: !!session,

@@ -9,7 +9,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, fontWeight, fontFamily } from '../../theme';
 import { WelcomeScreenProps } from '../../types/navigation';
 
 export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
@@ -17,11 +17,12 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       <ImageBackground
-        source={require('../../../assets/images/wirralbg.png')}
+        source={require('../../../assets/images/welcomescreen_background.jpg')}
         style={styles.backgroundImage}
         resizeMode="cover"
       >
-        <SafeAreaView style={styles.safeArea} edges={['top']}>
+        {/* Blob decoration - bottom layer, outside safe area */}
+        <SafeAreaView style={styles.safeArea} edges={[]}>
           <View style={styles.content}>
             {/* Top section with illustration */}
             <View style={styles.illustrationContainer}>
@@ -75,6 +76,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.primary,
+    position: 'relative',
   },
   backgroundImage: {
     flex: 1,
@@ -84,7 +86,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.xl,
   },
@@ -93,31 +95,33 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   illustration: {
-    width: 256,
-    height: 256,
+    width: '100%',
+    height: 280,
+    marginBottom: spacing.lg,
   },
   logoSection: {
     alignItems: 'center',
-    marginTop: -spacing.xl,
   },
   logo: {
-    width: 160,
-    height: 64,
+    width: 180,
+    height: 80,
   },
   headline: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
+    fontSize: 32,
+    fontFamily: fontFamily.headingBold,
     color: colors.white,
     textAlign: 'center',
     marginTop: spacing.lg,
   },
   tagline: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.lg,
+    fontFamily: fontFamily.bodyMedium,
     color: colors.white,
     marginTop: spacing.sm,
   },
   buttonContainer: {
     width: '100%',
+    marginTop: spacing.xxl,
   },
   loginButton: {
     backgroundColor: colors.accent,
@@ -128,18 +132,20 @@ const styles = StyleSheet.create({
     color: colors.primary,
     textAlign: 'center',
     fontWeight: fontWeight.semibold,
-    fontSize: fontSize.md,
+    fontSize: fontSize.lg,
+    fontFamily: fontFamily.bodyBold,
   },
   registerButton: {
     backgroundColor: colors.primaryLight,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.full,
-    marginTop: spacing.sm,
+    marginTop: spacing.md,
   },
   registerButtonText: {
     color: colors.white,
     textAlign: 'center',
     fontWeight: fontWeight.semibold,
-    fontSize: fontSize.md,
+    fontSize: fontSize.lg,
+    fontFamily: fontFamily.bodyBold,
   },
 });

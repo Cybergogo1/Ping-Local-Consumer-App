@@ -106,58 +106,6 @@ export default function VerificationScreen({ navigation, route }: VerificationSc
             <Text style={styles.bodyText}>
               We've sent a verification link to "{email}". Click the link in your email to verify your account.
             </Text>
-            <Text style={styles.smallText}>
-              Alternatively, you can enter the 6-digit code from the email below:
-            </Text>
-          </View>
-
-          {/* Verification code input */}
-          <View style={styles.formContainer}>
-            <View style={styles.inputContainer}>
-              <TextInput
-                placeholder="Enter Verification Code"
-                placeholderTextColor={colors.grayMedium}
-                value={code}
-                onChangeText={setCode}
-                keyboardType="number-pad"
-                maxLength={6}
-                style={styles.input}
-              />
-            </View>
-
-            {/* Error message */}
-            {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-            {/* Verify button */}
-            <TouchableOpacity
-              onPress={handleVerify}
-              disabled={isLoading}
-              style={styles.verifyButton}
-            >
-              {isLoading ? (
-                <ActivityIndicator color={colors.primary} />
-              ) : (
-                <Text style={styles.verifyButtonText}>Type in valid code</Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Resend link */}
-            <TouchableOpacity
-              onPress={handleResend}
-              disabled={isResending}
-              style={styles.resendButton}
-            >
-              {isResending ? (
-                <ActivityIndicator color={colors.accent} />
-              ) : (
-                <Text style={styles.resendText}>
-                  Don't have a code? Send a new one
-                </Text>
-              )}
-            </TouchableOpacity>
-
-            {/* Success message */}
-            {message ? <Text style={styles.messageText}>{message}</Text> : null}
           </View>
         </KeyboardAvoidingView>
       </SafeAreaView>

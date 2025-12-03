@@ -11,6 +11,7 @@ import SlotBookingScreen from '../screens/claim/SlotBookingScreen';
 import ExternalBookingScreen from '../screens/claim/ExternalBookingScreen';
 import ClaimScreen from '../screens/claim/ClaimScreen';
 import ClaimSuccessScreen from '../screens/claim/ClaimSuccessScreen';
+import LevelUpScreen from '../screens/claim/LevelUpScreen';
 
 const Stack = createStackNavigator<DirectoryStackParamList>();
 
@@ -29,6 +30,7 @@ export default function DirectoryStackNavigator() {
       <Stack.Screen name="ExternalBooking" component={ExternalBookingScreen} />
       <Stack.Screen name="Claim" component={ClaimScreen} />
       <Stack.Screen name="ClaimSuccess" component={ClaimSuccessScreen} />
+      <Stack.Screen name="LevelUp" component={LevelUpScreen} />
     </Stack.Navigator>
   );
 }

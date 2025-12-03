@@ -13,7 +13,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, fontWeight, fontFamily } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { SignUpScreenProps } from '../../types/navigation';
 
@@ -73,7 +73,7 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
               onPress={() => navigation.goBack()}
               style={styles.backButton}
             >
-              <Text style={styles.backButtonText}>←</Text>
+              <Image source={require('../../../assets/images/iconback.png')} style={styles.backButtonIcon} />
             </TouchableOpacity>
 
             {/* Illustration */}
@@ -164,12 +164,6 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
                   )}
                 </TouchableOpacity>
 
-                {/* Business link */}
-                <TouchableOpacity style={styles.businessLink}>
-                  <Text style={styles.businessLinkText}>
-                    → Apply to join as a Ping Local Business
-                  </Text>
-                </TouchableOpacity>
               </View>
             </View>
           </ScrollView>
@@ -196,18 +190,18 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     top: spacing.md,
-    left: spacing.md,
+    left: spacing.lg,
     zIndex: 10,
-    backgroundColor: colors.accent,
+    backgroundColor: '#203C50',
     width: 40,
     height: 40,
-    borderRadius: borderRadius.full,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  backButtonText: {
-    color: colors.primary,
-    fontSize: fontSize.xl,
+  backButtonIcon: {
+    width: 16,
+    height: 16,
   },
   illustrationContainer: {
     alignItems: 'center',
@@ -215,20 +209,23 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   illustration: {
-    width: 192,
-    height: 192,
+    width: '100%',
+    height: 250,
+    marginBottom: spacing.lg,
   },
   content: {
     flex: 1,
     paddingHorizontal: spacing.lg,
   },
   headline: {
-    fontSize: fontSize.xxl,
-    fontWeight: fontWeight.bold,
+    fontSize: fontSize.xxxl,
     color: colors.white,
     textAlign: 'center',
+    fontFamily: fontFamily.headingBold,
   },
   subtitle: {
+    fontFamily: fontFamily.bodySemiBold,
+    lineHeight: fontSize.xxl,
     fontSize: fontSize.sm,
     color: colors.white,
     textAlign: 'center',
@@ -257,20 +254,23 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   input: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodyMedium,
     color: colors.grayDark,
   },
   passwordHint: {
     color: colors.grayMedium,
     fontSize: fontSize.xs,
     textAlign: 'center',
-    marginTop: spacing.xs,
+    marginTop: spacing.sm,
+    fontFamily: fontFamily.bodyRegular,
   },
   errorText: {
     color: colors.accent,
     textAlign: 'center',
     fontSize: fontSize.sm,
     marginTop: spacing.sm,
+    fontFamily: fontFamily.bodyRegular,
   },
   signUpButton: {
     backgroundColor: colors.accent,
@@ -281,8 +281,8 @@ const styles = StyleSheet.create({
   signUpButtonText: {
     color: colors.primary,
     textAlign: 'center',
-    fontWeight: fontWeight.semibold,
     fontSize: fontSize.md,
+    fontFamily: fontFamily.bodyBold,
   },
   businessLink: {
     marginTop: spacing.md,

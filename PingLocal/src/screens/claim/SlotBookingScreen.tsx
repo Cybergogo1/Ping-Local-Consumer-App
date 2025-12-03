@@ -7,11 +7,13 @@ import {
   ActivityIndicator,
   StyleSheet,
   FlatList,
+  Image,
+  StatusBar,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format, parseISO, isSameDay, addDays, startOfDay } from 'date-fns';
 import { supabase } from '../../lib/supabase';
-import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, fontFamily, shadows } from '../../theme';
 import { OfferSlot } from '../../types/database';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -24,6 +26,7 @@ type SlotBookingScreenProps = {
 
 export default function SlotBookingScreen({ navigation, route }: SlotBookingScreenProps) {
   const { offerId, offer } = route.params;
+  const insets = useSafeAreaInsets();
 
   const [slots, setSlots] = useState<OfferSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -143,35 +146,70 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
 
   if (slots.length === 0) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.backButtonText}>{'<'}</Text>
+      <View style={styles.container}>
+        <StatusBar barStyle="light-content" />
+        <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+            <Image source={require('../../../assets/images/iconback.png')} style={styles.headerButtonIcon} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Select a Slot</Text>
-          <View style={styles.headerSpacer} />
+          <View style={styles.headerRight}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Notifications' as any)}
+              style={styles.headerButton}
+            >
+              <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.headerButtonIcon} />
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>N..</Text>
+              </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('Settings' as any)}
+              style={styles.headerButton}
+            >
+              <Image source={require('../../../assets/images/iconsettings.png')} style={styles.headerButtonIcon} />
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>No available slots for this offer</Text>
-          <TouchableOpacity style={styles.goBackButton} onPress={() => navigation.goBack()}>
-            <Text style={styles.goBackButtonText}>Go Back</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+        <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
+          <View style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No available slots for this offer</Text>
+            <TouchableOpacity style={styles.goBackButton} onPress={() => navigation.goBack()}>
+              <Text style={styles.goBackButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-          <Text style={styles.backButtonText}>{'<'}</Text>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+      {/* Header - extends edge to edge */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.headerButton}>
+          <Image source={require('../../../assets/images/iconback.png')} style={styles.headerButtonIcon} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Select a Slot</Text>
-        <View style={styles.headerSpacer} />
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Notifications' as any)}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.headerButtonIcon} />
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>N..</Text>
+            </View>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Settings' as any)}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconsettings.png')} style={styles.headerButtonIcon} />
+          </TouchableOpacity>
+        </View>
       </View>
 
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Offer Summary */}
         <View style={styles.offerSummary}>
@@ -329,7 +367,8 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
           </TouchableOpacity>
         </View>
       )}
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
@@ -337,6 +376,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.white,
+  },
+  safeArea: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -352,6 +394,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: fontSize.md,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
     marginBottom: spacing.md,
   },
@@ -363,39 +406,51 @@ const styles = StyleSheet.create({
   },
   goBackButtonText: {
     color: colors.white,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
   },
 
   // Header
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.grayLight,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
+    backgroundColor: colors.primary,
   },
-  backButton: {
+  headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.primary,
-    alignItems: 'center',
+    backgroundColor: '#203C50',
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  backButtonText: {
-    fontSize: fontSize.lg,
-    color: colors.white,
-    fontWeight: fontWeight.bold,
+  headerRight: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
-  headerTitle: {
-    fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+  headerButtonIcon: {
+    width: 16,
+    height: 16,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  notificationBadgeText: {
+    fontSize: 10,
+    fontFamily: fontFamily.bodyBold,
     color: colors.primary,
-  },
-  headerSpacer: {
-    width: 40,
   },
 
   scrollView: {
@@ -405,16 +460,19 @@ const styles = StyleSheet.create({
   // Offer Summary
   offerSummary: {
     padding: spacing.md,
-    backgroundColor: colors.grayLight,
+    backgroundColor: '#f9f9f9',
+    borderBottomWidth: 1,
+    borderColor: '#eee',
   },
   offerName: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
     marginBottom: spacing.xs,
   },
   businessName: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
   },
 
@@ -425,7 +483,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
     marginBottom: spacing.md,
   },
@@ -453,16 +511,18 @@ const styles = StyleSheet.create({
   },
   calendarDayName: {
     fontSize: fontSize.xs,
+    fontFamily: fontFamily.body,
     color: colors.grayDark,
     marginBottom: 2,
   },
   calendarDayNumber: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
   },
   calendarDayMonth: {
     fontSize: fontSize.xs,
+    fontFamily: fontFamily.body,
     color: colors.grayMedium,
   },
   calendarDayTextSelected: {
@@ -479,6 +539,7 @@ const styles = StyleSheet.create({
   },
   noSlotsText: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.grayMedium,
     textAlign: 'center',
     paddingVertical: spacing.lg,
@@ -502,7 +563,7 @@ const styles = StyleSheet.create({
   },
   slotTime: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
     marginBottom: spacing.xs,
   },
@@ -511,6 +572,7 @@ const styles = StyleSheet.create({
   },
   slotCapacity: {
     fontSize: fontSize.xs,
+    fontFamily: fontFamily.body,
     color: colors.grayMedium,
   },
   slotCapacitySelected: {
@@ -542,7 +604,7 @@ const styles = StyleSheet.create({
   partySizeButtonText: {
     fontSize: fontSize.xl,
     color: colors.white,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bodyBold,
   },
   partySizeValue: {
     alignItems: 'center',
@@ -550,11 +612,12 @@ const styles = StyleSheet.create({
   },
   partySizeNumber: {
     fontSize: fontSize.xxxl,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.headingBold,
     color: colors.primary,
   },
   partySizeLabel: {
     fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
     color: colors.grayMedium,
   },
 
@@ -575,11 +638,12 @@ const styles = StyleSheet.create({
   },
   selectedInfoText: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.bodySemiBold,
     color: colors.primary,
   },
   selectedInfoSubtext: {
     fontSize: fontSize.xs,
+    fontFamily: fontFamily.body,
     color: colors.grayMedium,
   },
   continueButton: {
@@ -590,7 +654,7 @@ const styles = StyleSheet.create({
   },
   continueButtonText: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
+    fontFamily: fontFamily.bodyBold,
     color: colors.primary,
   },
 });

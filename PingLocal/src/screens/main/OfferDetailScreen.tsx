@@ -293,8 +293,12 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
           <View style={styles.contentLeft}>
             <Text style={styles.title} numberOfLines={2}>{offer.name}</Text>
 
-            <TouchableOpacity onPress={handleBusinessPress}>
-              <Text style={styles.businessName}>🏢 {businessName}</Text>
+            <TouchableOpacity onPress={handleBusinessPress} style={styles.businessNameRow}>
+              <Image
+                source={require('../../../assets/images/iconbusinesses.png')}
+                style={styles.businessIcon}
+              />
+              <Text style={styles.businessName}>{businessName}</Text>
             </TouchableOpacity>
 
             {locationArea && (
@@ -420,7 +424,6 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
 
             <View style={styles.businessCardRight}>
               <View style={styles.businessCardHeader}>
-                <Text style={styles.businessCardIcon}>🏢</Text>
                 <Text style={styles.businessCardName}>{offer.businesses.name}</Text>
               </View>
               <Text style={styles.businessCardJoined}>
@@ -431,7 +434,6 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
                 style={styles.viewOnMapButton}
                 onPress={handleBusinessPress}
               >
-                <Text style={styles.viewOnMapIcon}>📍</Text>
                 <Text style={styles.viewOnMapText}>View on Map</Text>
               </TouchableOpacity>
             </View>
@@ -643,10 +645,19 @@ const styles = StyleSheet.create({
     color: colors.primary,
     marginBottom: spacing.xs,
   },
+  businessNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  businessIcon: {
+    width: 16,
+    height: 16,
+    marginRight: spacing.xs,
+  },
   businessName: {
     fontSize: fontSize.sm,
     color: colors.grayMedium,
-    marginBottom: spacing.xs,
     fontFamily: fontFamily.body,
   },
   location: {
