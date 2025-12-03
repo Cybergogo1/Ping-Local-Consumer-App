@@ -121,7 +121,7 @@ export default function ClaimedScreen() {
       return (
         <View style={styles.emptyContainer}>
           <Image
-            source={require('../../../assets/images/claimed_emptyfeed_graphic.avif')}
+            source={require('../../../assets/images/claimed_emptyfeed_graphic.png')}
             style={styles.emptyImage}
             resizeMode="contain"
           />
@@ -154,7 +154,7 @@ export default function ClaimedScreen() {
     return (
       <View style={styles.emptyContainer}>
         <Image
-          source={require('../../../assets/images/claimed_emptyfeed_graphic.avif')}
+          source={require('../../../assets/images/claimed_emptyfeed_graphic.png')}
           style={styles.emptyImage}
           resizeMode="contain"
         />
@@ -346,7 +346,6 @@ const styles = StyleSheet.create({
   // Filter Tabs
   filterContainer: {
     flexDirection: 'row',
-    backgroundColor: colors.white,
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.md,
   },
@@ -355,7 +354,9 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     marginRight: spacing.sm,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.grayLight,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: '#eee',
   },
   filterTabActive: {
     backgroundColor: colors.primary,
@@ -385,8 +386,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xxl,
   },
   emptyImage: {
-    width: 200,
-    height: 200,
+    width: 280,
+    height: 280,
     marginBottom: spacing.lg,
   },
   emptyIcon: {
@@ -412,7 +413,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.full,
-    ...shadows.sm,
+    fontFamily: fontFamily.bodySemiBold,
   },
   browseButtonText: {
     fontSize: fontSize.md,

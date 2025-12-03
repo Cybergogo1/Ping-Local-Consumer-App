@@ -14,11 +14,11 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 // Tab icon images
 const tabIcons = {
-  Feed: require('../../assets/images/footer_feed.avif'),
-  Favourites: require('../../assets/images/footer_favourites.avif'),
-  Claimed: require('../../assets/images/footer_claimed.avif'),
-  Businesses: require('../../assets/images/footer_businesses.avif'),
-  Account: require('../../assets/images/footer_account.avif'),
+  Feed: require('../../assets/images/footer_feed.png'),
+  Favourites: require('../../assets/images/footer_favourites.png'),
+  Claimed: require('../../assets/images/footer_claimed.png'),
+  Businesses: require('../../assets/images/footer_businesses.png'),
+  Account: require('../../assets/images/footer_account.png'),
 };
 
 // Custom Tab Bar Component

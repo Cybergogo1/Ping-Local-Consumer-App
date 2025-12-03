@@ -8,12 +8,13 @@ export type AuthStackParamList = {
   Login: undefined;
   SignUp: undefined;
   Verification: { email: string; isNewSignup?: boolean };
+  EmailVerificationSuccess: undefined;
   ForgotPassword: undefined;
 };
 
 // Onboarding Stack
 export type OnboardingStackParamList = {
-  Onboarding: undefined;
+  OnboardingSlides: undefined;
 };
 
 // Main Tab Navigator

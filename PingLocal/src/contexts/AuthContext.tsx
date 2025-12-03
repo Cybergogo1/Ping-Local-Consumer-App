@@ -14,6 +14,9 @@ interface AuthContextType {
   verifyEmail: (token: string) => Promise<{ error: Error | null }>;
   resendVerification: () => Promise<{ error: Error | null }>;
   refreshUser: () => Promise<void>;
+  completeOnboarding: () => Promise<{ error: Error | null }>;
+  updateNotificationPermission: (status: 'not_asked' | 'granted' | 'denied' | 'dismissed') => Promise<void>;
+  shouldShowOnboarding: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -75,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single();
 
       if (error) throw error;
+      console.log('Fetched user profile:', { id: data?.id, email: data?.email, onboarding_completed: data?.onboarding_completed });
       setUser(data);
     } catch (error) {
       console.error('Error fetching user profile:', error);
@@ -113,6 +117,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           loyalty_points: 0,
           loyalty_tier: 'Ping Local Member',
           verified: false,
+          onboarding_completed: false,
+          notification_permission_status: 'not_asked',
         }).select();
 
         if (profileError) {
@@ -196,6 +202,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const completeOnboarding = async () => {
+    try {
+      if (!user) return { error: new Error('No user logged in') };
+
+      console.log('Completing onboarding for user:', user.id);
+      const { error } = await supabase
+        .from('users')
+        .update({ onboarding_completed: true })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      console.log('Onboarding marked complete in DB, refreshing user...');
+      await refreshUser();
+      console.log('User refresh complete - state will update on next render');
+      return { error: null };
+    } catch (error) {
+      console.error('Error completing onboarding:', error);
+      return { error: error as Error };
+    }
+  };
+
+  const updateNotificationPermission = async (status: 'not_asked' | 'granted' | 'denied' | 'dismissed') => {
+    try {
+      if (!user) return;
+
+      const { error } = await supabase
+        .from('users')
+        .update({ notification_permission_status: status })
+        .eq('id', user.id);
+
+      if (error) throw error;
+      await refreshUser();
+    } catch (error) {
+      console.error('Error updating notification permission:', error);
+    }
+  };
+
+  const shouldShowOnboarding = () => {
+    if (!user || !supabaseUser) return false;
+    return supabaseUser.email_confirmed_at !== null && !user.onboarding_completed;
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -209,6 +257,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         verifyEmail,
         resendVerification,
         refreshUser,
+        completeOnboarding,
+        updateNotificationPermission,
+        shouldShowOnboarding,
       }}
     >
       {children}

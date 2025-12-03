@@ -94,7 +94,7 @@ export default function VerificationScreen({ navigation, route }: VerificationSc
           {/* Logo icon */}
           <View style={styles.logoContainer}>
             <Image
-              source={require('../../../assets/images/logo_icononly.avif')}
+              source={require('../../../assets/images/logo_icononly.png')}
               style={styles.logo}
               resizeMode="contain"
             />
@@ -102,12 +102,12 @@ export default function VerificationScreen({ navigation, route }: VerificationSc
 
           {/* Content */}
           <View style={styles.content}>
-            <Text style={styles.headline}>Verify your account</Text>
+            <Text style={styles.headline}>Check Your Email</Text>
             <Text style={styles.bodyText}>
-              An email will have just been sent to "{email}", copy the verification code below to get started!
+              We've sent a verification link to "{email}". Click the link in your email to verify your account.
             </Text>
             <Text style={styles.smallText}>
-              Your account has been created, so to access this screen later, use the 'log in' function.
+              Alternatively, you can enter the 6-digit code from the email below:
             </Text>
           </View>
 

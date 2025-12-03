@@ -40,12 +40,11 @@ export default function OfferCardLandscape({ offer, onPress }: OfferCardLandscap
           <Text style={styles.title} numberOfLines={1}>
             {offer.name}
           </Text>
-          {offer.price_discount && (
-            <Text style={styles.price}>
-              {formatPrice(offer.price_discount)}
-              {offer.unit_of_measurement ? ` ${offer.unit_of_measurement}` : ''}
-            </Text>
-          )}
+          <Text style={styles.price}>
+            {offer.price_discount
+              ? `${formatPrice(offer.price_discount)}${offer.unit_of_measurement ? ` ${offer.unit_of_measurement}` : ''}`
+              : 'Book Now'}
+          </Text>
         </LinearGradient>
       </View>
     </TouchableOpacity>

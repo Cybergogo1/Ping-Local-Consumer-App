@@ -227,7 +227,7 @@ export default function FavoritesScreen() {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <Ionicons name="heart-outline" size={64} color={colors.grayMedium} />
+      <Ionicons name="heart" size={64} color={colors.primary} />
       <Text style={styles.emptyStateTitle}>No Favourites Yet</Text>
       <Text style={styles.emptyStateText}>
         Tap the heart icon on any {activeTab === 'offers' ? 'promotion' : 'business'} to save it here for easy access later!
@@ -502,28 +502,29 @@ const styles = StyleSheet.create({
   tabContainer: {
     flexDirection: 'row',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.white,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.grayLight,
+    paddingVertical: spacing.md,
+    columnGap: 10,
   },
   tab: {
     flex: 1,
-    paddingVertical: spacing.sm,
+    paddingVertical: 12,
     alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: '#eee',
   },
   tabActive: {
-    borderBottomColor: colors.primary,
+    borderColor: colors.primary,
+    backgroundColor: colors.primary,
   },
   tabText: {
     fontSize: fontSize.md,
-    fontFamily: fontFamily.body,
-    color: colors.grayMedium,
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.primary,
   },
   tabTextActive: {
     fontFamily: fontFamily.bodySemiBold,
-    color: colors.primary,
+    color: colors.white,
   },
 });

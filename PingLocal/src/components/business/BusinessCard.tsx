@@ -42,11 +42,11 @@ export default function BusinessCard({
               resizeMode="cover"
             />
           ) : (
-            <View style={styles.placeholderImage}>
-              <Text style={styles.placeholderText}>
-                {business.name?.charAt(0)?.toUpperCase() || 'B'}
-              </Text>
-            </View>
+            <Image
+              source={{ uri: 'https://picsum.photos/400/600' }}
+              style={styles.image}
+              resizeMode="cover"
+            />
           )}
 
           {/* Featured Badge */}
@@ -173,9 +173,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
   },
   overlayName: {
-    fontSize: fontSize.lg,
+    fontSize: fontSize.md,
     color: colors.white,
-    marginBottom: spacing.xs,
+    marginBottom: 2,
     fontFamily: fontFamily.headingBold,
   },
   overlayLocation: {
@@ -188,15 +188,15 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
   },
   name: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.sm,
     color: colors.primary,
     marginBottom: 2,
     fontFamily: fontFamily.headingBold,
   },
   location: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     color: colors.grayMedium,
-    marginBottom: 2,
+    marginBottom: 5,
     fontFamily: fontFamily.body,
   },
   tagContainer: {

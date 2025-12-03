@@ -7,6 +7,8 @@ export interface User {
   loyalty_points: number;
   loyalty_tier: string;
   verified: boolean;
+  onboarding_completed: boolean;
+  notification_permission_status: 'not_asked' | 'granted' | 'denied' | 'dismissed';
   profile_pic?: any;
   activate_notifications?: boolean;
   selected_location?: string;

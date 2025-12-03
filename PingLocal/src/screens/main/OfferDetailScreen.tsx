@@ -343,7 +343,6 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
         {/* Expired Banner */}
         {expired && (
           <View style={styles.expiredBanner}>
-            <Text style={styles.expiredIcon}>⚠️</Text>
             <View style={styles.expiredTextContainer}>
               <Text style={styles.expiredTitle}>This Promotion ended {formatDate(offer.end_date)}</Text>
               <Text style={styles.expiredSubtitle}>
@@ -374,7 +373,7 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
         {offer.special_notes && (
           <View style={styles.specialNotesSection}>
             <View style={styles.specialNotesContent}>
-              <Text style={styles.specialNotesTitle}>📋 Special Note from {businessName}</Text>
+              <Text style={styles.specialNotesTitle}>Special Note from {businessName}</Text>
               <Text style={styles.specialNotesText}>{offer.special_notes}</Text>
             </View>
           </View>
@@ -728,12 +727,14 @@ const styles = StyleSheet.create({
 
   // Expired Banner
   expiredBanner: {
-    backgroundColor: colors.accent,
+    backgroundColor: '#FFF5F5',
     flexDirection: 'row',
     padding: spacing.md,
     marginHorizontal: spacing.md,
     marginTop: spacing.md,
     borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: '#6F363624',
   },
   expiredIcon: {
     fontSize: fontSize.xl,
@@ -745,11 +746,11 @@ const styles = StyleSheet.create({
   expiredTitle: {
     fontSize: fontSize.sm,
     fontFamily: fontFamily.bodySemiBold,
-    color: colors.primary,
+    color: '#6F3E36',
     marginBottom: spacing.xs,
   },
   expiredSubtitle: {
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
     color: colors.grayDark,
     fontFamily: fontFamily.body,
   },

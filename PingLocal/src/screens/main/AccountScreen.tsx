@@ -29,10 +29,10 @@ const TIER_DISPLAY_NAMES: Record<string, string> = {
 };
 
 const TIER_ICONS = {
-  member: require('../../../assets/images/loyaltytiericon_member.avif'),
-  hero: require('../../../assets/images/loyaltytiericon_hero.avif'),
-  champion: require('../../../assets/images/loyaltytiericon_champion.avif'),
-  legend: require('../../../assets/images/loyaltytiericon_legend.avif'),
+  member: require('../../../assets/images/loyaltytiericon_member.png'),
+  hero: require('../../../assets/images/loyaltytiericon_hero.png'),
+  champion: require('../../../assets/images/loyaltytiericon_champion.png'),
+  legend: require('../../../assets/images/loyaltytiericon_legend.png'),
 };
 
 const getNextTierInfo = (points: number) => {
@@ -249,7 +249,7 @@ export default function AccountScreen() {
               <Text style={styles.loyaltyCardSubtitle}>How it works for you!</Text>
             </View>
             <Image
-              source={require('../../../assets/images/account_loyaltyschemebutton_graphic.avif')}
+              source={require('../../../assets/images/account_loyaltyschemebutton_graphic.png')}
               style={styles.loyaltyCardImage}
               resizeMode="cover"
             />

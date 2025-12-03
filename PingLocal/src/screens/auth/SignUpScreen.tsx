@@ -79,7 +79,7 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
             {/* Illustration */}
             <View style={styles.illustrationContainer}>
               <Image
-                source={require('../../../assets/images/registerscreen_graphic.avif')}
+                source={require('../../../assets/images/registerscreen_graphic.png')}
                 style={styles.illustration}
                 resizeMode="contain"
               />

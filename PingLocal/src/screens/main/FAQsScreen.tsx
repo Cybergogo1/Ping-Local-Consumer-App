@@ -14,15 +14,19 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { CompositeNavigationProp } from '@react-navigation/native';
 import { colors, fontSize, spacing, borderRadius, shadows, fontFamily } from '../../theme';
-import { AccountStackParamList } from '../../types/navigation';
+import { AccountStackParamList, RootStackParamList } from '../../types/navigation';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-type FAQsScreenNavigationProp = StackNavigationProp<AccountStackParamList, 'FAQs'>;
+type FAQsScreenNavigationProp = CompositeNavigationProp<
+  StackNavigationProp<AccountStackParamList, 'FAQs'>,
+  StackNavigationProp<RootStackParamList>
+>;
 
 interface FAQItem {
   id: string;
@@ -38,6 +42,12 @@ const FAQ_DATA: FAQItem[] = [
     category: 'Getting Started',
     question: 'What is Ping Local?',
     answer: 'Ping Local is a platform that connects you with exclusive offers and promotions from local businesses in your area. Browse deals, claim offers, and enjoy discounts at your favorite local spots.',
+  },
+  {
+    id: '1b',
+    category: 'Getting Started',
+    question: 'Can I see the onboarding tutorial again?',
+    answer: 'Yes! You can replay the welcome tutorial at any time from Settings > Replay Onboarding, or tap the button below in the support section.',
   },
   {
     id: '2',
@@ -234,6 +244,15 @@ export default function FAQsScreen() {
               <Ionicons name="mail" size={20} color={colors.primary} />
               <Text style={styles.supportButtonText}>Contact Support</Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.supportButton, styles.onboardingButton]}
+              onPress={() => (navigation as any).navigate('Onboarding')}
+            >
+              <Ionicons name="play-circle" size={20} color={colors.accent} />
+              <Text style={[styles.supportButtonText, styles.onboardingButtonText]}>
+                Replay Onboarding
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {/* Bottom Spacing */}
@@ -384,6 +403,15 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.primary,
     fontFamily: fontFamily.headingBold,
+  },
+  onboardingButton: {
+    backgroundColor: colors.white,
+    borderWidth: 2,
+    borderColor: colors.accent,
+    marginTop: spacing.sm,
+  },
+  onboardingButtonText: {
+    color: colors.accent,
   },
   bottomSpacing: {
     height: spacing.xxl,

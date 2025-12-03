@@ -31,10 +31,10 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MODAL_WIDTH = SCREEN_WIDTH * 0.75;
 
 const TIER_ICONS = {
-  member: require('../../../assets/images/loyaltytiericon_member.avif'),
-  hero: require('../../../assets/images/loyaltytiericon_hero.avif'),
-  champion: require('../../../assets/images/loyaltytiericon_champion.avif'),
-  legend: require('../../../assets/images/loyaltytiericon_legend.avif'),
+  member: require('../../../assets/images/loyaltytiericon_member.png'),
+  hero: require('../../../assets/images/loyaltytiericon_hero.png'),
+  champion: require('../../../assets/images/loyaltytiericon_champion.png'),
+  legend: require('../../../assets/images/loyaltytiericon_legend.png'),
 };
 
 // Area coordinates for distance calculations

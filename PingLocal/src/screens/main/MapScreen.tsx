@@ -343,8 +343,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(54, 86, 111, 0.95)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
-    borderBottomLeftRadius: borderRadius.lg,
-    borderBottomRightRadius: borderRadius.lg,
+    borderRadius: borderRadius.lg,
     marginHorizontal: spacing.md,
   },
   headerTitle: {
@@ -385,7 +384,6 @@ const styles = StyleSheet.create({
   },
   markerSelected: {
     backgroundColor: colors.accent,
-    transform: [{ scale: 1.2 }],
   },
   markerBadge: {
     position: 'absolute',

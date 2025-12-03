@@ -72,7 +72,7 @@ export default function LoyaltyTiersScreen() {
           {/* Trophy Illustration */}
           <View style={styles.trophyContainer}>
             <Image
-              source={require('../../../assets/images/loyaltylandingpage_graphic.avif')}
+              source={require('../../../assets/images/loyaltylandingpage_graphic.png')}
               style={styles.loyaltyTierImage}
               resizeMode="cover"
             />

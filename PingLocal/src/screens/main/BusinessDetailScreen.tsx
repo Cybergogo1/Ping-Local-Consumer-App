@@ -21,7 +21,7 @@ import { Business, Offer } from '../../types/database';
 import { BusinessDetailScreenProps } from '../../types/navigation';
 import OfferCardLandscape from '../../components/promotions/OfferCardLandscape';
 
-const mapPinIcon = require('../../../assets/images/logo_icondark.avif');
+const mapPinIcon = require('../../../assets/images/logo_icondark.png');
 
 export default function BusinessDetailScreen({ navigation, route }: BusinessDetailScreenProps) {
   const { businessId } = route.params;

@@ -144,25 +144,6 @@ export default function DirectoryScreen() {
 
   const renderHeader = () => (
     <View style={styles.headerContainer}>
-      {/* Search Bar */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search businesses..."
-          placeholderTextColor={colors.grayMedium}
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity
-            style={styles.clearButton}
-            onPress={() => setSearchQuery('')}
-          >
-            <Text style={styles.clearButtonText}>×</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
       {/* Featured Section */}
       {!searchQuery && renderFeaturedSection()}
 
@@ -236,6 +217,25 @@ export default function DirectoryScreen() {
       </View>
 
       <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
+        {/* Search Bar - outside FlatList to prevent keyboard dismissal */}
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search businesses..."
+            placeholderTextColor={colors.grayMedium}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity
+              style={styles.clearButton}
+              onPress={() => setSearchQuery('')}
+            >
+              <Text style={styles.clearButtonText}>×</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
         <FlatList
           data={filteredBusinesses}
           keyExtractor={(item, index) => item?.name || `business-${index}`}
@@ -335,13 +335,15 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     marginHorizontal: spacing.md,
     marginTop: spacing.md,
+    marginBottom: spacing.sm,
     paddingHorizontal: spacing.md,
   },
   searchInput: {
     flex: 1,
     fontSize: fontSize.md,
+    fontFamily: fontFamily.bodyRegular,
     color: colors.grayDark,
-    paddingVertical: spacing.sm,
+    paddingVertical: spacing.md,
   },
   clearButton: {
     padding: spacing.xs,
@@ -356,13 +358,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
+    fontFamily: fontFamily.headingSemiBold,
     color: colors.primary,
     marginHorizontal: spacing.md,
-    marginBottom: spacing.md,
   },
   featuredScroll: {
     paddingHorizontal: spacing.md,
     paddingBottom: spacing.sm,
+    paddingTop: spacing.md,
   },
   allBusinessesHeader: {
     flexDirection: 'row',
@@ -373,6 +376,7 @@ const styles = StyleSheet.create({
   businessCount: {
     fontSize: fontSize.sm,
     color: colors.grayMedium,
+    marginRight: spacing.lg,
   },
   columnWrapper: {
     justifyContent: 'space-between',

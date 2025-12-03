@@ -15,13 +15,17 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { CompositeNavigationProp } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, spacing, borderRadius, shadows, fontFamily } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
-import { AccountStackParamList } from '../../types/navigation';
+import { AccountStackParamList, RootStackParamList } from '../../types/navigation';
 
-type SettingsScreenNavigationProp = StackNavigationProp<AccountStackParamList, 'Settings'>;
+type SettingsScreenNavigationProp = CompositeNavigationProp<
+  StackNavigationProp<AccountStackParamList, 'Settings'>,
+  StackNavigationProp<RootStackParamList>
+>;
 
 type SettingItemProps = {
   icon: keyof typeof Ionicons.glyphMap;
@@ -216,6 +220,22 @@ export default function SettingsScreen() {
     );
   };
 
+  const handleReplayOnboarding = () => {
+    Alert.alert(
+      'Replay Onboarding',
+      'Would you like to see the onboarding tutorial again?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Replay',
+          onPress: () => {
+            (navigation as any).navigate('Onboarding');
+          },
+        },
+      ]
+    );
+  };
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -348,6 +368,13 @@ export default function SettingsScreen() {
               title="Contact Support"
               subtitle="Get help from our team"
               onPress={handleContactSupport}
+            />
+            <View style={styles.divider} />
+            <SettingItem
+              icon="play-circle-outline"
+              title="Replay Onboarding"
+              subtitle="See the welcome tutorial again"
+              onPress={handleReplayOnboarding}
             />
           </View>
 

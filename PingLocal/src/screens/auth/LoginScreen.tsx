@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoginScreenProps } from '../../types/navigation';
+import { supabase } from '../../lib/supabase';
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
   const { signIn } = useAuth();
@@ -37,7 +38,21 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
 
     if (signInError) {
       setError(signInError.message || 'Email not recognised');
+      setIsLoading(false);
+      return;
     }
+
+    // Check if email is verified
+    setTimeout(async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+
+      if (authUser && !authUser.email_confirmed_at) {
+        navigation.navigate('Verification', {
+          email: authUser.email || email,
+          isNewSignup: false
+        });
+      }
+    }, 500);
 
     setIsLoading(false);
   };
@@ -57,7 +72,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             {/* Header image */}
             <View style={styles.headerImage}>
               <Image
-                source={require('../../../assets/images/signin_background.avif')}
+                source={require('../../../assets/images/signin_background.png')}
                 style={styles.backgroundImage}
                 resizeMode="cover"
               />

@@ -17,7 +17,7 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
       <ImageBackground
-        source={require('../../../assets/images/wirralbg.avif')}
+        source={require('../../../assets/images/wirralbg.png')}
         style={styles.backgroundImage}
         resizeMode="cover"
       >
@@ -26,7 +26,7 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
             {/* Top section with illustration */}
             <View style={styles.illustrationContainer}>
               <Image
-                source={require('../../../assets/images/welcomescreen_graphic.avif')}
+                source={require('../../../assets/images/welcomescreen_graphic.png')}
                 style={styles.illustration}
                 resizeMode="contain"
               />
@@ -35,7 +35,7 @@ export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
             {/* Middle section with logo and tagline */}
             <View style={styles.logoSection}>
               <Image
-                source={require('../../../assets/images/logo.avif')}
+                source={require('../../../assets/images/logo.png')}
                 style={styles.logo}
                 resizeMode="contain"
               />

@@ -14,7 +14,7 @@ export default function OnboardingNavigator() {
         cardStyle: { backgroundColor: 'white' },
       }}
     >
-      <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+      <Stack.Screen name="OnboardingSlides" component={OnboardingScreen} />
     </Stack.Navigator>
   );
 }

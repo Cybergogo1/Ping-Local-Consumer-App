@@ -12,8 +12,9 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import { colors, spacing, borderRadius, fontSize, fontWeight } from '../../theme';
+import { useAuth } from '../../contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -30,31 +31,32 @@ const slides: OnboardingSlide[] = [
     id: '1',
     title: 'Discover',
     description: "The best of Wirral's independents - tailored just for you",
-    image: require('../../../assets/images/useronboard1_graphic.avif'),
+    image: require('../../../assets/images/useronboard1_graphic.png'),
   },
   {
     id: '2',
     title: 'Love',
     description: 'Hidden gems, real smiles, warm welcomes, and stories to share - Ping Local helps you love where you live.',
-    image: require('../../../assets/images/useronboard2_graphic.avif'),
+    image: require('../../../assets/images/useronboard2_graphic.png'),
   },
   {
     id: '3',
     title: 'Support',
     description: "This is where it starts. You've made a choice to support real people—and that's something to be proud of.",
-    image: require('../../../assets/images/useronboard3_graphic.avif'),
+    image: require('../../../assets/images/useronboard3_graphic.png'),
   },
   {
     id: '4',
     title: "Don't Miss Out",
     description: 'Be first to hear about exclusive promotions, fresh finds, and local events.',
     secondaryText: "Turn on notifications—it's the smart way to stay in the loop.",
-    image: require('../../../assets/images/useronboard4_graphic.avif'),
+    image: require('../../../assets/images/useronboard4_graphic.png'),
   },
 ];
 
 export default function OnboardingScreen() {
   const navigation = useNavigation();
+  const { completeOnboarding, updateNotificationPermission, user } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
@@ -81,6 +83,15 @@ export default function OnboardingScreen() {
         finalStatus = status;
       }
 
+      // Update permission status in database
+      if (finalStatus === 'granted') {
+        await updateNotificationPermission('granted');
+      } else if (finalStatus === 'denied') {
+        await updateNotificationPermission('denied');
+      } else {
+        await updateNotificationPermission('dismissed');
+      }
+
       if (finalStatus !== 'granted') {
         Alert.alert(
           'Notifications',
@@ -93,6 +104,7 @@ export default function OnboardingScreen() {
     } catch (error) {
       // Notifications not available (e.g., in Expo Go)
       console.log('Notifications not available:', error);
+      await updateNotificationPermission('dismissed');
       return false;
     }
   };
@@ -102,10 +114,24 @@ export default function OnboardingScreen() {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
       setCurrentIndex(currentIndex + 1);
     } else {
-      // Last slide - request notifications and navigate to main app
+      // Last slide - request notifications and complete onboarding
       await requestNotificationPermission();
-      // Navigate back to main app (onboarding complete)
-      navigation.goBack();
+
+      const { error } = await completeOnboarding();
+
+      if (error) {
+        console.error('Error completing onboarding:', error);
+        Alert.alert('Error', 'Failed to save onboarding progress. Please try again.');
+        return;
+      }
+
+      // Force navigation reset to Main app
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Main' }],
+        })
+      );
     }
   };
 
