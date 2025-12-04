@@ -5,9 +5,11 @@ import {
   StyleSheet,
   TouchableOpacity,
   Animated,
+  ImageBackground,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, fontFamily } from '../../theme';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CommonActions } from '@react-navigation/native';
 import { ClaimedStackParamList } from '../../types/navigation';
@@ -68,68 +70,69 @@ export default function RedemptionSuccessScreen({ navigation, route }: Redemptio
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        {/* Success Animation */}
-        <View style={styles.successAnimationContainer}>
+    <ImageBackground
+      source={require('../../../assets/images/onboardbg.jpg')}
+      style={styles.background}
+      resizeMode="cover"
+    >
+      <SafeAreaView style={styles.container}>
+        <View style={styles.content}>
+          {/* Success Graphic */}
           <Animated.View
             style={[
-              styles.successCircle,
+              styles.successAnimationContainer,
               {
                 transform: [{ scale: scaleAnim }],
               },
             ]}
           >
-            <Animated.Text
-              style={[
-                styles.checkmark,
-                {
-                  transform: [{ scale: checkmarkScale }],
-                },
-              ]}
-            >
-              ✓
-            </Animated.Text>
+            <Image
+              source={require('../../../assets/images/welcomescreen_graphic.png')}
+              style={styles.successGraphic}
+              resizeMode="contain"
+            />
+          </Animated.View>
+
+          {/* Success Text */}
+          <Animated.View style={[styles.textContainer, { opacity: opacityAnim }]}>
+            <Text style={styles.successTitle}>Redeemed!</Text>
+            <Text style={styles.successSubtitle}>
+              Your offer has been successfully redeemed
+            </Text>
+
+            {/* Offer Details */}
+            <View style={styles.offerSummary}>
+              <Text style={styles.offerName}>{offerName}</Text>
+              <Text style={styles.businessNameText}>at {businessName}</Text>
+            </View>
+
+            {/* Thank You Message */}
+            <View style={styles.thankYouCard}>
+              <Text style={styles.thankYouIcon}>🎉</Text>
+              <Text style={styles.thankYouText}>
+                Thank you for using Ping Local! Enjoy your experience at {businessName}.
+              </Text>
+            </View>
+          </Animated.View>
+
+          {/* Done Button */}
+          <Animated.View style={[styles.buttonContainer, { opacity: opacityAnim }]}>
+            <TouchableOpacity style={styles.doneButton} onPress={handleDone}>
+              <Text style={styles.doneButtonText}>Done</Text>
+            </TouchableOpacity>
           </Animated.View>
         </View>
-
-        {/* Success Text */}
-        <Animated.View style={[styles.textContainer, { opacity: opacityAnim }]}>
-          <Text style={styles.successTitle}>Redeemed!</Text>
-          <Text style={styles.successSubtitle}>
-            Your offer has been successfully redeemed
-          </Text>
-
-          {/* Offer Details */}
-          <View style={styles.offerSummary}>
-            <Text style={styles.offerName}>{offerName}</Text>
-            <Text style={styles.businessName}>at {businessName}</Text>
-          </View>
-
-          {/* Thank You Message */}
-          <View style={styles.thankYouCard}>
-            <Text style={styles.thankYouIcon}>🎉</Text>
-            <Text style={styles.thankYouText}>
-              Thank you for using Ping Local! Enjoy your experience at {businessName}.
-            </Text>
-          </View>
-        </Animated.View>
-
-        {/* Done Button */}
-        <Animated.View style={[styles.buttonContainer, { opacity: opacityAnim }]}>
-          <TouchableOpacity style={styles.doneButton} onPress={handleDone}>
-            <Text style={styles.doneButtonText}>Done</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  background: {
+    flex: 1,
+  },
   container: {
     flex: 1,
-    backgroundColor: colors.white,
   },
   content: {
     flex: 1,
@@ -138,23 +141,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
 
-  // Success Animation
+  // Success Graphic
   successAnimationContainer: {
     marginBottom: spacing.xl,
-  },
-  successCircle: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-    backgroundColor: colors.success,
     alignItems: 'center',
-    justifyContent: 'center',
-    ...shadows.lg,
   },
-  checkmark: {
-    fontSize: 60,
-    color: colors.white,
-    fontWeight: fontWeight.bold,
+  successGraphic: {
+    width: 300,
+    height: 300,
   },
 
   // Text Container
@@ -164,13 +158,14 @@ const styles = StyleSheet.create({
   },
   successTitle: {
     fontSize: fontSize.display,
-    fontWeight: fontWeight.bold,
-    color: colors.primary,
+    fontFamily: fontFamily.headingBold,
+    color: colors.white,
     marginBottom: spacing.sm,
   },
   successSubtitle: {
     fontSize: fontSize.md,
-    color: colors.grayDark,
+    fontFamily: fontFamily.body,
+    color: colors.white,
     textAlign: 'center',
     marginBottom: spacing.lg,
   },
@@ -182,24 +177,28 @@ const styles = StyleSheet.create({
   },
   offerName: {
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.semibold,
-    color: colors.primary,
+    fontFamily: fontFamily.headingSemiBold,
+    color: colors.white,
     textAlign: 'center',
     marginBottom: spacing.xs,
   },
-  businessName: {
+  businessNameText: {
     fontSize: fontSize.md,
-    color: colors.grayMedium,
+    fontFamily: fontFamily.body,
+    color: colors.grayLight,
   },
 
   // Thank You Card
   thankYouCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.accent,
+    backgroundColor: colors.transparent,
     padding: spacing.md,
     borderRadius: borderRadius.lg,
     marginHorizontal: spacing.md,
+    borderWidth: 2,
+    borderColor: colors.white,
+    borderRadius: borderRadius.lg,
   },
   thankYouIcon: {
     fontSize: 32,
@@ -208,7 +207,8 @@ const styles = StyleSheet.create({
   thankYouText: {
     flex: 1,
     fontSize: fontSize.sm,
-    color: colors.grayDark,
+    fontFamily: fontFamily.body,
+    color: colors.white,
     lineHeight: fontSize.sm * 1.5,
   },
 
@@ -218,15 +218,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   doneButton: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.accent,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.full,
     alignItems: 'center',
-    ...shadows.sm,
   },
   doneButtonText: {
     fontSize: fontSize.md,
-    fontWeight: fontWeight.bold,
-    color: colors.white,
+    fontFamily: fontFamily.bodyBold,
+    color: colors.primary,
   },
 });

@@ -15,6 +15,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { colors, fontSize, fontFamily, spacing, borderRadius, shadows } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { supabase } from '../../lib/supabase';
 import { PurchaseToken, TIER_THRESHOLDS, getTierFromPoints } from '../../types/database';
 import { AccountStackParamList } from '../../types/navigation';
@@ -74,6 +75,7 @@ const getProgressPercentage = (points: number) => {
 export default function AccountScreen() {
   const navigation = useNavigation<AccountScreenNavigationProp>();
   const { user, signOut } = useAuth();
+  const { unreadCount } = useNotifications();
   const insets = useSafeAreaInsets();
   const [redeemedOffers, setRedeemedOffers] = useState<PurchaseToken[]>([]);
   const [claimedCount, setClaimedCount] = useState(0);
@@ -181,10 +183,13 @@ export default function AccountScreen() {
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
-            {/* Notification badge - could add unread count here */}
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>N..</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Settings')}

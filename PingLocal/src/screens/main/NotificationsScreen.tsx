@@ -17,6 +17,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { formatDistanceToNow } from 'date-fns';
 import { colors, fontSize, spacing, borderRadius, shadows, fontFamily } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { supabase } from '../../lib/supabase';
 import { AccountStackParamList } from '../../types/navigation';
 
@@ -46,6 +47,7 @@ const NOTIFICATION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
 export default function NotificationsScreen() {
   const navigation = useNavigation<NotificationsScreenNavigationProp>();
   const { user } = useAuth();
+  const { unreadCount, decrementUnreadCount, clearUnreadCount } = useNotifications();
   const insets = useSafeAreaInsets();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -91,6 +93,7 @@ export default function NotificationsScreen() {
       setNotifications(prev =>
         prev.map(n => (n.id === notificationId ? { ...n, read: true } : n))
       );
+      decrementUnreadCount();
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -107,6 +110,7 @@ export default function NotificationsScreen() {
         .eq('read', false);
 
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      clearUnreadCount();
     } catch (error) {
       console.error('Error marking all as read:', error);
     }
@@ -140,8 +144,6 @@ export default function NotificationsScreen() {
       return '';
     }
   };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   const renderNotification = ({ item }: { item: Notification }) => (
     <TouchableOpacity
@@ -193,10 +195,13 @@ export default function NotificationsScreen() {
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
-            {/* Notification badge - could add unread count here */}
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>N..</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Settings' as any)}

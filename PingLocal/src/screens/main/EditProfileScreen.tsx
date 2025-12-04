@@ -19,6 +19,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { colors, fontSize, spacing, borderRadius, shadows, fontFamily } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { supabase } from '../../lib/supabase';
 import { AccountStackParamList } from '../../types/navigation';
 
@@ -28,6 +29,7 @@ export default function EditProfileScreen() {
   const navigation = useNavigation<EditProfileScreenNavigationProp>();
   const insets = useSafeAreaInsets();
   const { user, refreshUser } = useAuth();
+  const { unreadCount } = useNotifications();
 
   const [firstName, setFirstName] = useState(user?.first_name || '');
   const [surname, setSurname] = useState(user?.surname || '');
@@ -112,9 +114,13 @@ export default function EditProfileScreen() {
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>N..</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Settings' as any)}

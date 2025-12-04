@@ -19,6 +19,7 @@ import { supabase } from '../../lib/supabase';
 import { colors, spacing, borderRadius, fontSize, fontWeight, fontFamily } from '../../theme';
 import { Business } from '../../types/database';
 import { DirectoryStackParamList } from '../../types/navigation';
+import { useNotifications } from '../../contexts/NotificationContext';
 import BusinessCard from '../../components/business/BusinessCard';
 
 type NavigationProp = StackNavigationProp<DirectoryStackParamList>;
@@ -30,6 +31,7 @@ interface BusinessWithOfferCount extends Business {
 export default function DirectoryScreen() {
   const navigation = useNavigation<NavigationProp>();
   const insets = useSafeAreaInsets();
+  const { unreadCount } = useNotifications();
 
   const [businesses, setBusinesses] = useState<BusinessWithOfferCount[]>([]);
   const [featuredBusinesses, setFeaturedBusinesses] = useState<BusinessWithOfferCount[]>([]);
@@ -202,10 +204,13 @@ export default function DirectoryScreen() {
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
-            {/* Notification badge - could add unread count here */}
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>N..</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Settings' as any)}

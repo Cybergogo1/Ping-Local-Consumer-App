@@ -25,6 +25,7 @@ import { colors, spacing, borderRadius, fontSize, shadows, fontFamily } from '..
 import { Offer, LocationArea, Tag, getTierFromPoints } from '../../types/database';
 import { HomeStackParamList } from '../../types/navigation';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import PromotionCard from '../../components/promotions/PromotionCard';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -59,6 +60,7 @@ type SortOption = 'newest' | 'ending_soon' | 'proximity';
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { user, supabaseUser } = useAuth();
+  const { unreadCount } = useNotifications();
 
   const [offers, setOffers] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -698,8 +700,18 @@ export default function HomeScreen() {
 
           {/* Right side - Icons */}
           <View style={styles.headerRight}>
-            <TouchableOpacity style={styles.headerIconButton}>
+            <TouchableOpacity
+              style={styles.headerIconButton}
+              onPress={() => navigation.navigate('Notifications')}
+            >
               <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.headerIcon}/>
+              {unreadCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               style={styles.headerIconButton}
@@ -1120,6 +1132,23 @@ const styles = StyleSheet.create({
   headerIcon: {
     width: 18,
     height: 18,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  notificationBadgeText: {
+    fontSize: 10,
+    fontFamily: fontFamily.bodyBold,
+    color: colors.primary,
   },
   mapViewButton: {
     position: 'absolute',

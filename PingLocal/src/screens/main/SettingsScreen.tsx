@@ -19,6 +19,7 @@ import { CompositeNavigationProp } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { colors, fontSize, spacing, borderRadius, shadows, fontFamily } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { supabase } from '../../lib/supabase';
 import { AccountStackParamList, RootStackParamList } from '../../types/navigation';
 
@@ -84,6 +85,7 @@ const STORAGE_KEYS = {
 export default function SettingsScreen() {
   const navigation = useNavigation<SettingsScreenNavigationProp>();
   const { signOut, user, refreshUser } = useAuth();
+  const { unreadCount } = useNotifications();
   const insets = useSafeAreaInsets();
 
   // Settings state - push notifications from database, others from AsyncStorage
@@ -250,10 +252,13 @@ export default function SettingsScreen() {
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
-            {/* Notification badge - could add unread count here */}
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>N..</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Settings' as any)}

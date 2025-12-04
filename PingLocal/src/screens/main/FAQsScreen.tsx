@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { colors, fontSize, spacing, borderRadius, shadows, fontFamily } from '../../theme';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { AccountStackParamList, RootStackParamList } from '../../types/navigation';
 
 // Enable LayoutAnimation on Android
@@ -169,6 +170,7 @@ const FAQItemComponent = ({
 export default function FAQsScreen() {
   const navigation = useNavigation<FAQsScreenNavigationProp>();
   const insets = useSafeAreaInsets();
+  const { unreadCount } = useNotifications();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const toggleItem = (id: string) => {
@@ -201,9 +203,13 @@ export default function FAQsScreen() {
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>N..</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Settings' as any)}

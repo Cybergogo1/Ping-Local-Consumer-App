@@ -16,6 +16,7 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { colors, fontSize, fontFamily, spacing, borderRadius, shadows } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { supabase } from '../../lib/supabase';
 import { Offer, Business } from '../../types/database';
 import { FavouritesStackParamList } from '../../types/navigation';
@@ -33,6 +34,7 @@ interface FavouritedBusiness extends Business {
 export default function FavoritesScreen() {
   const navigation = useNavigation<FavouritesScreenNavigationProp>();
   const { user } = useAuth();
+  const { unreadCount } = useNotifications();
   const insets = useSafeAreaInsets();
   const [activeTab, setActiveTab] = useState<'offers' | 'businesses'>('offers');
   const [favouriteOffers, setFavouriteOffers] = useState<FavouritedOffer[]>([]);
@@ -250,10 +252,13 @@ export default function FavoritesScreen() {
               style={styles.headerButton}
             >
               <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
-              {/* Notification badge - could add unread count here */}
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>N..</Text>
-              </View>
+              {unreadCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => navigation.navigate('Settings' as any)}
@@ -291,10 +296,13 @@ export default function FavoritesScreen() {
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
-            {/* Notification badge - could add unread count here */}
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>N..</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Settings' as any)}

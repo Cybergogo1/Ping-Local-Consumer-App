@@ -14,6 +14,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { colors, fontSize, fontWeight, spacing, borderRadius, shadows, fontFamily } from '../../theme';
 import { PurchaseToken } from '../../types/database';
 import ClaimedOfferCard from '../../components/claimed/ClaimedOfferCard';
@@ -22,6 +23,7 @@ type FilterType = 'active' | 'redeemed' | 'all';
 
 export default function ClaimedScreen() {
   const { user } = useAuth();
+  const { unreadCount } = useNotifications();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
@@ -216,10 +218,13 @@ export default function ClaimedScreen() {
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
-            {/* Notification badge - could add unread count here */}
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>N..</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => navigation.navigate('Settings' as any)}
