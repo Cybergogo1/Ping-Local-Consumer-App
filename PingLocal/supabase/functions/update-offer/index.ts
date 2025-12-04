@@ -117,6 +117,17 @@ serve(async (req) => {
       );
     }
 
+    // Get current offer status before update (to detect status change to active)
+    let previousStatus: string | null = null;
+    if (cleanedData.status === "active") {
+      const { data: currentOffer } = await supabaseClient
+        .from("offers")
+        .select("status")
+        .eq("id", id)
+        .single();
+      previousStatus = currentOffer?.status || null;
+    }
+
     const { data, error } = await supabaseClient
       .from("offers")
       .update(cleanedData)
@@ -146,6 +157,38 @@ serve(async (req) => {
           status: 404,
         }
       );
+    }
+
+    // Send push notification if offer just became active (was draft/pending before)
+    if (data.status === "active" && previousStatus && previousStatus !== "active") {
+      try {
+        const notificationPayload = {
+          type: "new_offer",
+          business_id: data.business_id,
+          business_name: data.business_name || data.businesses?.name || "A business you follow",
+          offer_id: data.id,
+          offer_title: data.name,
+        };
+
+        // Call the send-push-notification function
+        const notificationResponse = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push-notification`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify(notificationPayload),
+          }
+        );
+
+        const notificationResult = await notificationResponse.json();
+        console.log("Push notification result:", notificationResult);
+      } catch (notificationError) {
+        // Don't fail the offer update if notification fails
+        console.error("Error sending push notification:", notificationError);
+      }
     }
 
     // Return direct format (fields at top level) to match working collections

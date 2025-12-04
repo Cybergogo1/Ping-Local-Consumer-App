@@ -167,7 +167,7 @@ export default function SettingsScreen() {
   };
 
   const handleNotifications = () => {
-    navigation.navigate('Notifications');
+    navigation.navigate('NotificationPreferences');
   };
 
   const handleFAQs = () => {

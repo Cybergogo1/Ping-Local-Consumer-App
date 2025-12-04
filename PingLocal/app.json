@@ -13,7 +13,7 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "bundleIdentifier": "com.pinglocal.app",
+      "bundleIdentifier": "com.ping-local-dan.ios",
       "buildNumber": "1",
       "supportsTablet": true,
       "infoPlist": {
@@ -21,16 +21,17 @@
         "NSLocationAlwaysAndWhenInUseUsageDescription": "PingLocal needs your location to show nearby businesses and offers",
         "NSCameraUsageDescription": "PingLocal needs camera access to scan QR codes for offer redemption",
         "NSPhotoLibraryUsageDescription": "PingLocal needs access to your photos to upload images",
-        "NSUserTrackingUsageDescription": "This allows us to provide personalized offers based on your activity"
+        "NSUserTrackingUsageDescription": "This allows us to provide personalized offers based on your activity",
+        "UIBackgroundModes": [
+          "remote-notification"
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       },
       "config": {
         "googleMapsApiKey": "AIzaSyA3UvWRia-94eCIGPuyr4mMm3p-UJVpeGQ"
       },
       "entitlements": {
-        "aps-environment": "production",
-        "com.apple.developer.in-app-payments": [
-          "merchant.com.pinglocal"
-        ]
+        "aps-environment": "production"
       }
     },
     "android": {
@@ -73,7 +74,7 @@
         "expo-notifications",
         {
           "icon": "./assets/notification-icon.png",
-          "color": "#ffffff",
+          "color": "#14384F",
           "sounds": []
         }
       ],

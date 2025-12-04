@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
@@ -9,6 +9,8 @@ import { StripeProvider } from '@stripe/stripe-react-native';
 
 import { AuthProvider } from './src/contexts/AuthContext';
 import { NotificationProvider } from './src/contexts/NotificationContext';
+import { PushNotificationHandler } from './src/components/PushNotificationHandler';
+import { setNavigationRef } from './src/hooks/usePushNotifications';
 import RootNavigator from './src/navigation/RootNavigator';
 
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51S0jaTD2e561klM22nIBz5A3AOE9t87uHy1XBaeTNB5W0tufDp2bH0andFHnxpm9BfiafXJZBYsaN5vYc6IXDycs00bQob2628';
@@ -16,6 +18,8 @@ const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
 SplashScreen.preventAutoHideAsync();
 
 export default function App() {
+  const navigationRef = useRef<NavigationContainerRef<any>>(null);
+
   const [fontsLoaded, fontError] = useFonts({
     // Geologica weights
     'Geologica-Regular': require('./assets/fonts/Geologica-Regular.ttf'),
@@ -48,9 +52,14 @@ export default function App() {
         <SafeAreaProvider>
           <AuthProvider>
             <NotificationProvider>
-              <NavigationContainer>
-                <StatusBar style="light" />
-                <RootNavigator />
+              <NavigationContainer
+                ref={navigationRef}
+                onReady={() => setNavigationRef(navigationRef.current)}
+              >
+                <PushNotificationHandler>
+                  <StatusBar style="light" />
+                  <RootNavigator />
+                </PushNotificationHandler>
               </NavigationContainer>
             </NotificationProvider>
           </AuthProvider>
