@@ -32,7 +32,8 @@
       "Bash(npx eas:*)",
       "Bash(npx typescript:*)",
       "Bash(node -e:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(npm install:*)"
     ],
     "deny": [],
     "ask": []

@@ -9,18 +9,23 @@ import {
   StyleSheet,
   StatusBar,
   Modal,
-  Dimensions,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, fontSize, fontFamily, shadows } from '../../theme';
-import { Offer } from '../../types/database';
+import { Offer, ImageGalleryItem } from '../../types/database';
 import { OfferDetailScreenProps } from '../../types/navigation';
+import { ImageCarousel } from '../../components/ImageCarousel';
 
-const { width: screenWidth } = Dimensions.get('window');
-const placeholderImage = require('../../../assets/images/placeholder_offer.jpg');
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
 
 export default function OfferDetailScreen({ navigation, route }: OfferDetailScreenProps) {
   const { offerId } = route.params;
@@ -28,13 +33,15 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
 
   const [offer, setOffer] = useState<Offer | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showDescriptionModal, setShowDescriptionModal] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [isFavourited, setIsFavourited] = useState(false);
   const [favouriteId, setFavouriteId] = useState<string | null>(null);
+  const [offerTags, setOfferTags] = useState<{ id: number; name: string; type: string }[]>([]);
 
   useEffect(() => {
     fetchOffer();
+    fetchOfferTags();
     if (user) {
       checkFavouriteStatus();
     }
@@ -51,6 +58,24 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
 
       if (offerError) throw offerError;
 
+      // Fetch gallery images for this offer
+      const { data: galleryData } = await supabase
+        .from('image_gallery')
+        .select('*')
+        .eq('imageable_type', 'Offer')
+        .eq('imageable_id', offerId)
+        .order('display_order', { ascending: true });
+
+      // Map gallery data to ImageGalleryItem format
+      const galleryImages: ImageGalleryItem[] = (galleryData || []).map((item: any) => ({
+        id: item.id,
+        imageable_type: item.imageable_type,
+        imageable_id: item.imageable_id,
+        image_url: item.image_url || item.image_data, // Support both column names
+        display_order: item.display_order,
+        created: item.created,
+      }));
+
       // If offer has a business_name, fetch the business details by name
       // (businesses table has no 'id' column)
       if (offerData?.business_name) {
@@ -60,14 +85,41 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
           .eq('name', offerData.business_name)
           .single();
 
-        setOffer({ ...offerData, businesses: businessData || undefined });
+        setOffer({ ...offerData, businesses: businessData || undefined, gallery_images: galleryImages });
       } else {
-        setOffer(offerData);
+        setOffer({ ...offerData, gallery_images: galleryImages });
       }
     } catch (error) {
       console.error('Error fetching offer:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const fetchOfferTags = async () => {
+    try {
+      // Fetch tag IDs associated with this offer
+      const { data: offerTagData, error: offerTagError } = await supabase
+        .from('offer_tags')
+        .select('tag_id')
+        .eq('offer_id', offerId);
+
+      if (offerTagError) throw offerTagError;
+
+      if (offerTagData && offerTagData.length > 0) {
+        const tagIds = offerTagData.map(ot => ot.tag_id);
+
+        // Fetch the actual tag details
+        const { data: tagsData, error: tagsError } = await supabase
+          .from('tags')
+          .select('id, name, type')
+          .in('id', tagIds);
+
+        if (tagsError) throw tagsError;
+        setOfferTags(tagsData || []);
+      }
+    } catch (error) {
+      console.error('Error fetching offer tags:', error);
     }
   };
 
@@ -244,6 +296,18 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
   const locationArea = offer.location_area || offer.businesses?.location_area || '';
   const quantityRemaining = offer.quantity ? offer.quantity - (offer.number_sold || 0) : null;
 
+  // Build carousel images array: gallery images first, then featured_image as fallback
+  const carouselImages: string[] = [];
+  if (offer.gallery_images && offer.gallery_images.length > 0) {
+    offer.gallery_images.forEach((img) => {
+      if (img.image_url) carouselImages.push(img.image_url);
+    });
+  }
+  // If no gallery images, use featured_image
+  if (carouselImages.length === 0 && offer.featured_image) {
+    carouselImages.push(offer.featured_image);
+  }
+
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
@@ -255,11 +319,7 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
       >
         {/* Hero Image Section */}
         <View style={styles.heroContainer}>
-          <Image
-            source={offer.featured_image ? { uri: offer.featured_image } : placeholderImage}
-            style={styles.heroImage}
-            resizeMode="cover"
-          />
+          <ImageCarousel images={carouselImages} height={250} />
 
           {/* Top Navigation Buttons - positioned in safe area */}
           <SafeAreaView style={styles.heroButtonsContainer} edges={['top']}>
@@ -305,41 +365,48 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
               <Text style={styles.location}>📍 {locationArea}</Text>
             )}
 
-            {/* Category Tag */}
-            {offer.category && (
-              <View style={styles.tagContainer}>
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>{offer.category}</Text>
-                </View>
-              </View>
-            )}
           </View>
 
           {/* Right side - Price Box (overlapping image) */}
           {!expired && (
-            <View style={styles.priceBox}>
-              <TouchableOpacity
-                style={[styles.buyButton, soldOut && styles.buyButtonSoldOut]}
-                onPress={handleClaimPress}
-                disabled={soldOut}
-              >
-                <Text style={[styles.buyButtonText, soldOut && styles.buyButtonTextSoldOut]}>{getButtonText()}</Text>
-              </TouchableOpacity>
+            <View style={styles.priceBoxWrapper}>
+              <View style={styles.priceBox}>
+                <TouchableOpacity
+                  style={[styles.buyButton, soldOut && styles.buyButtonSoldOut]}
+                  onPress={handleClaimPress}
+                  disabled={soldOut}
+                >
+                  <Text style={[styles.buyButtonText, soldOut && styles.buyButtonTextSoldOut]}>{getButtonText()}</Text>
+                </TouchableOpacity>
 
-              <Text style={styles.priceAmount}>
-                {offer.price_discount
-                  ? `£${offer.price_discount.toFixed(2)}`
-                  : offer.custom_feed_text || 'Book Now'}
-              </Text>
-              {!!offer.price_discount && offer.unit_of_measurement && (
-                <Text style={styles.priceUnit}>per {offer.unit_of_measurement}</Text>
-              )}
+                <Text style={styles.priceAmount}>
+                  {offer.price_discount
+                    ? `£${offer.price_discount.toFixed(2)}`
+                    : offer.custom_feed_text || 'Book Now'}
+                </Text>
+                {!!offer.price_discount && offer.unit_of_measurement && (
+                  <Text style={styles.priceUnit}>per {offer.unit_of_measurement}</Text>
+                )}
 
-              {offer.end_date && (
-                <Text style={styles.endDate}>Ends {formatDate(offer.end_date)}</Text>
-              )}
+                {offer.end_date && (
+                  <Text style={styles.endDate}>Ends {formatDate(offer.end_date)}</Text>
+                )}
+              </View>
             </View>
           )}
+        </View>
+
+        <View style={styles.tagsWrapper}>
+          {/* Tags */}
+            {offerTags.length > 0 && (
+              <View style={styles.tagContainer}>
+                {offerTags.map((tag) => (
+                  <View key={tag.id} style={styles.tag}>
+                    <Text style={styles.tagText}>{tag.name}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
         </View>
 
         {/* Expired Banner */}
@@ -361,12 +428,21 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
             <Text style={styles.summaryText}>{offer.summary}</Text>
           )}
 
+          {isDescriptionExpanded && offer.full_description && (
+            <Text style={styles.fullDescriptionText}>{offer.full_description}</Text>
+          )}
+
           {offer.full_description && (
             <TouchableOpacity
               style={styles.readMoreButton}
-              onPress={() => setShowDescriptionModal(true)}
+              onPress={() => {
+                LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                setIsDescriptionExpanded(!isDescriptionExpanded);
+              }}
             >
-              <Text style={styles.readMoreText}>Read more...</Text>
+              <Text style={styles.readMoreText}>
+                {isDescriptionExpanded ? 'Show less' : 'Read more...'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -389,15 +465,6 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
           <Text style={styles.termsIcon}>📄</Text>
           <Text style={styles.termsText}>View Terms and Conditions</Text>
         </TouchableOpacity>
-
-        {/* Image Gallery Placeholder */}
-        <View style={styles.gallerySection}>
-          <View style={styles.galleryRow}>
-            <View style={styles.galleryImagePlaceholder} />
-            <View style={styles.galleryImagePlaceholder} />
-            <View style={styles.galleryImagePlaceholder} />
-          </View>
-        </View>
 
         {/* Business Card */}
         {offer.businesses && (
@@ -443,31 +510,6 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
         {/* Bottom spacing */}
         <View style={{ height: spacing.xxl }} />
       </ScrollView>
-
-      {/* Description Modal */}
-      <Modal
-        visible={showDescriptionModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowDescriptionModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Full Description</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowDescriptionModal(false)}
-              >
-                <Text style={styles.modalCloseText}>×</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalBody}>
-              <Text style={styles.modalText}>{offer?.full_description || ''}</Text>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
 
       {/* Terms & Conditions Modal */}
       <Modal
@@ -666,6 +708,11 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     fontFamily: fontFamily.body,
   },
+  tagsWrapper: {
+    flex: 1,
+    paddingHorizontal: spacing.sm,
+    paddingTop: spacing.sm,
+  },
   tagContainer: {
     paddingTop: '3%',
     flexDirection: 'row',
@@ -678,20 +725,24 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.sm,
     borderWidth: 1,
     borderColor: '#eee',
+    marginRight: spacing.xs,
+    marginBottom: spacing.xs,
   },
   tagText: {
     fontSize: fontSize.xs,
-    color: colors.grayDark,
+    color: colors.grayMedium,
     fontFamily: fontFamily.body,
   },
 
   // Price Box
-  priceBox: {
+  priceBoxWrapper: {
     width: 140,
+    marginTop: -40, // Overlap with hero image
+  },
+  priceBox: {
     backgroundColor: '#f9f9f9',
     borderRadius: borderRadius.lg,
-    padding: '3%',
-    marginTop: -40, // Overlap with hero image
+    padding: '10%',
     ...shadows.sm,
     alignItems: 'center',
   },
@@ -781,6 +832,13 @@ const styles = StyleSheet.create({
     lineHeight: fontSize.sm * 1.6,
     fontFamily: fontFamily.body,
   },
+  fullDescriptionText: {
+    fontSize: fontSize.sm,
+    color: colors.grayMedium,
+    lineHeight: fontSize.sm * 1.6,
+    fontFamily: fontFamily.body,
+    marginTop: spacing.sm,
+  },
   readMoreButton: {
     marginTop: spacing.sm,
   },
@@ -842,22 +900,6 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.grayMedium,
     fontFamily: fontFamily.body,
-  },
-
-  // Gallery
-  gallerySection: {
-    paddingHorizontal: spacing.md,
-    paddingTop: spacing.lg,
-  },
-  galleryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  galleryImagePlaceholder: {
-    width: (screenWidth - spacing.md * 4) / 3,
-    height: (screenWidth - spacing.md * 4) / 3,
-    backgroundColor: colors.grayLight,
-    borderRadius: borderRadius.md,
   },
 
   // Business Card

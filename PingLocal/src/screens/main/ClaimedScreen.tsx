@@ -35,15 +35,37 @@ export default function ClaimedScreen() {
 
     try {
       // Query purchase tokens by user_email
-      // No foreign key join - offer_name is stored directly on the token
-      const { data, error } = await supabase
+      const { data: tokens, error } = await supabase
         .from('purchase_tokens')
         .select('*')
         .eq('user_email', user.email)
         .order('created', { ascending: false });
 
       if (error) throw error;
-      setPurchaseTokens(data || []);
+
+      // Fetch offer details for tokens that have offer_id (no FK relationship exists)
+      if (tokens && tokens.length > 0) {
+        const offerIds = [...new Set(tokens.filter(t => t.offer_id).map(t => t.offer_id))];
+
+        if (offerIds.length > 0) {
+          const { data: offers } = await supabase
+            .from('offers')
+            .select('id, featured_image, business_name')
+            .in('id', offerIds);
+
+          // Map offers to tokens
+          const offersMap = new Map(offers?.map(o => [o.id, o]) || []);
+          const tokensWithOffers = tokens.map(token => ({
+            ...token,
+            offers: token.offer_id ? offersMap.get(token.offer_id) : undefined,
+          }));
+
+          setPurchaseTokens(tokensWithOffers);
+          return;
+        }
+      }
+
+      setPurchaseTokens(tokens || []);
     } catch (error) {
       console.error('Error fetching purchase tokens:', error);
     } finally {

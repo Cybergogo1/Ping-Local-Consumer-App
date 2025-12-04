@@ -23,9 +23,10 @@ export default function ClaimedOfferCard({
   onPress,
   onShowQR,
 }: ClaimedOfferCardProps) {
-  // Use data directly from purchase token (no joins available)
+  // Use data from purchase token and joined offer data
   const offerName = purchaseToken.offer_name || 'Unknown Offer';
-  const businessName = 'Business'; // Not stored on purchase_tokens currently
+  const businessName = purchaseToken.offers?.business_name || 'Business';
+  const featuredImage = purchaseToken.offers?.featured_image;
 
   // We don't have expiry date without joining to offers table
   const daysUntilExpiry = null;
@@ -56,9 +57,9 @@ export default function ClaimedOfferCard({
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
-      {/* Image - always use placeholder since we don't have featured_image on purchase_tokens */}
+      {/* Image - use featured_image from joined offer data */}
       <Image
-        source={placeholderImage}
+        source={featuredImage ? { uri: featuredImage } : placeholderImage}
         style={styles.image}
         resizeMode="cover"
       />

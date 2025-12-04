@@ -13,7 +13,10 @@ const Stack = createStackNavigator<RootStackParamList>();
 export default function RootNavigator() {
   const { session, user, supabaseUser, isLoading } = useAuth();
 
-  if (isLoading) {
+  // Keep loading if:
+  // 1. Initial auth state is loading, OR
+  // 2. We have a session but user profile hasn't loaded yet
+  if (isLoading || (session && !user)) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#36566F" />

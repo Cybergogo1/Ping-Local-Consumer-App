@@ -11,8 +11,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -25,6 +26,7 @@ type EditProfileScreenNavigationProp = StackNavigationProp<AccountStackParamList
 
 export default function EditProfileScreen() {
   const navigation = useNavigation<EditProfileScreenNavigationProp>();
+  const insets = useSafeAreaInsets();
   const { user, refreshUser } = useAuth();
 
   const [firstName, setFirstName] = useState(user?.first_name || '');
@@ -99,16 +101,31 @@ export default function EditProfileScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleCancel} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={24} color={colors.primary} />
+      {/* Header - extends edge to edge */}
+      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+        <TouchableOpacity onPress={handleCancel} style={styles.headerButton}>
+          <Image source={require('../../../assets/images/iconback.png')} style={styles.backButtonIcon}/>
+        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Notifications' as any)}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationBadgeText}>N..</Text>
+            </View>
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Profile</Text>
-          <View style={styles.headerSpacer} />
+          <TouchableOpacity
+            onPress={() => navigation.navigate('Settings' as any)}
+            style={styles.headerButton}
+          >
+            <Image source={require('../../../assets/images/iconsettings.png')} style={styles.settingsButtonIcon}/>
+          </TouchableOpacity>
         </View>
+      </View>
 
+      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
         <KeyboardAvoidingView
           style={styles.keyboardView}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -213,27 +230,53 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
+    alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
+    paddingTop: spacing.sm,
+    paddingBottom: spacing.md,
     backgroundColor: colors.primary,
   },
-  backButton: {
+  headerButton: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: colors.accent,
+    backgroundColor: '#203C50',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: fontSize.xl,
-    color: colors.white,
-    fontFamily: fontFamily.headingBold,
+  headerRight: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
-  headerSpacer: {
-    width: 40,
+  notificationBadge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    backgroundColor: colors.accent,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  backButtonIcon: {
+    width: 16,
+    height: 16,
+  },
+  notificationButtonIcon: {
+    width: 16,
+    height: 16,
+  },
+  settingsButtonIcon: {
+    width: 16,
+    height: 16,
+  },
+  notificationBadgeText: {
+    fontSize: 10,
+    fontFamily: fontFamily.bodyBold,
+    color: colors.primary,
   },
   keyboardView: {
     flex: 1,

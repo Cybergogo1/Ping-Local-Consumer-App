@@ -76,6 +76,7 @@ export interface Offer {
   updated: string;
   // Joined data
   businesses?: Business;
+  gallery_images?: ImageGalleryItem[];
 }
 
 // Legacy - keeping for reference but using PurchaseToken/RedemptionToken instead
@@ -199,6 +200,15 @@ export interface Favorite {
   business_id?: number;
   offer_id?: number;
   created_at: string;
+}
+
+export interface ImageGalleryItem {
+  id: number;
+  imageable_type: string;
+  imageable_id: number;
+  image_url: string;
+  display_order: number;
+  created: string;
 }
 
 // Tier thresholds

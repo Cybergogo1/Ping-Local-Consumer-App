@@ -6,6 +6,7 @@ import ClaimedScreen from '../screens/main/ClaimedScreen';
 import QRCodeScreen from '../screens/redemption/QRCodeScreen';
 import RedemptionSuccessScreen from '../screens/redemption/RedemptionSuccessScreen';
 import BillConfirmationScreen from '../screens/redemption/BillConfirmationScreen';
+import NotificationsScreen from '../screens/main/NotificationsScreen';
 
 const Stack = createStackNavigator<ClaimedStackParamList>();
 
@@ -17,6 +18,7 @@ export default function ClaimedStackNavigator() {
       }}
     >
       <Stack.Screen name="ClaimedMain" component={ClaimedScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen
         name="QRCode"
         component={QRCodeScreen}

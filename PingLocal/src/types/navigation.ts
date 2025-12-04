@@ -66,6 +66,7 @@ export type DirectoryStackParamList = {
   DirectoryMain: undefined;
   BusinessDetail: { businessId: number };
   OfferDetail: { offerId: number };
+  Notifications: undefined;
   // Claim flow screens (duplicated for directory navigation)
   SlotBooking: { offerId: number; offer: import('./database').Offer };
   ExternalBooking: { offerId: number; offer: import('./database').Offer };
@@ -95,6 +96,7 @@ export type DirectoryStackParamList = {
 // Claimed Stack (nested in Claimed tab)
 export type ClaimedStackParamList = {
   ClaimedMain: undefined;
+  Notifications: undefined;
   QRCode: {
     purchaseToken: import('./database').PurchaseToken;
   };
@@ -126,6 +128,7 @@ export type FavouritesStackParamList = {
   FavouritesMain: undefined;
   OfferDetail: { offerId: number };
   BusinessDetail: { businessId: number };
+  Notifications: undefined;
   // Claim flow screens for favourited offers
   SlotBooking: { offerId: number; offer: import('./database').Offer };
   ExternalBooking: { offerId: number; offer: import('./database').Offer };

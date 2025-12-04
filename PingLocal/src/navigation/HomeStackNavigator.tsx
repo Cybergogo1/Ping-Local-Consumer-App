@@ -7,6 +7,7 @@ import MapScreen from '../screens/main/MapScreen';
 import OfferDetailScreen from '../screens/main/OfferDetailScreen';
 import BusinessDetailScreen from '../screens/main/BusinessDetailScreen';
 import SettingsScreen from '../screens/main/SettingsScreen';
+import NotificationsScreen from '../screens/main/NotificationsScreen';
 
 // Claim flow screens
 import SlotBookingScreen from '../screens/claim/SlotBookingScreen';
@@ -29,6 +30,7 @@ export default function HomeStackNavigator() {
       <Stack.Screen name="OfferDetail" component={OfferDetailScreen} />
       <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
       {/* Claim Flow */}
       <Stack.Screen name="SlotBooking" component={SlotBookingScreen} />
       <Stack.Screen name="ExternalBooking" component={ExternalBookingScreen} />

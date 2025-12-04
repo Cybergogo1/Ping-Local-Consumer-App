@@ -98,6 +98,7 @@ serve(async (req) => {
       "location_area",
       "business_location",
       "pricing_complete",
+      "rejection_reason",
     ];
 
     for (const field of allowedFields) {

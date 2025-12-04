@@ -13,7 +13,6 @@ import {
   Alert,
   StyleSheet,
 } from 'react-native';
-import { useNavigation, CommonActions } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { colors, spacing, borderRadius, fontSize, fontFamily } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
@@ -57,8 +56,7 @@ const slides: OnboardingSlide[] = [
 ];
 
 export default function OnboardingScreen() {
-  const navigation = useNavigation();
-  const { completeOnboarding, updateNotificationPermission, user } = useAuth();
+  const { completeOnboarding, updateNotificationPermission } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
@@ -123,13 +121,8 @@ export default function OnboardingScreen() {
         return;
       }
 
-      // Force navigation reset to Main app
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [{ name: 'Main' }],
-        })
-      );
+      // RootNavigator will automatically switch to Main when onboarding_completed is true
+      // No manual navigation needed - the state change triggers a re-render
     }
   };
 
