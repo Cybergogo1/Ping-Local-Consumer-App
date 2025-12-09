@@ -103,8 +103,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...data,
         onboarding_completed: effectiveOnboardingComplete
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching user profile:', error);
+
+      // If user profile not found (deleted user), sign them out
+      if (error?.code === 'PGRST116') {
+        console.log('User profile not found - signing out');
+        await supabase.auth.signOut();
+        setUser(null);
+        setSession(null);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -113,6 +121,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signUp = async (email: string, password: string, firstName: string, surname: string) => {
     try {
       console.log('Starting signup for:', email);
+
+      // Clear any existing local storage onboarding flag for this email
+      // This ensures new signups don't inherit old onboarding state
+      const localOnboardingKey = `${ONBOARDING_COMPLETE_KEY}_${email}`;
+      await AsyncStorage.removeItem(localOnboardingKey);
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -129,27 +142,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       console.log('Auth signup successful, user:', data.user?.id);
 
-      // Create user profile in users table (Adalo format - uses auto-increment integer ID)
-      // Don't specify 'id' - let the database auto-generate it
+      // Create or reset user profile in users table
       if (data.user) {
-        console.log('Inserting into users table...');
-        const { data: insertData, error: profileError } = await supabase.from('users').insert({
-          email,
-          first_name: firstName,
-          surname,
-          loyalty_points: 0,
-          loyalty_tier: 'Ping Local Member',
-          verified: false,
-          onboarding_completed: false,
-          notification_permission_status: 'not_asked',
-        }).select();
+        console.log('Setting up user profile...');
 
-        if (profileError) {
-          console.error('Profile insert error:', profileError);
-          throw profileError;
+        // Check if user profile already exists (e.g., from previous signup attempt)
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('email', email)
+          .single();
+
+        if (existingUser) {
+          // Reset existing user profile for new signup
+          console.log('Resetting existing user profile...');
+          const { data: updateData, error: updateError } = await supabase
+            .from('users')
+            .update({
+              first_name: firstName,
+              surname,
+              loyalty_points: 0,
+              loyalty_tier: 'Ping Local Member',
+              verified: false,
+              onboarding_completed: false,
+              notification_permission_status: 'not_asked',
+              updated: new Date().toISOString(),
+            })
+            .eq('email', email)
+            .select();
+
+          if (updateError) {
+            console.error('Profile update error:', updateError);
+            throw updateError;
+          }
+          console.log('Profile reset successful:', updateData);
+        } else {
+          // Create new user profile
+          console.log('Creating new user profile...');
+          const { data: insertData, error: profileError } = await supabase.from('users').insert({
+            email,
+            first_name: firstName,
+            surname,
+            loyalty_points: 0,
+            loyalty_tier: 'Ping Local Member',
+            verified: false,
+            onboarding_completed: false,
+            notification_permission_status: 'not_asked',
+            created: new Date().toISOString(),
+            updated: new Date().toISOString(),
+            is_admin: false,
+            is_business: false,
+            api_requires_sync: false,
+          }).select();
+
+          if (profileError) {
+            console.error('Profile insert error:', profileError);
+            throw profileError;
+          }
+          console.log('Profile insert successful:', insertData);
         }
-
-        console.log('Profile insert successful:', insertData);
       }
 
       return { error: null };
@@ -227,7 +278,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const completeOnboarding = async () => {
     try {
-      if (!user) return { error: new Error('No user logged in') };
+      console.log('completeOnboarding called, user:', user);
+      if (!user) {
+        console.error('completeOnboarding: No user found in state');
+        return { error: new Error('No user logged in') };
+      }
 
       console.log('Completing onboarding for user:', user.id, 'email:', user.email);
 
@@ -263,7 +318,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateNotificationPermission = async (status: 'not_asked' | 'granted' | 'denied' | 'dismissed') => {
     try {
-      if (!user) return;
+      console.log('updateNotificationPermission called, status:', status, 'user:', user?.email);
+      if (!user) {
+        console.error('updateNotificationPermission: No user found in state');
+        return;
+      }
 
       const { error } = await supabase
         .from('users')

@@ -17,6 +17,7 @@ import { colors, spacing, borderRadius, fontSize, fontFamily } from '../../theme
 import { useAuth } from '../../contexts/AuthContext';
 import { LoginScreenProps } from '../../types/navigation';
 import { supabase } from '../../lib/supabase';
+import { getAuthErrorMessage } from '../../utils/errorMessages';
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
   const { signIn } = useAuth();
@@ -38,7 +39,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     const { error: signInError } = await signIn(email, password);
 
     if (signInError) {
-      setError(signInError.message || 'Email not recognised');
+      setError(getAuthErrorMessage(signInError));
       setIsLoading(false);
       return;
     }

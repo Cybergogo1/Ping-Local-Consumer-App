@@ -122,6 +122,7 @@ export type AccountStackParamList = {
   EditProfile: undefined;
   Notifications: undefined;
   NotificationPreferences: undefined;
+  OnboardingReplay: undefined;
 };
 
 // Favourites Stack (nested in Favourites tab)

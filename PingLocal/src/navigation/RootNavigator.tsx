@@ -37,24 +37,31 @@ export default function RootNavigator() {
   // Create a unique key based on navigation state to force re-render
   const navigationKey = `${!!session}-${isEmailVerified}-${isOnboardingComplete}`;
 
-  return (
-    <Stack.Navigator key={navigationKey} screenOptions={{ headerShown: false }}>
-      {!session ? (
-        // Not logged in - show auth screens
+  // Determine which screens to show based on auth state
+  if (!session || !isEmailVerified) {
+    return (
+      <Stack.Navigator key="auth" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Auth" component={AuthNavigator} />
-      ) : !isEmailVerified ? (
-        // Has session but not verified - keep in auth flow
-        <Stack.Screen name="Auth" component={AuthNavigator} />
-      ) : !isOnboardingComplete ? (
-        // Verified but onboarding not complete - show onboarding
+      </Stack.Navigator>
+    );
+  }
+
+  if (!isOnboardingComplete) {
+    return (
+      <Stack.Navigator key="onboarding" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
-      ) : (
-        // Everything complete - show main app
-        <>
-          <Stack.Screen name="Main" component={MainTabNavigator} />
-          <Stack.Screen name="Onboarding" component={OnboardingNavigator} />
-        </>
-      )}
+      </Stack.Navigator>
+    );
+  }
+
+  // Everything complete - show main app
+  // Note: Onboarding replay is handled via AccountStack (OnboardingReplayScreen)
+  return (
+    <Stack.Navigator
+      key="main"
+      screenOptions={{ headerShown: false }}
+    >
+      <Stack.Screen name="Main" component={MainTabNavigator} />
     </Stack.Navigator>
   );
 }

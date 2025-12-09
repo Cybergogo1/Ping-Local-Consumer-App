@@ -8,6 +8,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StripeProvider } from '@stripe/stripe-react-native';
 
 import { AuthProvider } from './src/contexts/AuthContext';
+import { LocationProvider } from './src/contexts/LocationContext';
 import { NotificationProvider } from './src/contexts/NotificationContext';
 import { PushNotificationHandler } from './src/components/PushNotificationHandler';
 import { setNavigationRef } from './src/hooks/usePushNotifications';
@@ -51,7 +52,8 @@ export default function App() {
       >
         <SafeAreaProvider>
           <AuthProvider>
-            <NotificationProvider>
+            <LocationProvider>
+              <NotificationProvider>
               <NavigationContainer
                 ref={navigationRef}
                 onReady={() => setNavigationRef(navigationRef.current)}
@@ -62,6 +64,7 @@ export default function App() {
                 </PushNotificationHandler>
               </NavigationContainer>
             </NotificationProvider>
+            </LocationProvider>
           </AuthProvider>
         </SafeAreaProvider>
       </StripeProvider>

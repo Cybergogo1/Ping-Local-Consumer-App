@@ -266,7 +266,7 @@ export default function FAQsScreen() {
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.supportButton, styles.onboardingButton]}
-              onPress={() => (navigation as any).navigate('Onboarding')}
+              onPress={() => navigation.navigate('OnboardingReplay')}
             >
               <Ionicons name="play-circle" size={20} color={colors.accent} />
               <Text style={[styles.supportButtonText, styles.onboardingButtonText]}>

@@ -231,7 +231,7 @@ export default function SettingsScreen() {
         {
           text: 'Replay',
           onPress: () => {
-            (navigation as any).navigate('Onboarding');
+            navigation.navigate('OnboardingReplay');
           },
         },
       ]

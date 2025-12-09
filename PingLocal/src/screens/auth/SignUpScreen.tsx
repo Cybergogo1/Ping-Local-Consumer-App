@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, fontSize, fontWeight, fontFamily } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { SignUpScreenProps } from '../../types/navigation';
+import { getAuthErrorMessage } from '../../utils/errorMessages';
 
 export default function SignUpScreen({ navigation }: SignUpScreenProps) {
   const { signUp } = useAuth();
@@ -47,7 +48,7 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
     const { error: signUpError } = await signUp(email, password, firstName, surname);
 
     if (signUpError) {
-      setError(signUpError.message || 'Failed to create account');
+      setError(getAuthErrorMessage(signUpError));
       setIsLoading(false);
       return;
     }

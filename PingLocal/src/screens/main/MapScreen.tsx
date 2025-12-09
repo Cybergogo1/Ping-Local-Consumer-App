@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
-import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -19,6 +18,7 @@ import { colors, fontSize, fontWeight, spacing, borderRadius, shadows } from '..
 import { supabase } from '../../lib/supabase';
 import { Business, Offer } from '../../types/database';
 import { HomeStackParamList } from '../../types/navigation';
+import { useLocation } from '../../contexts/LocationContext';
 
 const { width } = Dimensions.get('window');
 
@@ -41,42 +41,31 @@ const DEFAULT_REGION = {
 export default function MapScreen() {
   const navigation = useNavigation<MapScreenNavigationProp>();
   const mapRef = useRef<MapView>(null);
+  const { userLocation, locationPermission, requestLocation } = useLocation();
   const [businesses, setBusinesses] = useState<BusinessWithOffers[]>([]);
   const [selectedBusiness, setSelectedBusiness] = useState<BusinessWithOffers | null>(null);
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
   const [region, setRegion] = useState(DEFAULT_REGION);
 
+  // Request location if not already granted, and fetch businesses on mount
   useEffect(() => {
-    requestLocationPermission();
+    if (locationPermission !== 'granted') {
+      requestLocation();
+    }
     fetchBusinesses();
   }, []);
 
-  const requestLocationPermission = async () => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        setLocationPermission(true);
-        const location = await Location.getCurrentPositionAsync({});
-        setUserLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-        setRegion({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          latitudeDelta: 0.05,
-          longitudeDelta: 0.05,
-        });
-      } else {
-        setLocationPermission(false);
-      }
-    } catch (error) {
-      console.error('Error getting location:', error);
-      setLocationPermission(false);
+  // Update map region when user location becomes available
+  useEffect(() => {
+    if (userLocation) {
+      setRegion({
+        latitude: userLocation.latitude,
+        longitude: userLocation.longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      });
     }
-  };
+  }, [userLocation]);
 
   const fetchBusinesses = async () => {
     setIsLoading(true);
@@ -211,7 +200,7 @@ export default function MapScreen() {
         style={styles.map}
         provider={Platform.OS === 'android' ? PROVIDER_GOOGLE : undefined}
         initialRegion={region}
-        showsUserLocation={locationPermission === true}
+        showsUserLocation={locationPermission === 'granted'}
         showsMyLocationButton={false}
         onPress={() => setSelectedBusiness(null)}
       >
@@ -300,13 +289,13 @@ export default function MapScreen() {
       )}
 
       {/* No location permission banner */}
-      {locationPermission === false && (
+      {locationPermission === 'denied' && (
         <View style={styles.permissionBanner}>
           <Ionicons name="location-outline" size={20} color={colors.white} />
           <Text style={styles.permissionText}>
             Enable location to see businesses near you
           </Text>
-          <TouchableOpacity onPress={requestLocationPermission}>
+          <TouchableOpacity onPress={requestLocation}>
             <Text style={styles.permissionButton}>Enable</Text>
           </TouchableOpacity>
         </View>

@@ -19,12 +19,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
-import * as Location from 'expo-location';
 import { supabase } from '../../lib/supabase';
 import { colors, spacing, borderRadius, fontSize, shadows, fontFamily } from '../../theme';
 import { Offer, LocationArea, Tag, getTierFromPoints } from '../../types/database';
 import { HomeStackParamList } from '../../types/navigation';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLocation } from '../../contexts/LocationContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import PromotionCard from '../../components/promotions/PromotionCard';
 
@@ -60,6 +60,7 @@ type SortOption = 'newest' | 'ending_soon' | 'proximity';
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
   const { user, supabaseUser } = useAuth();
+  const { userLocation, locationPermission, isLocationLoading, requestLocation } = useLocation();
   const { unreadCount } = useNotifications();
 
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -88,10 +89,6 @@ export default function HomeScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const locationSlideAnim = useRef(new Animated.Value(-MODAL_WIDTH)).current;
   const filterSlideAnim = useRef(new Animated.Value(-MODAL_WIDTH)).current;
-
-  // User location for proximity sorting
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
-  const [locationPermission, setLocationPermission] = useState<boolean | null>(null);
 
   // Fetch location areas and categories on mount
   useEffect(() => {
@@ -548,34 +545,7 @@ export default function HomeScreen() {
     }).start(() => setShowFilterModal(false));
   };
 
-  // Location permission and distance calculation
-  const requestLocationPermission = async (): Promise<boolean> => {
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        setLocationPermission(true);
-        const location = await Location.getCurrentPositionAsync({});
-        setUserLocation({
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-        });
-        return true;
-      } else {
-        setLocationPermission(false);
-        Alert.alert(
-          'Location Permission Required',
-          'Please enable location permissions to sort by distance.',
-          [{ text: 'OK' }]
-        );
-        return false;
-      }
-    } catch (error) {
-      console.error('Error getting location:', error);
-      setLocationPermission(false);
-      return false;
-    }
-  };
-
+  // Distance calculation for proximity sorting
   const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
     const R = 6371; // Earth's radius in km
     const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -588,10 +558,15 @@ export default function HomeScreen() {
   };
 
   const handleProximitySortSelect = async () => {
-    if (locationPermission === true && userLocation) {
+    if (locationPermission === 'granted' && userLocation) {
+      // Location already available - just switch sort
+      setSortBy('proximity');
+    } else if (locationPermission === 'granted' && !userLocation) {
+      // Permission granted but still loading - set sort, will update when location arrives
       setSortBy('proximity');
     } else {
-      const granted = await requestLocationPermission();
+      // Need to request permission first
+      const granted = await requestLocation();
       if (granted) {
         setSortBy('proximity');
       }
@@ -803,13 +778,23 @@ export default function HomeScreen() {
               <TouchableOpacity
                 style={[styles.sortOption, sortBy === 'proximity' && styles.sortOptionActive]}
                 onPress={handleProximitySortSelect}
+                disabled={sortBy === 'proximity' && isLocationLoading}
               >
-                <Text style={[
-                  styles.sortOptionText,
-                  sortBy === 'proximity' && styles.sortOptionTextActive,
-                ]}>
-                  Closest to Me
-                </Text>
+                {sortBy === 'proximity' && isLocationLoading ? (
+                  <View style={styles.sortOptionLoading}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text style={[styles.sortOptionText, styles.sortOptionTextActive]}>
+                      Finding location...
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={[
+                    styles.sortOptionText,
+                    sortBy === 'proximity' && styles.sortOptionTextActive,
+                  ]}>
+                    Closest to Me
+                  </Text>
+                )}
               </TouchableOpacity>
             </View>
           }
@@ -1348,6 +1333,11 @@ const styles = StyleSheet.create({
   },
   sortOptionTextActive: {
     color: colors.primary,
+  },
+  sortOptionLoading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   listContent: {
     paddingTop: spacing.md,

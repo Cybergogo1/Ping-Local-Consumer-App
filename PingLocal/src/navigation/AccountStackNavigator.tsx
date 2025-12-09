@@ -8,6 +8,7 @@ import NotificationsScreen from '../screens/main/NotificationsScreen';
 import NotificationPreferencesScreen from '../screens/main/NotificationPreferencesScreen';
 import EditProfileScreen from '../screens/main/EditProfileScreen';
 import FAQsScreen from '../screens/main/FAQsScreen';
+import OnboardingReplayScreen from '../screens/onboarding/OnboardingReplayScreen';
 
 const Stack = createStackNavigator<AccountStackParamList>();
 
@@ -25,6 +26,7 @@ export default function AccountStackNavigator() {
       <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
       <Stack.Screen name="FAQs" component={FAQsScreen} />
+      <Stack.Screen name="OnboardingReplay" component={OnboardingReplayScreen} />
     </Stack.Navigator>
   );
 }

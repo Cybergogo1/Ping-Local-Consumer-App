@@ -9,13 +9,10 @@ import {
   StatusBar,
   Dimensions,
   FlatList,
-  Platform,
-  Alert,
   StyleSheet,
 } from 'react-native';
-import * as Notifications from 'expo-notifications';
+import { useNavigation } from '@react-navigation/native';
 import { colors, spacing, borderRadius, fontSize, fontFamily } from '../../theme';
-import { useAuth } from '../../contexts/AuthContext';
 
 const { width } = Dimensions.get('window');
 
@@ -55,76 +52,18 @@ const slides: OnboardingSlide[] = [
   },
 ];
 
-export default function OnboardingScreen() {
-  const { completeOnboarding, updateNotificationPermission, user } = useAuth();
+export default function OnboardingReplayScreen() {
+  const navigation = useNavigation();
   const [currentIndex, setCurrentIndex] = useState(0);
   const flatListRef = useRef<FlatList>(null);
 
-  const requestNotificationPermission = async () => {
-    try {
-      if (Platform.OS === 'android') {
-        await Notifications.setNotificationChannelAsync('default', {
-          name: 'default',
-          importance: Notifications.AndroidImportance.MAX,
-          vibrationPattern: [0, 250, 250, 250],
-          lightColor: '#FF231F7C',
-        });
-      }
-
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-
-      // Update permission status in database
-      if (finalStatus === 'granted') {
-        await updateNotificationPermission('granted');
-      } else if (finalStatus === 'denied') {
-        await updateNotificationPermission('denied');
-      } else {
-        await updateNotificationPermission('dismissed');
-      }
-
-      if (finalStatus !== 'granted') {
-        Alert.alert(
-          'Notifications',
-          'You can enable notifications later in your device settings.',
-          [{ text: 'OK' }]
-        );
-      }
-
-      return finalStatus === 'granted';
-    } catch (error) {
-      // Notifications not available (e.g., in Expo Go)
-      console.log('Notifications not available:', error);
-      await updateNotificationPermission('dismissed');
-      return false;
-    }
-  };
-
-  const handleNext = async () => {
+  const handleNext = () => {
     if (currentIndex < slides.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
       setCurrentIndex(currentIndex + 1);
     } else {
-      // Last slide - request notifications and complete onboarding
-      await requestNotificationPermission();
-
-      console.log('Onboarding: Completing onboarding for user:', user?.email);
-
-      const { error } = await completeOnboarding();
-
-      if (error) {
-        console.error('Error completing onboarding:', error);
-        Alert.alert('Error', 'Failed to save onboarding progress. Please try again.');
-        return;
-      }
-
-      // RootNavigator will automatically switch to Main when onboarding_completed becomes true
-      console.log('Onboarding: Complete - RootNavigator will handle navigation');
+      // Last slide - just go back to where we came from
+      navigation.goBack();
     }
   };
 
@@ -230,7 +169,7 @@ export default function OnboardingScreen() {
               style={styles.nextButton}
             >
               <Text style={styles.nextButtonText}>
-                {currentIndex === slides.length - 1 ? 'Get Started' : 'Next'}
+                {currentIndex === slides.length - 1 ? 'Done' : 'Next'}
               </Text>
             </TouchableOpacity>
           </View>
