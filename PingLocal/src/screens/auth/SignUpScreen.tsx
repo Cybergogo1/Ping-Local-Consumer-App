@@ -258,6 +258,8 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontFamily: fontFamily.bodyMedium,
     color: colors.grayDark,
+    height: 24,
+    maxHeight: 45,
   },
   passwordHint: {
     color: colors.grayMedium,

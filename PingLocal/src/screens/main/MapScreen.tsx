@@ -212,6 +212,8 @@ export default function MapScreen() {
                 latitude: business.latitude,
                 longitude: business.longitude,
               }}
+              anchor={{ x: 0.5, y: 0.5 }}
+              tracksViewChanges={false}
               onPress={() => handleMarkerPress(business)}
             >
               <View style={styles.markerContainer}>
@@ -234,11 +236,19 @@ export default function MapScreen() {
 
       {/* Header overlay */}
       <SafeAreaView style={styles.headerOverlay} edges={['top']}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Explore Nearby</Text>
-          <Text style={styles.headerSubtitle}>
-            {businesses.length} businesses with active offers
-          </Text>
+        <View style={styles.headerRow}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
+            <Image source={require('../../../assets/images/iconback.png')} style={styles.backButtonIcon} />
+          </TouchableOpacity>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Explore Nearby</Text>
+            <Text style={styles.headerSubtitle}>
+              {businesses.length} businesses with active offers
+            </Text>
+          </View>
         </View>
       </SafeAreaView>
 
@@ -328,12 +338,30 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    gap: spacing.sm,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  backButtonIcon: {
+    width: 16,
+    height: 16,
+  },
   header: {
+    flex: 1,
     backgroundColor: 'rgba(54, 86, 111, 0.95)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,
-    marginHorizontal: spacing.md,
   },
   headerTitle: {
     fontSize: fontSize.xl,

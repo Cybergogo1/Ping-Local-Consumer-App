@@ -358,8 +358,8 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
           </View>
         )}
 
-        {/* Party Size (if no slot but has booking) */}
-        {!hasSlot && partySize > 0 && (
+        {/* Party Size (if no slot but has booking and requires_booking is true) */}
+        {!hasSlot && partySize > 0 && offer.requires_booking && (
           <View style={styles.bookingDetailsCard}>
             <Text style={styles.cardTitle}>Booking Details</Text>
             <View style={styles.bookingRow}>

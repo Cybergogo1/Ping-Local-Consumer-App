@@ -1191,7 +1191,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: fontSize.sm,
     color: colors.white,
-    textAlign: 'center',
+    textAlign: 'left',
     marginHorizontal: spacing.sm,
     fontFamily: fontFamily.body,
   },

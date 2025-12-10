@@ -14,6 +14,13 @@ import { useNavigation } from '@react-navigation/native';
 import { colors, fontSize, fontFamily, spacing, borderRadius, shadows } from '../../theme';
 import { TIER_THRESHOLDS } from '../../types/database';
 
+const TIER_ICONS: Record<string, any> = {
+  member: require('../../../assets/images/loyaltytiericon_member.png'),
+  hero: require('../../../assets/images/loyaltytiericon_hero.png'),
+  champion: require('../../../assets/images/loyaltytiericon_champion.png'),
+  legend: require('../../../assets/images/loyaltytiericon_legend.png'),
+};
+
 const TIERS = [
   {
     key: 'member',
@@ -95,15 +102,10 @@ export default function LoyaltyTiersScreen() {
           {TIERS.map((tier, index) => (
             <View key={tier.key} style={styles.tierCard}>
               <View style={[styles.tierImageContainer, { backgroundColor: tier.color }]}>
-                <Ionicons
-                  name={
-                    tier.key === 'member' ? 'person' :
-                    tier.key === 'hero' ? 'shield' :
-                    tier.key === 'champion' ? 'medal' :
-                    'trophy'
-                  }
-                  size={40}
-                  color={colors.white}
+                <Image
+                  source={TIER_ICONS[tier.key]}
+                  style={styles.tierIcon}
+                  resizeMode="contain"
                 />
               </View>
               <View style={styles.tierInfo}>
@@ -246,6 +248,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
+  },
+  tierIcon: {
+    width: 50,
+    height: 50,
   },
   tierInfo: {
     flex: 1,

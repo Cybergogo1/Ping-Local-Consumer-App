@@ -234,6 +234,8 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontFamily: fontFamily.body,
     color: colors.grayDark,
+    height: 24,
+    maxHeight: 45,
   },
   forgotPassword: {
     marginTop: spacing.sm,

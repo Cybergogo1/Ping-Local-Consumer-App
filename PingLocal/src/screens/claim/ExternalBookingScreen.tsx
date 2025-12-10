@@ -169,36 +169,38 @@ export default function ExternalBookingScreen({ navigation, route }: ExternalBoo
           )}
         </View>
 
-        {/* Party Size Selector */}
-        <View style={styles.partySizeSection}>
-          <Text style={styles.sectionTitle}>How many people?</Text>
-          <View style={styles.partySizeSelector}>
-            <TouchableOpacity
-              style={[
-                styles.partySizeButton,
-                partySize <= 1 && styles.partySizeButtonDisabled,
-              ]}
-              onPress={decrementPartySize}
-              disabled={partySize <= 1}
-            >
-              <Text style={styles.partySizeButtonText}>-</Text>
-            </TouchableOpacity>
+        {/* Party Size Selector - only show if requires_booking */}
+        {offer.requires_booking && (
+          <View style={styles.partySizeSection}>
+            <Text style={styles.sectionTitle}>How many people?</Text>
+            <View style={styles.partySizeSelector}>
+              <TouchableOpacity
+                style={[
+                  styles.partySizeButton,
+                  partySize <= 1 && styles.partySizeButtonDisabled,
+                ]}
+                onPress={decrementPartySize}
+                disabled={partySize <= 1}
+              >
+                <Text style={styles.partySizeButtonText}>-</Text>
+              </TouchableOpacity>
 
-            <View style={styles.partySizeValue}>
-              <Text style={styles.partySizeNumber}>{partySize}</Text>
-              <Text style={styles.partySizeLabel}>
-                {partySize === 1 ? 'Person' : 'People'}
-              </Text>
+              <View style={styles.partySizeValue}>
+                <Text style={styles.partySizeNumber}>{partySize}</Text>
+                <Text style={styles.partySizeLabel}>
+                  {partySize === 1 ? 'Person' : 'People'}
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.partySizeButton}
+                onPress={incrementPartySize}
+              >
+                <Text style={styles.partySizeButtonText}>+</Text>
+              </TouchableOpacity>
             </View>
-
-            <TouchableOpacity
-              style={styles.partySizeButton}
-              onPress={incrementPartySize}
-            >
-              <Text style={styles.partySizeButtonText}>+</Text>
-            </TouchableOpacity>
           </View>
-        </View>
+        )}
 
         {/* Confirmation Checkbox */}
         <TouchableOpacity

@@ -9,7 +9,9 @@ import {
   Linking,
   StyleSheet,
   StatusBar,
-  Modal,
+  LayoutAnimation,
+  Platform,
+  UIManager,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -21,6 +23,11 @@ import { Business, Offer } from '../../types/database';
 import { BusinessDetailScreenProps } from '../../types/navigation';
 import OfferCardLandscape from '../../components/promotions/OfferCardLandscape';
 
+// Enable LayoutAnimation on Android
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
 const mapPinIcon = require('../../../assets/images/logo_icondark.png');
 
 export default function BusinessDetailScreen({ navigation, route }: BusinessDetailScreenProps) {
@@ -30,7 +37,7 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
   const [business, setBusiness] = useState<Business | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showDescriptionModal, setShowDescriptionModal] = useState(false);
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isFavourited, setIsFavourited] = useState(false);
   const [favouriteId, setFavouriteId] = useState<string | null>(null);
 
@@ -284,15 +291,26 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
             {/* About Section */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Who is {business.name}?</Text>
-              <Text style={styles.descriptionText} numberOfLines={3}>
+              <Text
+                style={styles.descriptionText}
+                numberOfLines={isDescriptionExpanded ? undefined : 3}
+              >
                 {business.description_summary || business.description || 'No description available.'}
               </Text>
+              {isDescriptionExpanded && business.description && business.description !== business.description_summary && (
+                <Text style={styles.fullDescriptionText}>{business.description}</Text>
+              )}
               {(business.description || business.description_summary) && (
                 <TouchableOpacity
                   style={styles.readMoreButton}
-                  onPress={() => setShowDescriptionModal(true)}
+                  onPress={() => {
+                    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+                    setIsDescriptionExpanded(!isDescriptionExpanded);
+                  }}
                 >
-                  <Text style={styles.readMoreText}>Read More</Text>
+                  <Text style={styles.readMoreText}>
+                    {isDescriptionExpanded ? 'Show less' : 'Read more...'}
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -345,33 +363,6 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
             )}
           </View>
         </ScrollView>
-
-      {/* Description Modal */}
-      <Modal
-        visible={showDescriptionModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowDescriptionModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>About {business?.name || 'this business'}</Text>
-              <TouchableOpacity
-                style={styles.modalCloseButton}
-                onPress={() => setShowDescriptionModal(false)}
-              >
-                <Text style={styles.modalCloseText}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <ScrollView style={styles.modalScrollView}>
-              <Text style={styles.modalDescription}>
-                {business?.description || business?.description_summary || 'No description available.'}
-              </Text>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
@@ -527,16 +518,18 @@ const styles = StyleSheet.create({
   },
   readMoreButton: {
     marginTop: spacing.sm,
-    borderWidth: 1,
-    borderColor: colors.grayMedium,
-    borderRadius: borderRadius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    alignSelf: 'flex-start',
   },
   readMoreText: {
     fontSize: fontSize.sm,
-    color: colors.grayDark,
+    color: colors.primary,
+    fontFamily: fontFamily.bodyMedium,
+  },
+  fullDescriptionText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
+    color: colors.grayMedium,
+    lineHeight: fontSize.sm * 1.6,
+    marginTop: spacing.sm,
   },
   promotionsCarousel: {
     paddingRight: spacing.md,
@@ -597,54 +590,5 @@ const styles = StyleSheet.create({
   mapTapText: {
     fontSize: fontSize.sm,
     color: colors.grayMedium,
-  },
-  // Modal styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
-  },
-  modalContent: {
-    backgroundColor: colors.white,
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
-    maxHeight: '80%',
-    paddingBottom: spacing.xl,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.grayLight,
-  },
-  modalTitle: {
-    fontSize: fontSize.lg,
-    fontFamily: fontFamily.headingBold,
-    color: colors.black,
-    flex: 1,
-  },
-  modalCloseButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.grayLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  modalCloseText: {
-    fontSize: fontSize.md,
-    fontFamily: fontFamily.body,
-    color: colors.grayDark,
-  },
-  modalScrollView: {
-    padding: spacing.md,
-  },
-  modalDescription: {
-    fontSize: fontSize.md,
-    fontFamily: fontFamily.body,
-    color: colors.grayDark,
-    lineHeight: fontSize.md * 1.6,
   },
 });

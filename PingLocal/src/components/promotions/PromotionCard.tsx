@@ -227,14 +227,30 @@ export default function PromotionCard({ offer, onPress, userLocation, userId }: 
             {businessName}{locationArea ? `, ${locationArea}` : ''}
           </Text>
 
-          {/* Category Tag */}
-          {offer.category && (
-            <View style={styles.tagContainer}>
-              <View style={styles.tag}>
-                <Text style={styles.tagText}>{offer.category}</Text>
+          {/* Tags from offer_tags junction table */}
+          {(() => {
+            // Extract tags from offer_tags if available
+            const offerTags = (offer as any).offer_tags;
+            const tagsArray = offerTags
+              ? (Array.isArray(offerTags) ? offerTags : [offerTags])
+                  .filter((ot: any) => ot?.tags?.name)
+                  .map((ot: any) => ot.tags.name)
+                  .slice(0, 8)
+              : [];
+
+            // Fallback to category if no offer_tags
+            const displayTags = tagsArray.length > 0 ? tagsArray : (offer.category ? [offer.category] : []);
+
+            return displayTags.length > 0 ? (
+              <View style={styles.tagContainer}>
+                {displayTags.map((tagName: string, index: number) => (
+                  <View key={index} style={styles.tag}>
+                    <Text style={styles.tagText}>{tagName}</Text>
+                  </View>
+                ))}
               </View>
-            </View>
-          )}
+            ) : null;
+          })()}
         </View>
       </View>
     </TouchableOpacity>
@@ -360,6 +376,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.xs,
     borderRadius: borderRadius.full,
     marginRight: spacing.xs,
+    marginBottom: spacing.xs,
   },
   tagText: {
     fontSize: fontSize.xs,

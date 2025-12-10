@@ -221,14 +221,17 @@ export default function AccountScreen() {
               <View style={styles.progressBar}>
                 <View style={[styles.progressFill, { width: `${Math.min(progressPercentage, 100)}%` }]} />
               </View>
-              {nextTier && (
-                <Text style={styles.progressText}>
-                  {pointsNeeded} points to {TIER_DISPLAY_NAMES[nextTier].split(' ').pop()}!
-                </Text>
-              )}
-              {!nextTier && (
-                <Text style={styles.progressText}>You've reached the highest tier!</Text>
-              )}
+              <View style={styles.progressTextRow}>
+                <Text style={styles.pointsCollectedText}>{loyaltyPoints} points</Text>
+                {nextTier && (
+                  <Text style={styles.progressText}>
+                    {pointsNeeded} to {TIER_DISPLAY_NAMES[nextTier].split(' ').pop()}!
+                  </Text>
+                )}
+                {!nextTier && (
+                  <Text style={styles.progressText}>Max tier reached!</Text>
+                )}
+              </View>
             </View>
           </View>
 
@@ -258,6 +261,21 @@ export default function AccountScreen() {
               style={styles.loyaltyCardImage}
               resizeMode="cover"
             />
+          </TouchableOpacity>
+
+          {/* FAQ Card */}
+          <TouchableOpacity
+            style={styles.faqCard}
+            onPress={() => navigation.navigate('FAQs')}
+          >
+            <View style={styles.faqCardContent}>
+              <Ionicons name="help-circle-outline" size={28} color={colors.primary} />
+              <View style={styles.faqCardText}>
+                <Text style={styles.faqCardTitle}>FAQs</Text>
+                <Text style={styles.faqCardSubtitle}>Got questions? We've got answers!</Text>
+              </View>
+            </View>
+            <Ionicons name="chevron-forward" size={24} color={colors.primary} />
           </TouchableOpacity>
 
           {/* Redeemed Promotions Section */}
@@ -432,6 +450,16 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: colors.accent,
   },
+  progressTextRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  pointsCollectedText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.primary,
+  },
   progressText: {
     fontSize: fontSize.sm,
     fontFamily: fontFamily.bodyRegular,
@@ -495,6 +523,38 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   loyaltyCardSubtitle: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodyRegular,
+    color: colors.grayMedium,
+  },
+  faqCard: {
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.lg,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.white,
+    borderWidth: 1,
+    borderColor: '#eee',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.md,
+  },
+  faqCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  faqCardText: {
+    marginLeft: spacing.md,
+    flex: 1,
+  },
+  faqCardTitle: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.headingBold,
+    color: colors.primary,
+    marginBottom: 2,
+  },
+  faqCardSubtitle: {
     fontSize: fontSize.sm,
     fontFamily: fontFamily.bodyRegular,
     color: colors.grayMedium,
