@@ -99,6 +99,7 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         user_email: user.email,
         offer_id: offerId,
         offer_name: offer.name,
+        business_id: businessId || null,
         purchase_type: offer.offer_type || 'Pay on the day',
         customer_price: isPayUpfront ? total : null,
         ping_local_take: pingLocalTake,
@@ -210,6 +211,7 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         user_email: user.email,
         offer_id: offerId,
         offer_name: offer.name,
+        business_id: businessId || null,
         purchase_type: offer.offer_type || 'Pay up front',
         customer_price: total,
         ping_local_take: paymentData.platformFee / 100, // Convert from cents

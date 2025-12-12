@@ -62,8 +62,7 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
       const { data: galleryData } = await supabase
         .from('image_gallery')
         .select('*')
-        .eq('imageable_type', 'Offer')
-        .eq('imageable_id', offerId)
+        .eq('offer_id', offerId)
         .order('display_order', { ascending: true });
 
       // Map gallery data to ImageGalleryItem format
@@ -77,11 +76,10 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
       }));
 
       // If offer has a business_name, fetch the business details by name
-      // (businesses table has no 'id' column)
       if (offerData?.business_name) {
         const { data: businessData } = await supabase
           .from('businesses')
-          .select('name, location_area, featured_image, location, phone_number, description_summary, created')
+          .select('id, name, location_area, featured_image, location, phone_number, description_summary, created')
           .eq('name', offerData.business_name)
           .single();
 
@@ -263,7 +261,6 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
   };
 
   const handleBusinessPress = () => {
-    // Use business name as identifier since businesses table has no 'id' column
     if (!offer?.businesses?.name) return;
     navigation.navigate('BusinessDetail', { businessId: offer.businesses.name as any });
   };
@@ -296,16 +293,19 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
   const locationArea = offer.location_area || offer.businesses?.location_area || '';
   const quantityRemaining = offer.quantity ? offer.quantity - (offer.number_sold || 0) : null;
 
-  // Build carousel images array: gallery images first, then featured_image as fallback
+  // Build carousel images array: featured_image first, then gallery images
   const carouselImages: string[] = [];
+
+  // Add featured_image as the first image
+  if (offer.featured_image) {
+    carouselImages.push(offer.featured_image);
+  }
+
+  // Add gallery images after featured_image
   if (offer.gallery_images && offer.gallery_images.length > 0) {
     offer.gallery_images.forEach((img) => {
       if (img.image_url) carouselImages.push(img.image_url);
     });
-  }
-  // If no gallery images, use featured_image
-  if (carouselImages.length === 0 && offer.featured_image) {
-    carouselImages.push(offer.featured_image);
   }
 
   return (

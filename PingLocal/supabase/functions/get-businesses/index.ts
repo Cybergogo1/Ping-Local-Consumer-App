@@ -76,6 +76,8 @@ serve(async (req) => {
       LeadRate: business.lead_rate,
       CutPercent: business.cut_percent,
       'Currently Trading': business.currently_trading,
+      latitude: business.latitude,
+      longitude: business.longitude,
       Created: business.created,
       Updated: business.updated
     }))

@@ -81,6 +81,7 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
             customer_name: purchaseToken.user_email,
             offer_name: purchaseToken.offer_name,
             promotion_id: purchaseToken.offer_id,
+            business_id: purchaseToken.business_id,
             scanned: false,
             status: 'Pending',
             completed: false,

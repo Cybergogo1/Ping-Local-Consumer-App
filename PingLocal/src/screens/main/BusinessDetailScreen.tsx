@@ -291,16 +291,17 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
             {/* About Section */}
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Who is {business.name}?</Text>
-              <Text
-                style={styles.descriptionText}
-                numberOfLines={isDescriptionExpanded ? undefined : 3}
-              >
-                {business.description_summary || business.description || 'No description available.'}
-              </Text>
-              {isDescriptionExpanded && business.description && business.description !== business.description_summary && (
+              {(business.description_summary || business.description) && (
+                <Text style={styles.descriptionText}>
+                  {business.description_summary || 'No description available.'}
+                </Text>
+              )}
+
+              {isDescriptionExpanded && business.description && (
                 <Text style={styles.fullDescriptionText}>{business.description}</Text>
               )}
-              {(business.description || business.description_summary) && (
+
+              {business.description && (
                 <TouchableOpacity
                   style={styles.readMoreButton}
                   onPress={() => {

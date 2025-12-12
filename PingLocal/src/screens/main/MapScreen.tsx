@@ -26,8 +26,6 @@ type MapScreenNavigationProp = StackNavigationProp<HomeStackParamList>;
 
 interface BusinessWithOffers extends Business {
   offers?: Offer[];
-  latitude?: number;
-  longitude?: number;
 }
 
 // Default location (Wirral, UK - where Ping Local operates)
@@ -102,52 +100,17 @@ export default function MapScreen() {
       });
       console.log('Map: Businesses with offers:', Object.keys(offersByBusiness));
 
-      // Filter businesses that have at least one active offer
-      // and parse location data
+      // Filter businesses that have at least one active offer and have coordinates
       const businessesWithLocation = (businessData || [])
         .filter(business => {
-          return offersByBusiness[business.name] && offersByBusiness[business.name].length > 0;
+          const hasOffers = offersByBusiness[business.name] && offersByBusiness[business.name].length > 0;
+          const hasCoordinates = business.latitude && business.longitude;
+          return hasOffers && hasCoordinates;
         })
-        .map(business => {
-          // Try to extract coordinates from location string
-          // Format might be "lat,lng" or full address - we'll need geocoding for addresses
-          let latitude: number | undefined;
-          let longitude: number | undefined;
-
-          // For now, generate random coordinates around Wirral for demo
-          // In production, you'd geocode the address or store lat/lng in the database
-          if (business.location_area) {
-            const areaCoords: Record<string, { lat: number; lng: number }> = {
-              'Oxton': { lat: 53.3847, lng: -3.0414 },
-              'West Kirby': { lat: 53.3728, lng: -3.1840 },
-              'Heswall': { lat: 53.3271, lng: -3.0977 },
-              'Birkenhead': { lat: 53.3934, lng: -3.0145 },
-              'Hoylake': { lat: 53.3900, lng: -3.1818 },
-              'Bebington': { lat: 53.3511, lng: -3.0033 },
-              'Wallasey': { lat: 53.4243, lng: -3.0486 },
-            };
-
-            const coords = areaCoords[business.location_area];
-            if (coords) {
-              // Add small random offset to prevent markers from overlapping
-              latitude = coords.lat + (Math.random() - 0.5) * 0.01;
-              longitude = coords.lng + (Math.random() - 0.5) * 0.01;
-            }
-          }
-
-          // Default to Wirral center if no area match
-          if (!latitude || !longitude) {
-            latitude = 53.3727 + (Math.random() - 0.5) * 0.05;
-            longitude = -3.0738 + (Math.random() - 0.5) * 0.05;
-          }
-
-          return {
-            ...business,
-            offers: offersByBusiness[business.name] || [],
-            latitude,
-            longitude,
-          };
-        });
+        .map(business => ({
+          ...business,
+          offers: offersByBusiness[business.name] || [],
+        }));
 
       console.log('Map: Final businesses with location:', businessesWithLocation.length, businessesWithLocation.map(b => b.name));
       setBusinesses(businessesWithLocation);
@@ -204,16 +167,16 @@ export default function MapScreen() {
         showsMyLocationButton={false}
         onPress={() => setSelectedBusiness(null)}
       >
-        {businesses.map((business) => (
-          business.latitude && business.longitude && (
+        {businesses
+          .filter((business) => business.latitude && business.longitude)
+          .map((business) => (
             <Marker
               key={business.name}
+              identifier={business.name}
               coordinate={{
-                latitude: business.latitude,
-                longitude: business.longitude,
+                latitude: business.latitude!,
+                longitude: business.longitude!,
               }}
-              anchor={{ x: 0.5, y: 0.5 }}
-              tracksViewChanges={false}
               onPress={() => handleMarkerPress(business)}
             >
               <View style={styles.markerContainer}>
@@ -230,8 +193,7 @@ export default function MapScreen() {
                 )}
               </View>
             </Marker>
-          )
-        ))}
+          ))}
       </MapView>
 
       {/* Header overlay */}

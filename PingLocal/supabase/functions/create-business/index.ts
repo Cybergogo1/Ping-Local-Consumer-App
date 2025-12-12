@@ -55,6 +55,8 @@ Deno.serve(async (req)=>{
       lead_rate: body.LeadRate,
       cut_percent: body.CutPercent,
       currently_trading: body['Currently Trading'],
+      latitude: body.latitude,
+      longitude: body.longitude,
       updated: new Date().toISOString()
     };
     // Check if updating (id provided) or creating
@@ -93,6 +95,8 @@ Deno.serve(async (req)=>{
       LeadRate: business.lead_rate,
       CutPercent: business.cut_percent,
       'Currently Trading': business.currently_trading,
+      latitude: business.latitude,
+      longitude: business.longitude,
       Created: business.created,
       Updated: business.updated
     };

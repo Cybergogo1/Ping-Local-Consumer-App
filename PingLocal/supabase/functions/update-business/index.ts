@@ -75,6 +75,8 @@ Deno.serve(async (req)=>{
     if (body.LeadRate !== undefined) businessData.lead_rate = body.LeadRate;
     if (body.CutPercent !== undefined) businessData.cut_percent = body.CutPercent;
     if (body['Currently Trading'] !== undefined) businessData.currently_trading = body['Currently Trading'];
+    if (body.latitude !== undefined) businessData.latitude = body.latitude;
+    if (body.longitude !== undefined) businessData.longitude = body.longitude;
     // Update the business
     const { data, error } = await supabaseClient.from('businesses').update(businessData).eq('id', id).select().single();
     if (error) throw error;
@@ -101,6 +103,8 @@ Deno.serve(async (req)=>{
       LeadRate: data.lead_rate,
       CutPercent: data.cut_percent,
       'Currently Trading': data.currently_trading,
+      latitude: data.latitude,
+      longitude: data.longitude,
       Created: data.created,
       Updated: data.updated
     };

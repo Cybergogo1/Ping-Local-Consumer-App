@@ -1,5 +1,5 @@
 // supabase/functions/get-redemption-tokens/index.ts
-// Returns redemption tokens, can be filtered by id, purchase_token_id, or customer_id
+// Returns redemption tokens, can be filtered by id, purchase_token_id, customer_id, or business_id
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -26,6 +26,7 @@ serve(async (req) => {
     const id = url.searchParams.get('id')
     const purchaseTokenId = url.searchParams.get('purchase_token_id')
     const customerId = url.searchParams.get('customer_id')
+    const businessId = url.searchParams.get('business_id')
     const status = url.searchParams.get('status')
     const limit = url.searchParams.get('limit')
     const offset = url.searchParams.get('offset')
@@ -47,6 +48,11 @@ serve(async (req) => {
     // Filter by customer ID
     if (customerId) {
       query = query.eq('customer_id', customerId)
+    }
+
+    // Filter by business ID
+    if (businessId) {
+      query = query.eq('business_id', businessId)
     }
 
     // Filter by status
@@ -82,6 +88,8 @@ serve(async (req) => {
         purchase_token_id: record.purchase_token_id ? String(record.purchase_token_id) : null,
         customer_id: record.customer_id ? String(record.customer_id) : null,
         promotion_id: record.promotion_id ? String(record.promotion_id) : null,
+        business_id: record.business_id ? String(record.business_id) : null,
+        Adjusted_Bill: record.Adjusted_Bill ?? null,
       }
     }
 

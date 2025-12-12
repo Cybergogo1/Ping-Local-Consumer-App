@@ -25,6 +25,8 @@ export interface Business {
   description_summary?: string;
   location?: string;
   location_area?: string;
+  latitude?: number;
+  longitude?: number;
   phone_number?: string;
   opening_times?: string;
   featured_image?: string;
