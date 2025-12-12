@@ -132,6 +132,31 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         .update({ number_sold: (offer.number_sold || 0) + quantity })
         .eq('id', offerId);
 
+      // Send purchase notification
+      try {
+        const customerName = user.first_name && user.surname
+          ? `${user.first_name} ${user.surname}`
+          : user.email || 'A customer';
+
+        await supabase.functions.invoke('notify-purchase', {
+          body: {
+            offer_id: offerId,
+            offer_name: offer.name,
+            business_id: businessId,
+            business_name: businessName,
+            consumer_user_id: user.id,
+            consumer_name: customerName,
+            amount: null, // Pay on the day
+            purchase_type: 'Pay on the day',
+            booking_date: selectedSlot?.slot_date,
+            booking_time: selectedSlot?.slot_time,
+          },
+        });
+      } catch (notifError) {
+        // Don't fail the purchase if notification fails
+        console.error('Error sending purchase notification:', notifError);
+      }
+
       // Navigate to success screen
       navigation.navigate('ClaimSuccess', {
         purchaseTokenId: data.id,
@@ -272,6 +297,31 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         if (refreshUser) {
           await refreshUser();
         }
+      }
+
+      // Send purchase notification
+      try {
+        const customerName = user.first_name && user.surname
+          ? `${user.first_name} ${user.surname}`
+          : user.email || 'A customer';
+
+        await supabase.functions.invoke('notify-purchase', {
+          body: {
+            offer_id: offerId,
+            offer_name: offer.name,
+            business_id: businessId,
+            business_name: businessName,
+            consumer_user_id: user.id,
+            consumer_name: customerName,
+            amount: total,
+            purchase_type: 'Pay up front',
+            booking_date: selectedSlot?.slot_date,
+            booking_time: selectedSlot?.slot_time,
+          },
+        });
+      } catch (notifError) {
+        // Don't fail the purchase if notification fails
+        console.error('Error sending purchase notification:', notifError);
       }
 
       // Navigate to success screen with tier info

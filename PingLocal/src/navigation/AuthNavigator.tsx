@@ -7,6 +7,8 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import SignUpScreen from '../screens/auth/SignUpScreen';
 import VerificationScreen from '../screens/auth/VerificationScreen';
 import EmailVerificationSuccessScreen from '../screens/auth/EmailVerificationSuccessScreen';
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
+import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 
 const Stack = createStackNavigator<AuthStackParamList>();
 
@@ -23,6 +25,8 @@ export default function AuthNavigator() {
       <Stack.Screen name="SignUp" component={SignUpScreen} />
       <Stack.Screen name="Verification" component={VerificationScreen} />
       <Stack.Screen name="EmailVerificationSuccess" component={EmailVerificationSuccessScreen} />
+      <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <Stack.Screen name="ResetPassword" component={ResetPasswordScreen} />
     </Stack.Navigator>
   );
 }

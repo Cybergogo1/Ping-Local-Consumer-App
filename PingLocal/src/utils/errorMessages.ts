@@ -23,6 +23,23 @@ export function getAuthErrorMessage(error: Error): string {
     return 'Please verify your email before logging in.';
   }
 
+  // Password reset errors
+  if (message.includes('otp') && message.includes('expired')) {
+    return 'The reset code has expired. Please request a new one.';
+  }
+  if (message.includes('otp') && message.includes('invalid')) {
+    return 'Invalid code. Please check and try again.';
+  }
+  if (message.includes('token') && (message.includes('expired') || message.includes('invalid'))) {
+    return 'The reset link has expired. Please request a new one.';
+  }
+  if (message.includes('same password') || message.includes('different password')) {
+    return 'New password must be different from your current password.';
+  }
+  if (message.includes('user not found') || message.includes('no user')) {
+    return 'No account found with this email address.';
+  }
+
   // Rate limiting
   if (message.includes('rate limit') || message.includes('too many requests')) {
     return 'Too many attempts. Please wait a moment and try again.';

@@ -10,6 +10,7 @@ export type AuthStackParamList = {
   Verification: { email: string; isNewSignup?: boolean };
   EmailVerificationSuccess: undefined;
   ForgotPassword: undefined;
+  ResetPassword: { email: string };
 };
 
 // Onboarding Stack
@@ -113,6 +114,21 @@ export type ClaimedStackParamList = {
   };
 };
 
+// Notification type for detail screen
+export interface NotificationItem {
+  id: number;
+  name: string;
+  content: string;
+  read: boolean;
+  trigger_user_id?: number;
+  user_id: number;
+  offer_id?: number;
+  business_id?: number;
+  notifications_categories?: string;
+  created: string;
+  updated: string;
+}
+
 // Account Stack (nested in Account tab)
 export type AccountStackParamList = {
   AccountMain: undefined;
@@ -121,6 +137,7 @@ export type AccountStackParamList = {
   FAQs: undefined;
   EditProfile: undefined;
   Notifications: undefined;
+  NotificationDetail: { notification: NotificationItem };
   NotificationPreferences: undefined;
   OnboardingReplay: undefined;
 };

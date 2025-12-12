@@ -20,6 +20,9 @@ interface AuthContextType {
   completeOnboarding: () => Promise<{ error: Error | null }>;
   updateNotificationPermission: (status: 'not_asked' | 'granted' | 'denied' | 'dismissed') => Promise<void>;
   shouldShowOnboarding: () => boolean;
+  requestPasswordReset: (email: string) => Promise<{ error: Error | null }>;
+  verifyPasswordResetOtp: (email: string, token: string) => Promise<{ error: Error | null }>;
+  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -343,6 +346,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return supabaseUser.email_confirmed_at !== null && !user.onboarding_completed;
   };
 
+  const requestPasswordReset = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
+  const verifyPasswordResetOtp = async (email: string, token: string) => {
+    try {
+      const { error } = await supabase.auth.verifyOtp({
+        email,
+        token,
+        type: 'recovery',
+      });
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+      if (error) throw error;
+      return { error: null };
+    } catch (error) {
+      return { error: error as Error };
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -359,6 +398,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         completeOnboarding,
         updateNotificationPermission,
         shouldShowOnboarding,
+        requestPasswordReset,
+        verifyPasswordResetOtp,
+        updatePassword,
       }}
     >
       {children}

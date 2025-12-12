@@ -25,7 +25,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       const { count, error } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
-        .eq('receiver_id', user.id)
+        .eq('user_id', user.id)
         .eq('read', false);
 
       if (!error && count !== null) {
@@ -53,7 +53,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           event: '*',
           schema: 'public',
           table: 'notifications',
-          filter: `receiver_id=eq.${user.id}`,
+          filter: `user_id=eq.${user.id}`,
         },
         () => {
           fetchUnreadCount();

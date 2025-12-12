@@ -19,22 +19,12 @@ import { colors, fontSize, spacing, borderRadius, shadows, fontFamily } from '..
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { supabase } from '../../lib/supabase';
-import { AccountStackParamList } from '../../types/navigation';
+import { AccountStackParamList, NotificationItem } from '../../types/navigation';
 
 type NotificationsScreenNavigationProp = StackNavigationProp<AccountStackParamList, 'Notifications'>;
 
-interface Notification {
-  id: number;
-  name: string;
-  content: string;
-  read: boolean;
-  trigger_user_id?: number;
-  receiver_id: number;
-  offer_id?: number;
-  notifications_categories?: string;
-  created: string;
-  updated: string;
-}
+// Use NotificationItem from navigation types for consistency
+type Notification = NotificationItem;
 
 const NOTIFICATION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   'offer': 'pricetag',
@@ -60,7 +50,7 @@ export default function NotificationsScreen() {
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('receiver_id', user.id)
+        .eq('user_id', user.id)
         .order('created', { ascending: false })
         .limit(50);
 
@@ -106,7 +96,7 @@ export default function NotificationsScreen() {
       await supabase
         .from('notifications')
         .update({ read: true })
-        .eq('receiver_id', user.id)
+        .eq('user_id', user.id)
         .eq('read', false);
 
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
@@ -117,14 +107,8 @@ export default function NotificationsScreen() {
   };
 
   const handleNotificationPress = async (notification: Notification) => {
-    // Mark as read
-    if (!notification.read) {
-      await handleMarkAsRead(notification.id);
-    }
-
-    // Navigate to related content if applicable
-    // Note: Navigation to offers would need to be handled by the parent navigator
-    // For now, we just mark as read
+    // Navigate to notification detail screen
+    navigation.navigate('NotificationDetail', { notification });
   };
 
   const getNotificationIcon = (category?: string): keyof typeof Ionicons.glyphMap => {
