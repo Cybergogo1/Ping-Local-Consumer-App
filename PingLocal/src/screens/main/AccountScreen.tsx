@@ -242,7 +242,7 @@ export default function AccountScreen() {
               <Text style={styles.statText}>{claimedCount} Pings Claimed</Text>
             </View>
             <View style={[styles.statPill, styles.statPillOutline]}>
-              <Ionicons name="share-social" size={18} color={colors.primary} />
+              <Ionicons name="share-social" size={18} color={colors.white} />
               <Text style={[styles.statText, styles.statTextOutline]}>{sharedCount} Pings Shared</Text>
             </View>
           </View>
@@ -269,13 +269,16 @@ export default function AccountScreen() {
             onPress={() => navigation.navigate('FAQs')}
           >
             <View style={styles.faqCardContent}>
-              <Ionicons name="help-circle-outline" size={28} color={colors.primary} />
               <View style={styles.faqCardText}>
                 <Text style={styles.faqCardTitle}>FAQs</Text>
                 <Text style={styles.faqCardSubtitle}>Got questions? We've got answers!</Text>
               </View>
             </View>
-            <Ionicons name="chevron-forward" size={24} color={colors.primary} />
+            <Image
+              source={require('../../../assets/images/FAQs_graphic.png')}
+              style={styles.loyaltyCardImage}
+              resizeMode="cover"
+            />
           </TouchableOpacity>
 
           {/* Redeemed Promotions Section */}
@@ -510,11 +513,14 @@ const styles = StyleSheet.create({
   loyaltyCardImage: {
     width: '40%',
     height: '100%',
+    borderBottomRightRadius: borderRadius.md,
+    borderTopRightRadius: borderRadius.md,
   },
   loyaltyCardContent: {
     flexDirection: 'column',
     justifyContent: 'center',
     padding: spacing.md,
+    paddingLeft: spacing.lg,
   },
   loyaltyCardTitle: {
     fontSize: fontSize.lg,
@@ -531,33 +537,33 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
     marginBottom: spacing.lg,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.white,
+    backgroundColor: colors.primary,
     borderWidth: 1,
     borderColor: '#eee',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: spacing.md,
   },
   faqCardContent: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    padding: spacing.md,
   },
   faqCardText: {
     marginLeft: spacing.md,
     flex: 1,
   },
   faqCardTitle: {
-    fontSize: fontSize.md,
+    fontSize: fontSize.lg,
     fontFamily: fontFamily.headingBold,
-    color: colors.primary,
+    color: colors.white,
     marginBottom: 2,
   },
   faqCardSubtitle: {
     fontSize: fontSize.sm,
     fontFamily: fontFamily.bodyRegular,
-    color: colors.grayMedium,
+    color: colors.grayLight,
   },
   redeemedSection: {
     paddingHorizontal: spacing.md,

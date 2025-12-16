@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   StatusBar,
   ScrollView,
   Image,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -62,10 +63,55 @@ const TIERS = [
 
 export default function LoyaltyTiersScreen() {
   const navigation = useNavigation();
+  const [selectedTier, setSelectedTier] = useState<typeof TIERS[0] | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const openTierModal = (tier: typeof TIERS[0]) => {
+    setSelectedTier(tier);
+    setModalVisible(true);
+  };
+
+  const closeTierModal = () => {
+    setModalVisible(false);
+    setSelectedTier(null);
+  };
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" />
+
+      {/* Tier Detail Modal */}
+      <Modal
+        visible={modalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={closeTierModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity style={styles.modalCloseButton} onPress={closeTierModal}>
+              <Ionicons name="close" size={24} color={colors.white} />
+            </TouchableOpacity>
+
+            {selectedTier && (
+              <>
+                <View style={styles.modalIconContainer}>
+                  <Image
+                    source={TIER_ICONS[selectedTier.key]}
+                    style={styles.modalTierIcon}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={styles.modalTitle}>{selectedTier.name}</Text>
+                <Text style={styles.modalPoints}>{selectedTier.pointsRange}</Text>
+                <Text style={styles.modalBlurb}>
+                  {selectedTier.description || 'Unlock exclusive benefits and rewards as you progress through our loyalty tiers. Keep earning points to level up!'}
+                </Text>
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header Section with Trophy */}
         <View style={styles.headerSection}>
@@ -101,7 +147,7 @@ export default function LoyaltyTiersScreen() {
         >
           {TIERS.map((tier, index) => (
             <View key={tier.key} style={styles.tierCard}>
-              <View style={[styles.tierImageContainer, { backgroundColor: tier.color }]}>
+              <View style={[styles.tierImageContainer, { backgroundColor: colors.white }]}>
                 <Image
                   source={TIER_ICONS[tier.key]}
                   style={styles.tierIcon}
@@ -112,7 +158,7 @@ export default function LoyaltyTiersScreen() {
                 <Text style={styles.tierName}>{tier.shortName}</Text>
                 <Text style={styles.tierPoints}>{tier.pointsRange}</Text>
               </View>
-              <TouchableOpacity style={styles.viewButton}>
+              <TouchableOpacity style={styles.viewButton} onPress={() => openTierModal(tier)}>
                 <Text style={styles.viewButtonText}>View</Text>
               </TouchableOpacity>
             </View>
@@ -320,5 +366,60 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: spacing.xxl,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.xl,
+    padding: spacing.xl,
+    width: '85%',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  modalCloseButton: {
+    position: 'absolute',
+    top: spacing.md,
+    right: spacing.md,
+    zIndex: 10,
+  },
+  modalIconContainer: {
+    width: 120,
+    height: 120,
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.lg,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: spacing.lg,
+    marginTop: spacing.md,
+  },
+  modalTierIcon: {
+    width: 80,
+    height: 80,
+  },
+  modalTitle: {
+    fontSize: fontSize.xxl,
+    fontFamily: fontFamily.headingBold,
+    color: colors.accent,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  modalPoints: {
+    fontSize: fontSize.lg,
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.white,
+    textAlign: 'center',
+    marginBottom: spacing.md,
+  },
+  modalBlurb: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.bodyRegular,
+    color: colors.grayLight,
+    textAlign: 'center',
+    lineHeight: 22,
   },
 });

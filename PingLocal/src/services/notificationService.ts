@@ -280,3 +280,39 @@ export async function cancelScheduledNotification(notificationId: string): Promi
 export async function cancelAllScheduledNotifications(): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
+
+/**
+ * Schedule a booking reminder notification for the day before
+ * @param bookingDate The date of the booking
+ * @param businessName The business name for the notification
+ * @param purchaseTokenId The purchase token ID for navigation
+ * @returns The notification ID or null if scheduling failed
+ */
+export async function scheduleBookingReminder(
+  bookingDate: Date,
+  businessName: string,
+  purchaseTokenId: number
+): Promise<string | null> {
+  const reminderDate = new Date(bookingDate);
+  reminderDate.setDate(reminderDate.getDate() - 1);
+  reminderDate.setHours(10, 0, 0, 0); // 10am day before
+
+  const now = new Date();
+  if (reminderDate <= now) {
+    console.log('Booking reminder date is in the past, skipping');
+    return null;
+  }
+
+  const secondsUntilReminder = (reminderDate.getTime() - now.getTime()) / 1000;
+
+  return await scheduleLocalNotification(
+    'Booking Reminder',
+    `Don't forget your booking at ${businessName} tomorrow!`,
+    {
+      type: 'booking_reminder',
+      purchaseTokenId,
+      screen: 'Claimed',
+    },
+    secondsUntilReminder
+  );
+}

@@ -229,16 +229,16 @@ export default function PromotionCard({ offer, onPress, userLocation, userId }: 
 
           {/* Tags from offer_tags junction table */}
           {(() => {
-            // Extract tags from offer_tags if available
+            // Extract tags from offer_tags if available (only tags with type 'tags', not 'Category')
             const offerTags = (offer as any).offer_tags;
             const tagsArray = offerTags
               ? (Array.isArray(offerTags) ? offerTags : [offerTags])
-                  .filter((ot: any) => ot?.tags?.name)
+                  .filter((ot: any) => ot?.tags?.name && ot?.tags?.type === 'tags')
                   .map((ot: any) => ot.tags.name)
                   .slice(0, 8)
               : [];
 
-            // Fallback to category if no offer_tags
+            // Fallback to category if no tags with type 'tags'
             const displayTags = tagsArray.length > 0 ? tagsArray : (offer.category ? [offer.category] : []);
 
             return displayTags.length > 0 ? (
@@ -369,18 +369,21 @@ const styles = StyleSheet.create({
   tagContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    rowGap: spacing.xs,
+    marginTop: spacing.xs,
   },
   tag: {
     backgroundColor: colors.grayLight,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.sm,
     marginRight: spacing.xs,
-    marginBottom: spacing.xs,
+    borderWidth: 1,
+    borderColor: '#eee',
   },
   tagText: {
     fontSize: fontSize.xs,
-    color: colors.grayDark,
+    color: colors.grayMedium,
     fontFamily: fontFamily.body,
   },
 });

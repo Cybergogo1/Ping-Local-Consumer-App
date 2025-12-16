@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,10 @@ import {
   Animated,
   ImageBackground,
   Image,
+  Linking,
+  Alert,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, fontSize, fontFamily, shadows } from '../../theme';
@@ -14,6 +18,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CommonActions } from '@react-navigation/native';
 import { HomeStackParamList } from '../../types/navigation';
 import { TIER_THRESHOLDS, TierName } from '../../types/database';
+import BookingConfirmationModal from '../../components/modals/BookingConfirmationModal';
 
 type ClaimSuccessScreenProps = {
   navigation: StackNavigationProp<HomeStackParamList, 'ClaimSuccess'>;
@@ -29,11 +34,30 @@ const TIER_DISPLAY_NAMES: Record<TierName, string> = {
 };
 
 export default function ClaimSuccessScreen({ navigation, route }: ClaimSuccessScreenProps) {
-  const { purchaseTokenId, offerName, businessName, pointsEarned, previousTier, newTier, totalPoints } = route.params;
+  const {
+    purchaseTokenId,
+    offerName,
+    businessName,
+    pointsEarned,
+    previousTier,
+    newTier,
+    totalPoints,
+    // External/call booking params
+    isExternalBooking,
+    bookingType,
+    bookingUrl,
+    businessPhoneNumber,
+  } = route.params;
 
   // Check if this was a paid offer (has points)
   const hasPaidWithPoints = pointsEarned !== undefined && pointsEarned > 0;
   const leveledUp = previousTier && newTier && previousTier !== newTier;
+
+  // External booking state
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [bookingConfirmed, setBookingConfirmed] = useState(false);
+  const appStateRef = useRef(AppState.currentState);
+  const hasOpenedExternalLink = useRef(false);
 
   // Animation values
   const opacityAnim = useRef(new Animated.Value(0)).current;
@@ -130,6 +154,62 @@ export default function ClaimSuccessScreen({ navigation, route }: ClaimSuccessSc
       });
     }
   };
+
+  // Handle Book Now button press
+  const handleBookNow = async () => {
+    hasOpenedExternalLink.current = true;
+
+    if (bookingType === 'call' && businessPhoneNumber) {
+      const phoneUrl = `tel:${businessPhoneNumber}`;
+      try {
+        const supported = await Linking.canOpenURL(phoneUrl);
+        if (supported) {
+          await Linking.openURL(phoneUrl);
+        } else {
+          Alert.alert('Error', 'Unable to make phone call on this device');
+        }
+      } catch (error) {
+        Alert.alert('Error', 'Unable to make phone call');
+      }
+    } else if (bookingType === 'external' && bookingUrl) {
+      try {
+        const supported = await Linking.canOpenURL(bookingUrl);
+        if (supported) {
+          await Linking.openURL(bookingUrl);
+        } else {
+          Alert.alert('Error', 'Unable to open booking link');
+        }
+      } catch (error) {
+        Alert.alert('Error', 'Unable to open booking link');
+      }
+    }
+  };
+
+  // Handle booking confirmation
+  const handleBookingConfirmed = (date: Date) => {
+    setBookingConfirmed(true);
+    console.log('Booking confirmed for:', date);
+  };
+
+  // AppState listener for detecting return from external link
+  useEffect(() => {
+    if (!isExternalBooking) return;
+
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextAppState === 'active' &&
+        hasOpenedExternalLink.current
+      ) {
+        // User has returned to the app after opening external link
+        hasOpenedExternalLink.current = false;
+        setShowBookingModal(true);
+      }
+      appStateRef.current = nextAppState;
+    });
+
+    return () => subscription.remove();
+  }, [isExternalBooking]);
 
   return (
     <ImageBackground
@@ -229,6 +309,26 @@ export default function ClaimSuccessScreen({ navigation, route }: ClaimSuccessSc
                 </Text>
               </View>
             )}
+
+            {/* Book Now Button - for external/call bookings */}
+            {isExternalBooking && !bookingConfirmed && (
+              <TouchableOpacity style={styles.bookNowButton} onPress={handleBookNow}>
+                <Text style={styles.bookNowButtonIcon}>
+                  {bookingType === 'call' ? '📞' : '🔗'}
+                </Text>
+                <Text style={styles.bookNowButtonText}>
+                  {bookingType === 'call' ? 'Call to Book' : 'Book Now'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            {/* Booking Confirmed Badge */}
+            {isExternalBooking && bookingConfirmed && (
+              <View style={styles.bookingConfirmedBadge}>
+                <Text style={styles.bookingConfirmedIcon}>✓</Text>
+                <Text style={styles.bookingConfirmedText}>Booking Saved!</Text>
+              </View>
+            )}
           </Animated.View>
 
           {/* Action Buttons */}
@@ -243,6 +343,15 @@ export default function ClaimSuccessScreen({ navigation, route }: ClaimSuccessSc
           </Animated.View>
         </View>
       </SafeAreaView>
+
+      {/* Booking Confirmation Modal */}
+      <BookingConfirmationModal
+        visible={showBookingModal}
+        onClose={() => setShowBookingModal(false)}
+        purchaseTokenId={purchaseTokenId}
+        businessName={businessName}
+        onBookingConfirmed={handleBookingConfirmed}
+      />
     </ImageBackground>
   );
 }
@@ -312,6 +421,8 @@ const styles = StyleSheet.create({
   loyaltySection: {
     width: '100%',
     alignItems: 'center',
+    flexDirection: 'row',
+    maxWidth: '100%',
   },
   pointsBadge: {
     backgroundColor: colors.accent,
@@ -320,7 +431,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     alignItems: 'center',
     marginBottom: spacing.md,
-    ...shadows.md,
+    height: 93,
   },
   pointsEarnedLabel: {
     fontSize: fontSize.xs,
@@ -337,10 +448,13 @@ const styles = StyleSheet.create({
   // Tier Progress
   tierProgressContainer: {
     width: '100%',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    padding: spacing.md,
-    borderRadius: borderRadius.lg,
     marginBottom: spacing.md,
+    maxWidth: 200,
+    marginLeft: 20,
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
   },
   tierRow: {
     flexDirection: 'row',
@@ -442,5 +556,48 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontFamily: fontFamily.bodySemiBold,
     color: colors.grayMedium,
+  },
+
+  // Book Now Button
+  bookNowButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.accent,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.full,
+    marginTop: spacing.md,
+    gap: spacing.sm,
+  },
+  bookNowButtonIcon: {
+    fontSize: fontSize.lg,
+  },
+  bookNowButtonText: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.bodyBold,
+    color: colors.primary,
+  },
+
+  // Booking Confirmed Badge
+  bookingConfirmedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.success,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.full,
+    marginTop: spacing.md,
+    gap: spacing.xs,
+  },
+  bookingConfirmedIcon: {
+    fontSize: fontSize.md,
+    color: colors.white,
+  },
+  bookingConfirmedText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.white,
   },
 });

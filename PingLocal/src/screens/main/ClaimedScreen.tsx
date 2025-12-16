@@ -52,11 +52,28 @@ export default function ClaimedScreen() {
         if (offerIds.length > 0) {
           const { data: offers } = await supabase
             .from('offers')
-            .select('id, featured_image, business_name')
+            .select('id, featured_image, business_name, booking_type, booking_url')
             .in('id', offerIds);
 
-          // Map offers to tokens
-          const offersMap = new Map(offers?.map(o => [o.id, o]) || []);
+          // Get unique business names to fetch phone numbers
+          const businessNames = [...new Set(offers?.filter(o => o.business_name).map(o => o.business_name) || [])];
+          let businessesMap = new Map<string, { phone_number?: string }>();
+
+          if (businessNames.length > 0) {
+            const { data: businesses } = await supabase
+              .from('businesses')
+              .select('name, phone_number')
+              .in('name', businessNames);
+
+            businessesMap = new Map(businesses?.map(b => [b.name, { phone_number: b.phone_number }]) || []);
+          }
+
+          // Map offers to tokens with business phone numbers
+          const offersMap = new Map(offers?.map(o => [o.id, {
+            ...o,
+            businesses: o.business_name ? businessesMap.get(o.business_name) : undefined,
+          }]) || []);
+
           const tokensWithOffers = tokens.map(token => ({
             ...token,
             offers: token.offer_id ? offersMap.get(token.offer_id) : undefined,
@@ -214,7 +231,7 @@ export default function ClaimedScreen() {
         </TouchableOpacity>
         <View style={styles.headerRight}>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Notifications' as any)}
+            onPress={() => navigation.navigate('Notifications')}
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
@@ -227,7 +244,7 @@ export default function ClaimedScreen() {
             )}
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Settings' as any)}
+            onPress={() => navigation.navigate('Settings')}
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconsettings.png')} style={styles.settingsButtonIcon}/>
@@ -235,7 +252,7 @@ export default function ClaimedScreen() {
         </View>
       </View>
 
-      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
+      <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
         {/* Filter Tabs */}
         <View style={styles.filterContainer}>
           <TouchableOpacity
@@ -284,9 +301,13 @@ export default function ClaimedScreen() {
               purchaseToken={item}
               onPress={() => handleCardPress(item)}
               onShowQR={() => handleShowQR(item)}
+              onBookingUpdated={fetchPurchaseTokens}
             />
           )}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            filteredTokens.length === 0 && styles.listContentEmpty,
+          ]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -401,6 +422,8 @@ const styles = StyleSheet.create({
   listContent: {
     paddingTop: spacing.md,
     paddingBottom: spacing.xxl,
+  },
+  listContentEmpty: {
     flexGrow: 1,
   },
 

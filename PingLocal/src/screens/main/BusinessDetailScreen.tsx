@@ -19,9 +19,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, fontSize, fontFamily, shadows } from '../../theme';
-import { Business, Offer } from '../../types/database';
+import { Business, Offer, OpeningTime, Tag } from '../../types/database';
 import { BusinessDetailScreenProps } from '../../types/navigation';
 import OfferCardLandscape from '../../components/promotions/OfferCardLandscape';
+import OpeningHoursModal, { getTodayOpeningStatus } from '../../components/modals/OpeningHoursModal';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -36,18 +37,28 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
 
   const [business, setBusiness] = useState<Business | null>(null);
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [openingTimes, setOpeningTimes] = useState<OpeningTime[]>([]);
+  const [businessTags, setBusinessTags] = useState<Tag[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isFavourited, setIsFavourited] = useState(false);
   const [favouriteId, setFavouriteId] = useState<string | null>(null);
+  const [showOpeningHoursModal, setShowOpeningHoursModal] = useState(false);
 
   useEffect(() => {
     fetchBusiness();
     fetchOffers();
+    fetchOpeningTimes();
     if (user && business) {
       checkFavouriteStatus();
     }
   }, [businessId, user, business?.id]);
+
+  useEffect(() => {
+    if (business?.id) {
+      fetchBusinessTags();
+    }
+  }, [business?.id]);
 
   const fetchBusiness = async () => {
     try {
@@ -106,6 +117,54 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
       if (data) setOffers(data);
     } catch (error) {
       console.error('Error fetching offers:', error);
+    }
+  };
+
+  const fetchOpeningTimes = async () => {
+    try {
+      if (businessId === undefined || businessId === null) {
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('opening_times')
+        .select('*')
+        .eq('business_name', businessId)
+        .order('day_number', { ascending: true });
+
+      if (error) {
+        console.error('Opening times fetch error:', error);
+        return;
+      }
+
+      if (data) {
+        setOpeningTimes(data);
+      }
+    } catch (error) {
+      console.error('Error fetching opening times:', error);
+    }
+  };
+
+  const fetchBusinessTags = async () => {
+    try {
+      if (!business?.id) return;
+
+      const { data, error } = await supabase
+        .from('business_tags')
+        .select('tags(id, name, type)')
+        .eq('business_id', business.id);
+
+      if (error) {
+        console.error('Business tags fetch error:', error);
+        return;
+      }
+
+      if (data) {
+        const tags = data.map((bt: any) => bt.tags).filter((tag: Tag | null) => tag !== null);
+        setBusinessTags(tags);
+      }
+    } catch (error) {
+      console.error('Error fetching business tags:', error);
     }
   };
 
@@ -280,11 +339,24 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
           {/* Content */}
           <View style={styles.content}>
             {/* Category Tag */}
-            {business.category && (
-              <View style={styles.tagsContainer}>
-                <View style={styles.tag}>
-                  <Text style={styles.tagText}>{business.category}</Text>
-                </View>
+            {(business.category || businessTags.length > 0) && (
+              <View style={styles.tagsWrapper}>
+                {business.category && (
+                  <View style={styles.tagsContainer}>
+                    <View style={styles.tag}>
+                      <Text style={styles.tagText}>{business.category}</Text>
+                    </View>
+                  </View>
+                )}
+                {businessTags.length > 0 && (
+                  <View style={styles.subTagsContainer}>
+                    {businessTags.map((tag) => (
+                      <View key={tag.id} style={styles.subTag}>
+                        <Text style={styles.subTagText}>{tag.name}</Text>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
             )}
 
@@ -315,6 +387,29 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
                 </TouchableOpacity>
               )}
             </View>
+
+            {/* Opening Hours Section */}
+            {openingTimes.length > 0 && (
+              <TouchableOpacity
+                style={styles.openingHoursSection}
+                onPress={() => setShowOpeningHoursModal(true)}
+                activeOpacity={0.7}
+              >
+                <View style={styles.openingHoursLeft}>
+                  <Text style={styles.openingHoursIcon}>🕐</Text>
+                  <View>
+                    <Text style={styles.openingHoursLabel}>Opening Hours</Text>
+                    <Text style={[
+                      styles.openingHoursStatus,
+                      getTodayOpeningStatus(openingTimes).isOpen && styles.openingHoursStatusOpen
+                    ]}>
+                      {getTodayOpeningStatus(openingTimes).statusText}
+                    </Text>
+                  </View>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={colors.grayMedium} />
+              </TouchableOpacity>
+            )}
 
             {/* Latest Promotions Carousel */}
             {offers.length > 0 && (
@@ -364,6 +459,14 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
             )}
           </View>
         </ScrollView>
+
+      {/* Opening Hours Modal */}
+      <OpeningHoursModal
+        visible={showOpeningHoursModal}
+        onClose={() => setShowOpeningHoursModal(false)}
+        openingTimes={openingTimes}
+        businessName={business.name}
+      />
     </View>
   );
 }
@@ -483,10 +586,17 @@ const styles = StyleSheet.create({
   content: {
     padding: spacing.md,
   },
+  tagsWrapper: {
+    marginBottom: spacing.md,
+  },
   tagsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: spacing.md,
+  },
+  subTagsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: spacing.xs,
   },
   tag: {
     backgroundColor: colors.white,
@@ -501,6 +611,20 @@ const styles = StyleSheet.create({
   tagText: {
     fontSize: fontSize.sm,
     color: colors.grayDark,
+  },
+  subTag: {
+    backgroundColor: '#f8f8f8',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    marginRight: spacing.xs,
+    marginBottom: spacing.xs,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  subTagText: {
+    fontSize: fontSize.sm,
+    color: colors.grayMedium,
   },
   section: {
     marginBottom: spacing.lg,
@@ -534,6 +658,38 @@ const styles = StyleSheet.create({
   },
   promotionsCarousel: {
     paddingRight: spacing.md,
+  },
+  openingHoursSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8F8F8',
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  openingHoursLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  openingHoursIcon: {
+    fontSize: 28,
+  },
+  openingHoursLabel: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.black,
+  },
+  openingHoursStatus: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
+    color: colors.grayDark,
+    marginTop: 2,
+  },
+  openingHoursStatusOpen: {
+    color: colors.success,
+    fontFamily: fontFamily.bodySemiBold,
   },
   mapSection: {
     backgroundColor: '#F8F8F8',

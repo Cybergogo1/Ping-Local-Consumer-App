@@ -6,6 +6,12 @@ import { User } from '../types/database';
 
 const ONBOARDING_COMPLETE_KEY = 'onboarding_completed';
 
+interface PendingLevelUp {
+  previousTier: string;
+  newTier: string;
+  totalPoints: number;
+}
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -23,6 +29,8 @@ interface AuthContextType {
   requestPasswordReset: (email: string) => Promise<{ error: Error | null }>;
   verifyPasswordResetOtp: (email: string, token: string) => Promise<{ error: Error | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
+  checkPendingLevelUp: () => Promise<PendingLevelUp | null>;
+  clearPendingLevelUp: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -382,6 +390,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const checkPendingLevelUp = async (): Promise<PendingLevelUp | null> => {
+    try {
+      if (!user) return null;
+
+      // Refresh user data to get latest pending_level_up status
+      const { data, error } = await supabase
+        .from('users')
+        .select('pending_level_up, pending_level_up_from, pending_level_up_to, loyalty_points')
+        .eq('email', user.email)
+        .single();
+
+      if (error || !data) return null;
+
+      if (data.pending_level_up && data.pending_level_up_from && data.pending_level_up_to) {
+        return {
+          previousTier: data.pending_level_up_from,
+          newTier: data.pending_level_up_to,
+          totalPoints: data.loyalty_points || 0,
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error checking pending level up:', error);
+      return null;
+    }
+  };
+
+  const clearPendingLevelUp = async () => {
+    try {
+      if (!user) return;
+
+      await supabase
+        .from('users')
+        .update({
+          pending_level_up: false,
+          pending_level_up_from: null,
+          pending_level_up_to: null,
+        })
+        .eq('email', user.email);
+
+      // Update local state
+      setUser(prev => prev ? {
+        ...prev,
+        pending_level_up: false,
+        pending_level_up_from: undefined,
+        pending_level_up_to: undefined,
+      } : prev);
+    } catch (error) {
+      console.error('Error clearing pending level up:', error);
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -401,6 +462,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         requestPasswordReset,
         verifyPasswordResetOtp,
         updatePassword,
+        checkPendingLevelUp,
+        clearPendingLevelUp,
       }}
     >
       {children}

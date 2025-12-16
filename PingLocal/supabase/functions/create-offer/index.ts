@@ -113,32 +113,63 @@ serve(async (req) => {
       throw error;
     }
 
-    // Send push notification if offer is active (published)
-    if (data.status === "active") {
+    // Send push notification if offer is signed off (published)
+    if (data.status === "Signed Off") {
       try {
         const notificationPayload = {
           type: "new_offer",
-          business_id: data.business_id,
+          business_id: String(data.business_id),
           business_name: data.business_name || data.businesses?.name || "A business you follow",
-          offer_id: data.id,
+          offer_id: String(data.id),
           offer_title: data.name,
         };
 
-        // Call the send-push-notification function
-        const notificationResponse = await fetch(
-          `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push-notification`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-            },
-            body: JSON.stringify(notificationPayload),
-          }
-        );
+        // Check if start_date is today or in the past (send immediately) or in the future (schedule)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-        const notificationResult = await notificationResponse.json();
-        console.log("Push notification result:", notificationResult);
+        let shouldSendNow = true;
+        let scheduledFor: string | null = null;
+
+        if (data.start_date) {
+          const startDate = new Date(data.start_date);
+          startDate.setHours(0, 0, 0, 0);
+
+          if (startDate > today) {
+            // Start date is in the future - schedule for that date
+            shouldSendNow = false;
+            scheduledFor = data.start_date;
+
+            // Store scheduled notification in database
+            await supabaseClient.from("scheduled_notifications").insert({
+              notification_type: "new_offer",
+              payload: notificationPayload,
+              scheduled_for: data.start_date,
+              offer_id: data.id,
+              business_id: data.business_id,
+              status: "pending",
+            });
+            console.log(`Notification scheduled for ${data.start_date}`);
+          }
+        }
+
+        if (shouldSendNow) {
+          // Call the send-push-notification function immediately
+          const notificationResponse = await fetch(
+            `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push-notification`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify(notificationPayload),
+            }
+          );
+
+          const notificationResult = await notificationResponse.json();
+          console.log("Push notification result:", notificationResult);
+        }
       } catch (notificationError) {
         // Don't fail the offer creation if notification fails
         console.error("Error sending push notification:", notificationError);

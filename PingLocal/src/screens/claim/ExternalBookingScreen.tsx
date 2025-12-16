@@ -15,6 +15,7 @@ import { colors, spacing, borderRadius, fontSize, fontFamily, shadows } from '..
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { HomeStackParamList } from '../../types/navigation';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 const placeholderImage = require('../../../assets/images/placeholder_offer.jpg');
 
@@ -26,6 +27,7 @@ type ExternalBookingScreenProps = {
 export default function ExternalBookingScreen({ navigation, route }: ExternalBookingScreenProps) {
   const { offerId, offer } = route.params;
   const insets = useSafeAreaInsets();
+  const { unreadCount } = useNotifications();
 
   const [partySize, setPartySize] = useState(1);
   const [hasBooked, setHasBooked] = useState(false);
@@ -97,16 +99,20 @@ export default function ExternalBookingScreen({ navigation, route }: ExternalBoo
         </TouchableOpacity>
         <View style={styles.headerRight}>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Notifications' as any)}
+            onPress={() => navigation.navigate('Notifications')}
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.headerButtonIcon} />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>N..</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Settings' as any)}
+            onPress={() => navigation.navigate('Settings')}
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconsettings.png')} style={styles.headerButtonIcon} />

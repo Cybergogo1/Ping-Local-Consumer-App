@@ -38,6 +38,8 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
   const [isFavourited, setIsFavourited] = useState(false);
   const [favouriteId, setFavouriteId] = useState<string | null>(null);
   const [offerTags, setOfferTags] = useState<{ id: number; name: string; type: string }[]>([]);
+  const [hasAlreadyClaimed, setHasAlreadyClaimed] = useState(false);
+  const [showAlreadyClaimedModal, setShowAlreadyClaimedModal] = useState(false);
 
   useEffect(() => {
     fetchOffer();
@@ -46,6 +48,13 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
       checkFavouriteStatus();
     }
   }, [offerId, user]);
+
+  // Check if user has already claimed this one_per_customer offer
+  useEffect(() => {
+    if (offer?.one_per_customer && user?.email) {
+      checkExistingClaim();
+    }
+  }, [offer?.id, offer?.one_per_customer, user?.email]);
 
   const fetchOffer = async () => {
     try {
@@ -151,6 +160,31 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
     }
   };
 
+  const checkExistingClaim = async () => {
+    if (!user?.email) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('purchase_tokens')
+        .select('id')
+        .eq('user_email', user.email)
+        .eq('offer_id', offerId)
+        .eq('cancelled', false)
+        .limit(1);
+
+      if (error) {
+        console.error('Error checking existing claim:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        setHasAlreadyClaimed(true);
+      }
+    } catch (error) {
+      console.error('Error checking existing claim:', error);
+    }
+  };
+
   const toggleFavourite = async () => {
     // Get the Supabase Auth user ID (UUID) for favorites
     const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -247,15 +281,19 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
   const handleClaimPress = () => {
     if (!offer) return;
 
+    // Check one_per_customer restriction
+    if (offer.one_per_customer && hasAlreadyClaimed) {
+      setShowAlreadyClaimedModal(true);
+      return;
+    }
+
     // Route based on booking type
     if (offer.booking_type === 'online' || (offer.requires_booking && !offer.booking_type)) {
       // Slot-based booking - go to calendar
       navigation.navigate('SlotBooking', { offerId: offer.id, offer });
-    } else if (offer.booking_type === 'external' || offer.booking_type === 'call') {
-      // External/phone booking
-      navigation.navigate('ExternalBooking', { offerId: offer.id, offer });
     } else {
-      // No booking required - go directly to claim
+      // External/call booking or no booking - go directly to claim
+      // For external/call, user will book AFTER claiming via ClaimSuccessScreen
       navigation.navigate('Claim', { offerId: offer.id, offer });
     }
   };
@@ -362,7 +400,13 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
             </TouchableOpacity>
 
             {locationArea && (
-              <Text style={styles.location}>📍 {locationArea}</Text>
+              <View style={styles.locationNameRow}>
+                <Image
+                  source={require('../../../assets/images/iconlocation.png')}
+                  style={styles.locationIcon}
+                />
+                <Text style={styles.location}>{locationArea}</Text>
+              </View>
             )}
 
           </View>
@@ -372,11 +416,21 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
             <View style={styles.priceBoxWrapper}>
               <View style={styles.priceBox}>
                 <TouchableOpacity
-                  style={[styles.buyButton, soldOut && styles.buyButtonSoldOut]}
+                  style={[
+                    styles.buyButton,
+                    soldOut && styles.buyButtonSoldOut,
+                    (offer.one_per_customer && hasAlreadyClaimed) && styles.buyButtonClaimed,
+                  ]}
                   onPress={handleClaimPress}
                   disabled={soldOut}
                 >
-                  <Text style={[styles.buyButtonText, soldOut && styles.buyButtonTextSoldOut]}>{getButtonText()}</Text>
+                  <Text style={[
+                    styles.buyButtonText,
+                    soldOut && styles.buyButtonTextSoldOut,
+                    (offer.one_per_customer && hasAlreadyClaimed) && styles.buyButtonTextClaimed,
+                  ]}>
+                    {(offer.one_per_customer && hasAlreadyClaimed) ? 'Already Claimed' : getButtonText()}
+                  </Text>
                 </TouchableOpacity>
 
                 <Text style={styles.priceAmount}>
@@ -408,6 +462,26 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
               </View>
             )}
         </View>
+
+        {/* One Per Customer Notice */}
+        {offer.one_per_customer && (
+          <View style={styles.onePerCustomerSection}>
+            <View style={styles.onePerCustomerBadge}>
+              <Text style={styles.onePerCustomerBadgeText}>1</Text>
+            </View>
+            <View style={styles.onePerCustomerContent}>
+              <Text style={styles.onePerCustomerTitle}>
+                {hasAlreadyClaimed ? "You've Already Claimed This Offer" : "Limited to 1 Per Customer"}
+              </Text>
+              <Text style={styles.onePerCustomerText}>
+                {hasAlreadyClaimed
+                  ? "You can view your claimed offer in the 'Claimed' section."
+                  : "This offer can only be claimed once per customer."
+                }
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Expired Banner */}
         {expired && (
@@ -577,6 +651,41 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
           </View>
         </View>
       </Modal>
+
+      {/* Already Claimed Modal */}
+      <Modal
+        visible={showAlreadyClaimedModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowAlreadyClaimedModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.alreadyClaimedModalContent}>
+            <View style={styles.alreadyClaimedIcon}>
+              <Text style={styles.alreadyClaimedIconText}>!</Text>
+            </View>
+            <Text style={styles.alreadyClaimedTitle}>Already Claimed</Text>
+            <Text style={styles.alreadyClaimedMessage}>
+              You've already claimed this offer. This promotion is limited to one per customer.
+            </Text>
+            <TouchableOpacity
+              style={styles.alreadyClaimedViewButton}
+              onPress={() => {
+                setShowAlreadyClaimedModal(false);
+                navigation.navigate('Claimed' as any);
+              }}
+            >
+              <Text style={styles.alreadyClaimedViewButtonText}>View My Claims</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.alreadyClaimedCloseButton}
+              onPress={() => setShowAlreadyClaimedModal(false)}
+            >
+              <Text style={styles.alreadyClaimedCloseButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -705,8 +814,18 @@ const styles = StyleSheet.create({
   location: {
     fontSize: fontSize.sm,
     color: colors.grayMedium,
-    marginBottom: spacing.sm,
     fontFamily: fontFamily.body,
+  },
+  locationNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    marginBottom: spacing.xs,
+  },
+  locationIcon: {
+    width: 16,
+    height: 16,
+    marginRight: spacing.xs,
   },
   tagsWrapper: {
     flex: 1,
@@ -759,6 +878,7 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontSize: fontSize.sm,
     fontFamily: fontFamily.bodySemiBold,
+    textAlign: 'center',
   },
   buyButtonSoldOut: {
     backgroundColor: colors.grayLight,
@@ -1026,5 +1146,114 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodySemiBold,
     color: colors.primary,
     marginBottom: spacing.xs,
+  },
+
+  // One Per Customer Notice
+  onePerCustomerSection: {
+    backgroundColor: '#F5FAFF',
+    flexDirection: 'row',
+    padding: spacing.md,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: '#36566F24',
+    alignItems: 'center',
+  },
+  onePerCustomerBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  onePerCustomerBadgeText: {
+    color: colors.white,
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.headingBold,
+  },
+  onePerCustomerContent: {
+    flex: 1,
+  },
+  onePerCustomerTitle: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.primary,
+    marginBottom: spacing.xs,
+  },
+  onePerCustomerText: {
+    fontSize: fontSize.sm,
+    color: colors.grayDark,
+    fontFamily: fontFamily.body,
+  },
+
+  // Buy Button Claimed State
+  buyButtonClaimed: {
+    backgroundColor: colors.grayLight,
+  },
+  buyButtonTextClaimed: {
+    color: colors.grayMedium,
+  },
+
+  // Already Claimed Modal
+  alreadyClaimedModalContent: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    width: '85%',
+    alignItems: 'center',
+  },
+  alreadyClaimedIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  alreadyClaimedIconText: {
+    fontSize: fontSize.xxl,
+    fontFamily: fontFamily.headingBold,
+    color: '#D97706',
+  },
+  alreadyClaimedTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: fontFamily.headingBold,
+    color: colors.primary,
+    marginBottom: spacing.sm,
+  },
+  alreadyClaimedMessage: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
+    color: colors.grayDark,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+    lineHeight: fontSize.sm * 1.5,
+  },
+  alreadyClaimedViewButton: {
+    backgroundColor: colors.accent,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.xl,
+    borderRadius: borderRadius.full,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  alreadyClaimedViewButtonText: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.bodyBold,
+    color: colors.primary,
+  },
+  alreadyClaimedCloseButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.xl,
+  },
+  alreadyClaimedCloseButtonText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.grayMedium,
   },
 });

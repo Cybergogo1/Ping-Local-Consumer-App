@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
+import { getTierFromPoints } from '../../types/database';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp, CommonActions } from '@react-navigation/native';
 import { ClaimedStackParamList } from '../../types/navigation';
@@ -59,7 +60,13 @@ export default function BillConfirmationScreen({ navigation, route }: BillConfir
 
     try {
       // Add points to user
-      const newPoints = (user.loyalty_points || 0) + pointsEarned;
+      const oldPoints = user.loyalty_points || 0;
+      const newPoints = oldPoints + pointsEarned;
+
+      // Detect tier change
+      const previousTier = getTierFromPoints(oldPoints);
+      const newTier = getTierFromPoints(newPoints);
+
       const { error: userError } = await supabase
         .from('users')
         .update({
@@ -76,6 +83,36 @@ export default function BillConfirmationScreen({ navigation, route }: BillConfir
         reason: `Redeemed: ${offerName}`,
         offer_id: null, // Could link to offer_id if needed
       });
+
+      // Send loyalty points notification to user
+      try {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            type: 'loyalty_points_earned',
+            user_id: user.id,
+            points_earned: pointsEarned,
+            reason: 'redemption',
+            offer_title: offerName,
+          },
+        });
+      } catch (notifError) {
+        console.error('Error sending loyalty points notification:', notifError);
+      }
+
+      // If tier changed, send tier upgrade notification
+      if (newTier !== previousTier) {
+        try {
+          await supabase.functions.invoke('send-push-notification', {
+            body: {
+              type: 'loyalty_upgrade',
+              user_id: user.id,
+              new_tier: newTier,
+            },
+          });
+        } catch (notifError) {
+          console.error('Error sending tier upgrade notification:', notifError);
+        }
+      }
 
       // Refresh user data to update points in context
       if (refreshUser) {

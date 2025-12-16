@@ -8,7 +8,7 @@ const corsHeaders = {
 };
 
 interface NotificationPayload {
-  type: "new_offer" | "offer_expiring" | "redemption_reminder" | "loyalty_upgrade";
+  type: "new_offer" | "offer_expiring" | "redemption_reminder" | "loyalty_upgrade" | "loyalty_points_earned" | "offer_claimed";
   business_id?: string;
   business_name?: string;
   offer_id?: string;
@@ -16,6 +16,9 @@ interface NotificationPayload {
   user_id?: string;
   claim_id?: string;
   new_tier?: string;
+  points_earned?: number;
+  reason?: string;
+  purchase_type?: string; // 'claim' or 'purchase'
 }
 
 interface ExpoPushMessage {
@@ -63,10 +66,10 @@ serve(async (req) => {
       case "new_offer": {
         // Get all users who favorited this business
         const { data: favorites, error: favError } = await supabase
-          .from("user_favorites")
+          .from("favorites")
           .select("user_id")
           .eq("business_id", payload.business_id)
-          .eq("is_business", true);
+          .not("business_id", "is", null);
 
         if (favError) {
           console.error("Error fetching favorites:", favError);
@@ -176,7 +179,10 @@ serve(async (req) => {
       case "redemption_reminder": {
         // Single user notification
         if (payload.user_id) {
-          // Check user's preference
+          // Always add to targetUserIds for in-app notification
+          targetUserIds = [payload.user_id];
+
+          // Check user's preference for push notifications
           const { data: preferences } = await supabase
             .from("notification_preferences")
             .select("redemption_reminders")
@@ -194,7 +200,6 @@ serve(async (req) => {
               .eq("is_active", true);
 
             tokens = pushTokens?.map((t: { expo_push_token: string }) => t.expo_push_token) || [];
-            targetUserIds = [payload.user_id];
           }
         }
 
@@ -207,7 +212,10 @@ serve(async (req) => {
 
       case "loyalty_upgrade": {
         if (payload.user_id) {
-          // Check user's preference
+          // Always add to targetUserIds for in-app notification
+          targetUserIds = [payload.user_id];
+
+          // Check user's preference for push notifications
           const { data: preferences } = await supabase
             .from("notification_preferences")
             .select("loyalty_updates")
@@ -224,13 +232,79 @@ serve(async (req) => {
               .eq("is_active", true);
 
             tokens = pushTokens?.map((t: { expo_push_token: string }) => t.expo_push_token) || [];
-            targetUserIds = [payload.user_id];
           }
         }
 
         title = "Congratulations!";
         body = `You've reached ${payload.new_tier || "a new"} status!`;
         data = { type: "loyalty_upgrade", newTier: payload.new_tier };
+        break;
+      }
+
+      case "loyalty_points_earned": {
+        if (payload.user_id) {
+          // Always add to targetUserIds for in-app notification
+          targetUserIds = [payload.user_id];
+
+          // Check user's preference for push notifications
+          const { data: preferences } = await supabase
+            .from("notification_preferences")
+            .select("loyalty_updates")
+            .eq("user_id", payload.user_id)
+            .single();
+
+          const wantsUpdates = preferences?.loyalty_updates !== false;
+
+          if (wantsUpdates) {
+            const { data: pushTokens } = await supabase
+              .from("push_tokens")
+              .select("expo_push_token")
+              .eq("user_id", payload.user_id)
+              .eq("is_active", true);
+
+            tokens = pushTokens?.map((t: { expo_push_token: string }) => t.expo_push_token) || [];
+          }
+        }
+
+        const points = payload.points_earned || 0;
+        title = "Loyalty Points Earned!";
+
+        // Customize body based on reason
+        if (payload.reason === "purchase") {
+          body = `You earned ${points} loyalty points for your purchase!`;
+        } else if (payload.reason === "redemption") {
+          body = `You earned ${points} loyalty points for redeeming your offer!`;
+        } else if (payload.reason === "admin") {
+          body = `You've been awarded ${points} loyalty points!`;
+        } else {
+          body = `You earned ${points} loyalty points!`;
+        }
+
+        data = { type: "loyalty_points_earned", points: points, reason: payload.reason };
+        break;
+      }
+
+      case "offer_claimed": {
+        // Single user notification when they claim/purchase an offer
+        if (payload.user_id) {
+          targetUserIds = [payload.user_id];
+
+          const { data: pushTokens } = await supabase
+            .from("push_tokens")
+            .select("expo_push_token")
+            .eq("user_id", payload.user_id)
+            .eq("is_active", true);
+
+          tokens = pushTokens?.map((t: { expo_push_token: string }) => t.expo_push_token) || [];
+        }
+
+        const isPurchase = payload.purchase_type === "purchase";
+        title = isPurchase ? "Purchase Confirmed!" : "Offer Claimed!";
+        body = isPurchase
+          ? `You've purchased ${payload.offer_title || "an offer"} from ${payload.business_name || "a business"}. Show your QR code to redeem!`
+          : `You've claimed ${payload.offer_title || "an offer"} from ${payload.business_name || "a business"}. Show your QR code to redeem!`;
+        data = { type: "offer_claimed", offerId: payload.offer_id, businessId: payload.business_id, claimId: payload.claim_id };
+        channelId = "offers";
         break;
       }
 
@@ -244,9 +318,44 @@ serve(async (req) => {
         );
     }
 
-    console.log(`Found ${tokens.length} tokens to send to`);
+    console.log(`Found ${tokens.length} tokens to send to, ${targetUserIds.length} target users`);
 
-    // Send notifications via Expo Push API
+    // Map notification types to categories for the notifications table
+    const categoryMap: Record<string, string> = {
+      new_offer: "offer",
+      offer_expiring: "offer",
+      offer_claimed: "offer",
+      redemption_reminder: "redemption",
+      loyalty_upgrade: "loyalty",
+      loyalty_points_earned: "points",
+    };
+
+    // ALWAYS create entries in the notifications table for all target users
+    // This ensures notifications appear in-app even if push fails
+    let notificationsCreated = 0;
+    for (const userId of targetUserIds) {
+      try {
+        await supabase.from("notifications").insert({
+          user_id: userId,
+          name: title,
+          content: body,
+          read: false,
+          notifications_categories: categoryMap[payload.type] || "system",
+          offer_id: payload.offer_id ? parseInt(payload.offer_id) : null,
+          business_id: payload.business_id ? parseInt(payload.business_id) : null,
+        });
+        notificationsCreated++;
+      } catch (notifError) {
+        console.error(`Error creating notification for user ${userId}:`, notifError);
+      }
+    }
+
+    console.log(`Created ${notificationsCreated} notification entries`);
+
+    // Send push notifications via Expo Push API (separate from in-app notifications)
+    let totalSent = 0;
+    let totalErrors = 0;
+
     if (tokens.length > 0) {
       const messages: ExpoPushMessage[] = tokens.map((token) => ({
         to: token,
@@ -263,9 +372,6 @@ serve(async (req) => {
         batches.push(messages.slice(i, i + 100));
       }
 
-      let totalSent = 0;
-      let totalErrors = 0;
-
       for (const batch of batches) {
         try {
           const response = await fetch("https://exp.host/--/api/v2/push/send", {
@@ -281,10 +387,11 @@ serve(async (req) => {
           const result = await response.json();
           console.log("Expo push response:", JSON.stringify(result, null, 2));
 
-          // Log each notification
+          // Log each push attempt
           for (let i = 0; i < batch.length; i++) {
             const ticketData = result.data?.[i];
             const status = ticketData?.status === "ok" ? "sent" : "error";
+            const userId = targetUserIds[i];
 
             if (status === "sent") {
               totalSent++;
@@ -292,9 +399,9 @@ serve(async (req) => {
               totalErrors++;
             }
 
-            // Log to notification_log table
+            // Log to notification_log table (for debugging/analytics)
             await supabase.from("notification_log").insert({
-              user_id: targetUserIds[i] || null,
+              user_id: userId || null,
               notification_type: payload.type,
               title,
               body,
@@ -311,20 +418,17 @@ serve(async (req) => {
           totalErrors += batch.length;
         }
       }
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          sent: totalSent,
-          errors: totalErrors,
-          total_tokens: tokens.length
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
     }
 
     return new Response(
-      JSON.stringify({ success: true, sent: 0, message: "No tokens to send to" }),
+      JSON.stringify({
+        success: true,
+        notifications_created: notificationsCreated,
+        push_sent: totalSent,
+        push_errors: totalErrors,
+        total_tokens: tokens.length,
+        total_users: targetUserIds.length
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 

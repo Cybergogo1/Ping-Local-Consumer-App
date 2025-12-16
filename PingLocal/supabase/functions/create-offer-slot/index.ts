@@ -29,25 +29,39 @@ serve(async (req) => {
 
     const body = await req.json()
 
-    // Support both direct fields and Adalo's 'fields' wrapper
-    const requestData = body.fields || body
+    // Log the incoming request for debugging
+    console.log('Received body:', JSON.stringify(body, null, 2))
+
+    // Support multiple Adalo formats:
+    // 1. Direct fields: { offer_id: 123 }
+    // 2. Wrapped in 'fields': { fields: { offer_id: 123 } }
+    // 3. Wrapped in 'record': { record: { offer_id: 123 } }
+    // 4. Adalo action format: { action: { fields: { offer_id: 123 } } }
+    const requestData = body.fields || body.record || body.action?.fields || body
+
+    // Support multiple field name formats from Adalo
+    // Adalo may send: offer_id, offerId, or "Offer Id"
+    const offerId = requestData.offer_id || requestData.offerId || requestData['Offer Id'] || requestData['offer id'] || body.offer_id
+    const slotDate = requestData.slot_date || requestData.slotDate || requestData['Slot Date'] || requestData['slot date'] || body.slot_date
+    const slotTime = requestData.slot_time || requestData.slotTime || requestData['Slot Time'] || requestData['slot time'] || body.slot_time
+    const capacity = requestData.capacity || requestData.Capacity || body.capacity || 10
 
     // Validate required fields
-    if (!requestData.offer_id) {
+    if (!offerId) {
       return new Response(
         JSON.stringify({ error: 'offer_id is required' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
-    if (!requestData.slot_date) {
+    if (!slotDate) {
       return new Response(
         JSON.stringify({ error: 'slot_date is required' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
-    if (!requestData.slot_time) {
+    if (!slotTime) {
       return new Response(
         JSON.stringify({ error: 'slot_time is required' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
@@ -56,10 +70,10 @@ serve(async (req) => {
 
     // Create the slot
     const slotData = {
-      offer_id: requestData.offer_id,
-      slot_date: requestData.slot_date,
-      slot_time: requestData.slot_time,
-      capacity: requestData.capacity || 10,
+      offer_id: offerId,
+      slot_date: slotDate,
+      slot_time: slotTime,
+      capacity: capacity,
       booked_count: 0,
       available: true,
     }

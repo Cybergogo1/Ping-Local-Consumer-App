@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   },
   markerBadge: {
     position: 'absolute',
-    top: -5,
+    top: 0,
     right: -5,
     minWidth: 20,
     height: 20,
@@ -375,6 +375,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
+    zIndex: 10,
+    elevation: 10,
   },
   markerBadgeText: {
     fontSize: 11,

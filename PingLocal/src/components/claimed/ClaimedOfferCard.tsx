@@ -1,14 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   Image,
   TouchableOpacity,
   StyleSheet,
+  Linking,
+  Alert,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { format, parseISO } from 'date-fns';
 import { colors, spacing, borderRadius, fontSize, shadows, fontFamily } from '../../theme';
 import { PurchaseToken } from '../../types/database';
+import BookingConfirmationModal from '../modals/BookingConfirmationModal';
 
 const placeholderImage = require('../../../assets/images/placeholder_offer.jpg');
 
@@ -16,17 +21,32 @@ interface ClaimedOfferCardProps {
   purchaseToken: PurchaseToken;
   onPress: () => void;
   onShowQR: () => void;
+  onBookingUpdated?: () => void; // Callback to refresh list after booking update
 }
 
 export default function ClaimedOfferCard({
   purchaseToken,
   onPress,
   onShowQR,
+  onBookingUpdated,
 }: ClaimedOfferCardProps) {
   // Use data from purchase token and joined offer data
   const offerName = purchaseToken.offer_name || 'Unknown Offer';
   const businessName = purchaseToken.offers?.business_name || 'Business';
   const featuredImage = purchaseToken.offers?.featured_image;
+
+  // External/call booking data
+  const bookingType = purchaseToken.offers?.booking_type as 'external' | 'call' | undefined;
+  const bookingUrl = purchaseToken.offers?.booking_url;
+  const businessPhoneNumber = purchaseToken.offers?.businesses?.phone_number;
+  const isExternalBooking = bookingType === 'external' || bookingType === 'call';
+  const hasBookingConfirmed = purchaseToken.booking_confirmed === true;
+  const bookingDate = purchaseToken.booking_date;
+
+  // Modal state
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const hasOpenedExternalLink = React.useRef(false);
+  const appStateRef = React.useRef(AppState.currentState);
 
   // We don't have expiry date without joining to offers table
   const daysUntilExpiry = null;
@@ -51,9 +71,66 @@ export default function ClaimedOfferCard({
   const statusBadge = getStatusBadge();
   const isRedeemable = !purchaseToken.redeemed && !purchaseToken.cancelled && (daysUntilExpiry === null || daysUntilExpiry >= 0);
 
+  // Show Book Now button for external/call offers that haven't confirmed booking yet
+  const showBookNowButton = isExternalBooking && !hasBookingConfirmed && isRedeemable;
+
+  // Handle Book Now button press
+  const handleBookNow = async () => {
+    hasOpenedExternalLink.current = true;
+
+    if (bookingType === 'call' && businessPhoneNumber) {
+      const phoneUrl = `tel:${businessPhoneNumber}`;
+      try {
+        await Linking.openURL(phoneUrl);
+      } catch (error) {
+        Alert.alert('Error', 'Unable to make phone call');
+      }
+    } else if (bookingType === 'external' && bookingUrl) {
+      try {
+        await Linking.openURL(bookingUrl);
+      } catch (error) {
+        Alert.alert('Error', 'Unable to open booking link');
+      }
+    }
+  };
+
+  // Handle edit booking date
+  const handleEditBooking = () => {
+    setShowBookingModal(true);
+  };
+
+  // Handle booking confirmation
+  const handleBookingConfirmed = () => {
+    setShowBookingModal(false);
+    onBookingUpdated?.();
+  };
+
+  // AppState listener for detecting return from external link
+  React.useEffect(() => {
+    if (!isExternalBooking || hasBookingConfirmed) return;
+
+    const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
+      if (
+        appStateRef.current.match(/inactive|background/) &&
+        nextAppState === 'active' &&
+        hasOpenedExternalLink.current
+      ) {
+        hasOpenedExternalLink.current = false;
+        setShowBookingModal(true);
+      }
+      appStateRef.current = nextAppState;
+    });
+
+    return () => subscription.remove();
+  }, [isExternalBooking, hasBookingConfirmed]);
 
   // Use 'created' field instead of 'created_at'
   const claimedDate = purchaseToken.created ? format(parseISO(purchaseToken.created), 'MMM d, yyyy') : '';
+
+  // Format booking date for display
+  const formattedBookingDate = bookingDate
+    ? format(parseISO(bookingDate), 'EEE, MMM d, yyyy')
+    : null;
 
   return (
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
@@ -81,6 +158,39 @@ export default function ClaimedOfferCard({
           <Text style={styles.claimedDate}>Claimed {claimedDate}</Text>
         )}
 
+        {/* Booking Date Display - for confirmed external/call bookings */}
+        {isExternalBooking && hasBookingConfirmed && formattedBookingDate && (
+          <TouchableOpacity
+            style={styles.bookingDateContainer}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleEditBooking();
+            }}
+          >
+            <Text style={styles.bookingDateIcon}>📅</Text>
+            <Text style={styles.bookingDateText}>Booking: {formattedBookingDate}</Text>
+            <Text style={styles.bookingDateEdit}>Edit</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Book Now Button - for external/call offers without confirmed booking */}
+        {showBookNowButton && (
+          <TouchableOpacity
+            style={styles.bookNowButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleBookNow();
+            }}
+          >
+            <Text style={styles.bookNowButtonIcon}>
+              {bookingType === 'call' ? '📞' : '🔗'}
+            </Text>
+            <Text style={styles.bookNowButtonText}>
+              {bookingType === 'call' ? 'Call to Book' : 'Book Now'}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         {/* Action Button */}
         {isRedeemable && (
           <TouchableOpacity
@@ -95,6 +205,17 @@ export default function ClaimedOfferCard({
           </TouchableOpacity>
         )}
       </View>
+
+      {/* Booking Confirmation Modal */}
+      <BookingConfirmationModal
+        visible={showBookingModal}
+        onClose={() => setShowBookingModal(false)}
+        purchaseTokenId={purchaseToken.id}
+        businessName={businessName}
+        existingBookingDate={bookingDate}
+        existingReminderId={purchaseToken.booking_reminder_id}
+        onBookingConfirmed={handleBookingConfirmed}
+      />
     </TouchableOpacity>
   );
 }
@@ -191,5 +312,54 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.primary,
     fontFamily: fontFamily.bodyBold,
+  },
+
+  // Booking Date Display
+  bookingDateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.sm,
+  },
+  bookingDateIcon: {
+    fontSize: fontSize.sm,
+    marginRight: spacing.xs,
+  },
+  bookingDateText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.primary,
+  },
+  bookingDateEdit: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.success,
+  },
+
+  // Book Now Button
+  bookNowButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF9E6',
+    borderWidth: 1,
+    borderColor: colors.accent,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    marginBottom: spacing.sm,
+  },
+  bookNowButtonIcon: {
+    fontSize: fontSize.md,
+    marginRight: spacing.sm,
+  },
+  bookNowButtonText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontFamily: fontFamily.bodySemiBold,
   },
 });

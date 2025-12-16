@@ -117,15 +117,17 @@ serve(async (req) => {
       );
     }
 
-    // Get current offer status before update (to detect status change to active)
+    // Get current offer status before update (to detect status change to Signed Off)
     let previousStatus: string | null = null;
-    if (cleanedData.status === "active") {
+    let currentStartDate: string | null = null;
+    if (cleanedData.status === "Signed Off") {
       const { data: currentOffer } = await supabaseClient
         .from("offers")
-        .select("status")
+        .select("status, start_date")
         .eq("id", id)
         .single();
       previousStatus = currentOffer?.status || null;
+      currentStartDate = currentOffer?.start_date || null;
     }
 
     const { data, error } = await supabaseClient
@@ -159,32 +161,185 @@ serve(async (req) => {
       );
     }
 
-    // Send push notification if offer just became active (was draft/pending before)
-    if (data.status === "active" && previousStatus && previousStatus !== "active") {
+    // Send push notification if offer just became Signed Off (was draft/pending before)
+    if (data.status === "Signed Off" && previousStatus && previousStatus !== "Signed Off") {
       try {
         const notificationPayload = {
           type: "new_offer",
-          business_id: data.business_id,
+          business_id: String(data.business_id),
           business_name: data.business_name || data.businesses?.name || "A business you follow",
-          offer_id: data.id,
+          offer_id: String(data.id),
           offer_title: data.name,
         };
 
-        // Call the send-push-notification function
-        const notificationResponse = await fetch(
-          `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-push-notification`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-            },
-            body: JSON.stringify(notificationPayload),
-          }
-        );
+        // Check if start_date is today or in the past (send immediately) or in the future (schedule)
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
 
-        const notificationResult = await notificationResponse.json();
-        console.log("Push notification result:", notificationResult);
+        // Use the updated start_date if provided, otherwise use existing
+        const startDateStr = cleanedData.start_date || data.start_date;
+        let shouldSendNow = true;
+
+        if (startDateStr) {
+          const startDate = new Date(startDateStr);
+          startDate.setHours(0, 0, 0, 0);
+
+          if (startDate > today) {
+            // Start date is in the future - schedule for that date
+            shouldSendNow = false;
+
+            // Store scheduled notification in database
+            await supabaseClient.from("scheduled_notifications").insert({
+              notification_type: "new_offer",
+              payload: notificationPayload,
+              scheduled_for: startDateStr,
+              offer_id: data.id,
+              business_id: data.business_id,
+              status: "pending",
+            });
+            console.log(`Notification scheduled for ${startDateStr}`);
+          }
+        }
+
+        if (shouldSendNow) {
+          // Send notification directly (inline logic to avoid JWT issues with function-to-function calls)
+          console.log("Sending new_offer notification inline...");
+
+          // Get all users who favorited this business
+          const { data: favorites, error: favError } = await supabaseClient
+            .from("favorites")
+            .select("user_id")
+            .eq("business_id", data.business_id)
+            .not("business_id", "is", null);
+
+          if (favError) {
+            console.error("Error fetching favorites:", favError);
+          }
+
+          let inAppUserIds: string[] = [];
+          let pushUserIds: string[] = [];
+          let tokens: string[] = [];
+
+          if (favorites && favorites.length > 0) {
+            // favorites.user_id is UUID, but notifications.user_id expects integer
+            // We need to get integer IDs from users table
+            const userUuids = favorites.map((f: { user_id: string }) => f.user_id);
+            console.log("User UUIDs from favorites:", userUuids);
+
+            // Get integer user IDs from users table using the UUIDs
+            const { data: usersData, error: usersError } = await supabaseClient
+              .from("users")
+              .select("id, activate_notifications")
+              .in("id", userUuids);
+
+            if (usersError) {
+              console.error("Error fetching users:", usersError);
+            }
+
+            console.log("Users found:", JSON.stringify(usersData));
+
+            if (usersData && usersData.length > 0) {
+              // Get users with new_offers_from_favorites enabled (for in-app notifications)
+              const { data: preferences } = await supabaseClient
+                .from("notification_preferences")
+                .select("user_id")
+                .in("user_id", userUuids)
+                .eq("new_offers_from_favorites", true);
+
+              // If no preferences found, assume all users want notifications (default true)
+              // Use the integer IDs for in-app notifications
+              const enabledUserUuids = preferences && preferences.length > 0
+                ? preferences.map((p: { user_id: string }) => p.user_id)
+                : userUuids;
+
+              // Map to integer IDs for notifications table
+              const enabledUsersData = usersData.filter((u: { id: string }) =>
+                enabledUserUuids.includes(u.id)
+              );
+              inAppUserIds = enabledUsersData.map((u: { id: string }) => u.id);
+
+              // For push notifications, filter users with activate_notifications = true
+              const pushEnabledUsers = usersData.filter((u: { id: string, activate_notifications: boolean }) =>
+                u.activate_notifications === true && enabledUserUuids.includes(u.id)
+              );
+              const pushUserUuids = pushEnabledUsers.map((u: { id: string }) => u.id);
+
+              // Get push tokens for users with push enabled
+              if (pushUserUuids.length > 0) {
+                const { data: pushTokens } = await supabaseClient
+                  .from("push_tokens")
+                  .select("expo_push_token, user_id")
+                  .in("user_id", pushUserUuids)
+                  .eq("is_active", true);
+
+                tokens = pushTokens?.map((t: { expo_push_token: string }) => t.expo_push_token) || [];
+                pushUserIds = pushTokens?.map((t: { user_id: string }) => t.user_id) || [];
+              }
+            }
+          }
+
+          console.log(`Found ${inAppUserIds.length} in-app users, ${tokens.length} push tokens`);
+
+          const title = `New from ${notificationPayload.business_name}`;
+          const body = notificationPayload.offer_title || "Check out their latest offer!";
+
+          // Create in-app notifications for all users who favorited (regardless of push settings)
+          for (const userId of inAppUserIds) {
+            console.log(`Creating in-app notification for user ${userId}...`);
+            const { data: notifData, error: notifErr } = await supabaseClient
+              .from("notifications")
+              .insert({
+                user_id: userId,
+                name: title,
+                content: body,
+                read: false,
+                notifications_categories: "offer",
+                offer_id: data.id,
+                business_id: data.business_id,
+              })
+              .select()
+              .single();
+
+            if (notifErr) {
+              console.error(`Error creating notification for user ${userId}:`, JSON.stringify(notifErr));
+            } else {
+              console.log(`Notification created: ${JSON.stringify(notifData)}`);
+            }
+          }
+
+          // Send push notifications via Expo
+          if (tokens.length > 0) {
+            const messages = tokens.map((token) => ({
+              to: token,
+              sound: "default",
+              title,
+              body,
+              data: { type: "new_offer", offerId: notificationPayload.offer_id, businessId: notificationPayload.business_id },
+              channelId: "offers",
+            }));
+
+            // Batch notifications (max 100 per request)
+            for (let i = 0; i < messages.length; i += 100) {
+              const batch = messages.slice(i, i + 100);
+              try {
+                const response = await fetch("https://exp.host/--/api/v2/push/send", {
+                  method: "POST",
+                  headers: {
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify(batch),
+                });
+                const result = await response.json();
+                console.log("Expo push response:", JSON.stringify(result, null, 2));
+              } catch (pushErr) {
+                console.error("Error sending push batch:", pushErr);
+              }
+            }
+          }
+
+          console.log(`Notification sent: ${inAppUserIds.length} in-app, ${tokens.length} push`);
+        }
       } catch (notificationError) {
         // Don't fail the offer update if notification fails
         console.error("Error sending push notification:", notificationError);

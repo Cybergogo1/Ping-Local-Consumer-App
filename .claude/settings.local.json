@@ -33,7 +33,11 @@
       "Bash(npx typescript:*)",
       "Bash(node -e:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(grep:*)",
+      "Bash(xargs ls:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(del \"c:\\Users\\cyber\\OneDrive\\Documents\\Claude\\Ping-Local-Consumer-App\\PingLocal\\supabase\\functions\\send-push-notification\\config.toml\")"
     ],
     "deny": [],
     "ask": []

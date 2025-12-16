@@ -175,7 +175,7 @@ export default function NotificationsScreen() {
         </TouchableOpacity>
         <View style={styles.headerRight}>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Notifications' as any)}
+            onPress={() => navigation.navigate('Notifications')}
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
@@ -188,7 +188,7 @@ export default function NotificationsScreen() {
             )}
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Settings' as any)}
+            onPress={() => navigation.navigate('Settings')}
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconsettings.png')} style={styles.settingsButtonIcon}/>

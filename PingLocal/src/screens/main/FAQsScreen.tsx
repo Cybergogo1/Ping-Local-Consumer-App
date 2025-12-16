@@ -11,7 +11,7 @@ import {
   UIManager,
   Image,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -199,7 +199,7 @@ export default function FAQsScreen() {
         </TouchableOpacity>
         <View style={styles.headerRight}>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Notifications' as any)}
+            onPress={() => navigation.navigate('Notifications')}
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.notificationButtonIcon}/>
@@ -212,7 +212,7 @@ export default function FAQsScreen() {
             )}
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Settings' as any)}
+            onPress={() => navigation.navigate('Settings')}
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconsettings.png')} style={styles.settingsButtonIcon}/>
@@ -220,7 +220,7 @@ export default function FAQsScreen() {
         </View>
       </View>
 
-      <SafeAreaView style={styles.safeArea} edges={['bottom', 'left', 'right']}>
+      <View style={styles.safeArea}>
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -275,10 +275,8 @@ export default function FAQsScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Bottom Spacing */}
-          <View style={styles.bottomSpacing} />
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
@@ -346,6 +344,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingTop: spacing.md,
+    paddingBottom: spacing.xxl,
   },
   introCard: {
     backgroundColor: colors.white,
@@ -458,8 +457,5 @@ const styles = StyleSheet.create({
   },
   onboardingButtonText: {
     color: colors.accent,
-  },
-  bottomSpacing: {
-    height: spacing.xxl,
   },
 });

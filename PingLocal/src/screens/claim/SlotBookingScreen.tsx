@@ -18,6 +18,7 @@ import { OfferSlot } from '../../types/database';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { HomeStackParamList } from '../../types/navigation';
+import { useNotifications } from '../../contexts/NotificationContext';
 
 type SlotBookingScreenProps = {
   navigation: StackNavigationProp<HomeStackParamList, 'SlotBooking'>;
@@ -27,6 +28,7 @@ type SlotBookingScreenProps = {
 export default function SlotBookingScreen({ navigation, route }: SlotBookingScreenProps) {
   const { offerId, offer } = route.params;
   const insets = useSafeAreaInsets();
+  const { unreadCount } = useNotifications();
 
   const [slots, setSlots] = useState<OfferSlot[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -154,16 +156,20 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
           </TouchableOpacity>
           <View style={styles.headerRight}>
             <TouchableOpacity
-              onPress={() => navigation.navigate('Notifications' as any)}
+              onPress={() => navigation.navigate('Notifications')}
               style={styles.headerButton}
             >
               <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.headerButtonIcon} />
-              <View style={styles.notificationBadge}>
-                <Text style={styles.notificationBadgeText}>N..</Text>
-              </View>
+              {unreadCount > 0 && (
+                <View style={styles.notificationBadge}>
+                  <Text style={styles.notificationBadgeText}>
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => navigation.navigate('Settings' as any)}
+              onPress={() => navigation.navigate('Settings')}
               style={styles.headerButton}
             >
               <Image source={require('../../../assets/images/iconsettings.png')} style={styles.headerButtonIcon} />
@@ -192,16 +198,20 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
         </TouchableOpacity>
         <View style={styles.headerRight}>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Notifications' as any)}
+            onPress={() => navigation.navigate('Notifications')}
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.headerButtonIcon} />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>N..</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Settings' as any)}
+            onPress={() => navigation.navigate('Settings')}
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconsettings.png')} style={styles.headerButtonIcon} />

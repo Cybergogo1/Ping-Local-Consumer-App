@@ -59,9 +59,10 @@ type SortOption = 'newest' | 'ending_soon' | 'proximity';
 
 export default function HomeScreen() {
   const navigation = useNavigation<NavigationProp>();
-  const { user, supabaseUser } = useAuth();
+  const { user, supabaseUser, checkPendingLevelUp, clearPendingLevelUp } = useAuth();
   const { userLocation, locationPermission, isLocationLoading, requestLocation } = useLocation();
   const { unreadCount } = useNotifications();
+  const hasCheckedLevelUp = useRef(false);
 
   const [offers, setOffers] = useState<Offer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,6 +90,28 @@ export default function HomeScreen() {
   const [showFilterModal, setShowFilterModal] = useState(false);
   const locationSlideAnim = useRef(new Animated.Value(-MODAL_WIDTH)).current;
   const filterSlideAnim = useRef(new Animated.Value(-MODAL_WIDTH)).current;
+
+  // Check for pending level up when screen loads
+  useEffect(() => {
+    const checkLevelUp = async () => {
+      if (user && !hasCheckedLevelUp.current) {
+        hasCheckedLevelUp.current = true;
+        const pendingLevelUp = await checkPendingLevelUp();
+        if (pendingLevelUp) {
+          // Navigate to LevelUp screen
+          navigation.navigate('LevelUp', {
+            previousTier: pendingLevelUp.previousTier,
+            newTier: pendingLevelUp.newTier,
+            pointsEarned: 0, // Not tracked in this flow
+            totalPoints: pendingLevelUp.totalPoints,
+          });
+          // Clear the pending level up flag
+          await clearPendingLevelUp();
+        }
+      }
+    };
+    checkLevelUp();
+  }, [user, checkPendingLevelUp, clearPendingLevelUp, navigation]);
 
   // Fetch location areas and categories on mount
   useEffect(() => {
@@ -194,11 +217,12 @@ export default function HomeScreen() {
           return includeOffer;
         });
 
-        // Extract unique location areas from filtered offers
+        // Extract unique location areas from filtered offers (check both offer and business)
         const locationSet = new Set<string>();
         filteredOffers.forEach((offer: any) => {
-          if (offer.businesses?.location_area) {
-            locationSet.add(offer.businesses.location_area);
+          const locationArea = offer.businesses?.location_area || offer.location_area;
+          if (locationArea) {
+            locationSet.add(locationArea);
           }
         });
 
@@ -228,8 +252,8 @@ export default function HomeScreen() {
         const filteredOffers = data.filter((offer: any) => {
           let includeOffer = true;
 
-          // Check location filter
-          if (selectedLocation && offer.businesses?.location_area !== selectedLocation) {
+          // Check location filter (case-insensitive)
+          if (selectedLocation && offer.businesses?.location_area?.toLowerCase() !== selectedLocation.toLowerCase()) {
             includeOffer = false;
           }
 
@@ -290,8 +314,8 @@ export default function HomeScreen() {
         const filteredOffers = data.filter((offer: any) => {
           let includeOffer = true;
 
-          // Check location filter
-          if (selectedLocation && offer.businesses?.location_area !== selectedLocation) {
+          // Check location filter (case-insensitive)
+          if (selectedLocation && offer.businesses?.location_area?.toLowerCase() !== selectedLocation.toLowerCase()) {
             includeOffer = false;
           }
 
@@ -352,13 +376,8 @@ export default function HomeScreen() {
     }
 
     try {
-      // Build the select query with joins for filtering
-      let selectQuery = '*, businesses!inner(location_area)';
-
-      // If filtering by category or tags, we need to join with offer_tags and tags
-      if (selectedCategory || selectedTags.length > 0) {
-        selectQuery = '*, businesses!inner(location_area), offer_tags(tag_id, tags(id, name, type))';
-      }
+      // Build the select query with joins - always include offer_tags for display
+      const selectQuery = '*, businesses!inner(location_area), offer_tags(tag_id, tags(id, name, type))';
 
       let query = supabase
         .from('offers')
@@ -366,9 +385,9 @@ export default function HomeScreen() {
         .eq('status', 'Signed Off')
         .gte('end_date', new Date().toISOString());
 
-      // Apply location filter using business's location_area
+      // Apply location filter using business's location_area (case-insensitive with ilike)
       if (selectedLocation) {
-        query = query.eq('businesses.location_area', selectedLocation);
+        query = query.ilike('businesses.location_area', selectedLocation);
       }
 
       // For category and tags, we'll fetch all candidates and filter client-side for AND logic
@@ -404,10 +423,11 @@ export default function HomeScreen() {
           const exists = acc.find(offer => offer.id === curr.id);
           if (!exists) {
             // Extract offer properties and include location_area from businesses
-            const { businesses, offer_tags, tags, ...offerData } = curr;
+            const { businesses, tags, ...offerData } = curr;
             const offerWithLocation = {
               ...offerData,
               location_area: businesses?.location_area || offerData.location_area,
+              offer_tags: curr.offer_tags, // Include offer_tags for PromotionCard display
             } as Offer;
 
             // Apply client-side filtering for category and tags (AND logic)
@@ -874,9 +894,11 @@ export default function HomeScreen() {
                   )}
                 </TouchableOpacity>
 
-                {/* Location Areas - Only show available locations */}
+                {/* Location Areas - Only show available locations (case-insensitive match) */}
                 {locationAreas
-                  .filter((area) => availableLocations.includes(area.name))
+                  .filter((area) => availableLocations.some(
+                    loc => loc.toLowerCase() === area.name.toLowerCase()
+                  ))
                   .map((area) => (
                     <TouchableOpacity
                       key={area.id}

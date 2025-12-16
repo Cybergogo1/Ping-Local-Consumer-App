@@ -6,6 +6,8 @@ import DirectoryScreen from '../screens/main/DirectoryScreen';
 import BusinessDetailScreen from '../screens/main/BusinessDetailScreen';
 import OfferDetailScreen from '../screens/main/OfferDetailScreen';
 import NotificationsScreen from '../screens/main/NotificationsScreen';
+import NotificationDetailScreen from '../screens/main/NotificationDetailScreen';
+import SettingsScreen from '../screens/main/SettingsScreen';
 
 // Claim flow screens
 import SlotBookingScreen from '../screens/claim/SlotBookingScreen';
@@ -27,6 +29,8 @@ export default function DirectoryStackNavigator() {
       <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} />
       <Stack.Screen name="OfferDetail" component={OfferDetailScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      <Stack.Screen name="NotificationDetail" component={NotificationDetailScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
       {/* Claim Flow */}
       <Stack.Screen name="SlotBooking" component={SlotBookingScreen} />
       <Stack.Screen name="ExternalBooking" component={ExternalBookingScreen} />

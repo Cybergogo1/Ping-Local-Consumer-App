@@ -34,6 +34,7 @@ export type HomeStackParamList = {
   OfferDetail: { offerId: number };
   BusinessDetail: { businessId: number };
   Notifications: undefined;
+  NotificationDetail: { notification: NotificationItem };
   LoyaltyInfo: undefined;
   Settings: undefined;
   // Claim flow screens
@@ -53,6 +54,11 @@ export type HomeStackParamList = {
     previousTier?: string;
     newTier?: string;
     totalPoints?: number;
+    // External/call booking flow
+    isExternalBooking?: boolean;
+    bookingType?: 'external' | 'call';
+    bookingUrl?: string;
+    businessPhoneNumber?: string;
   };
   LevelUp: {
     previousTier: string;
@@ -68,6 +74,8 @@ export type DirectoryStackParamList = {
   BusinessDetail: { businessId: number };
   OfferDetail: { offerId: number };
   Notifications: undefined;
+  NotificationDetail: { notification: NotificationItem };
+  Settings: undefined;
   // Claim flow screens (duplicated for directory navigation)
   SlotBooking: { offerId: number; offer: import('./database').Offer };
   ExternalBooking: { offerId: number; offer: import('./database').Offer };
@@ -85,6 +93,11 @@ export type DirectoryStackParamList = {
     previousTier?: string;
     newTier?: string;
     totalPoints?: number;
+    // External/call booking flow
+    isExternalBooking?: boolean;
+    bookingType?: 'external' | 'call';
+    bookingUrl?: string;
+    businessPhoneNumber?: string;
   };
   LevelUp: {
     previousTier: string;
@@ -98,6 +111,8 @@ export type DirectoryStackParamList = {
 export type ClaimedStackParamList = {
   ClaimedMain: undefined;
   Notifications: undefined;
+  NotificationDetail: { notification: NotificationItem };
+  Settings: undefined;
   QRCode: {
     purchaseToken: import('./database').PurchaseToken;
   };
@@ -148,6 +163,8 @@ export type FavouritesStackParamList = {
   OfferDetail: { offerId: number };
   BusinessDetail: { businessId: number };
   Notifications: undefined;
+  NotificationDetail: { notification: NotificationItem };
+  Settings: undefined;
   // Claim flow screens for favourited offers
   SlotBooking: { offerId: number; offer: import('./database').Offer };
   ExternalBooking: { offerId: number; offer: import('./database').Offer };
@@ -165,6 +182,11 @@ export type FavouritesStackParamList = {
     previousTier?: string;
     newTier?: string;
     totalPoints?: number;
+    // External/call booking flow
+    isExternalBooking?: boolean;
+    bookingType?: 'external' | 'call';
+    bookingUrl?: string;
+    businessPhoneNumber?: string;
   };
   LevelUp: {
     previousTier: string;

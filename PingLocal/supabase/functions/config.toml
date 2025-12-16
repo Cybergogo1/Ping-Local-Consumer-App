@@ -1,0 +1,6 @@
+# Disable JWT verification for functions that are called internally
+[send-push-notification]
+verify_jwt = false
+
+[process-scheduled-notifications]
+verify_jwt = false

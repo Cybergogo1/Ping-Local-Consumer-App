@@ -5,6 +5,8 @@ import FavoritesScreen from '../screens/main/FavoritesScreen';
 import OfferDetailScreen from '../screens/main/OfferDetailScreen';
 import BusinessDetailScreen from '../screens/main/BusinessDetailScreen';
 import NotificationsScreen from '../screens/main/NotificationsScreen';
+import NotificationDetailScreen from '../screens/main/NotificationDetailScreen';
+import SettingsScreen from '../screens/main/SettingsScreen';
 import SlotBookingScreen from '../screens/claim/SlotBookingScreen';
 import ExternalBookingScreen from '../screens/claim/ExternalBookingScreen';
 import ClaimScreen from '../screens/claim/ClaimScreen';
@@ -24,6 +26,8 @@ export default function FavouritesStackNavigator() {
       <Stack.Screen name="OfferDetail" component={OfferDetailScreen} />
       <Stack.Screen name="BusinessDetail" component={BusinessDetailScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      <Stack.Screen name="NotificationDetail" component={NotificationDetailScreen} />
+      <Stack.Screen name="Settings" component={SettingsScreen} />
       <Stack.Screen name="SlotBooking" component={SlotBookingScreen} />
       <Stack.Screen name="ExternalBooking" component={ExternalBookingScreen} />
       <Stack.Screen name="Claim" component={ClaimScreen} />

@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Alert,
   StatusBar,
+  Modal,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { format, parseISO } from 'date-fns';
@@ -17,6 +18,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, fontSize, fontFamily, shadows } from '../../theme';
 import { getTierFromPoints } from '../../types/database';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { HomeStackParamList } from '../../types/navigation';
@@ -32,15 +34,22 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
   const { offerId, offer, selectedSlot, partySize = 1 } = route.params;
   const { user, refreshUser } = useAuth();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const { unreadCount } = useNotifications();
   const insets = useSafeAreaInsets();
 
   const [quantity, setQuantity] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const isPayUpfront = offer.offer_type === 'Pay up front';
   const hasSlot = !!selectedSlot;
   const businessName = offer.business_name || offer.businesses?.name || 'Unknown Business';
   const businessId = offer.business_id || offer.businesses?.id;
+
+  // Check if this is an external/call booking offer
+  const isExternalBooking = offer.booking_type === 'external';
+  const isCallBooking = offer.booking_type === 'call';
+  const requiresExternalBooking = isExternalBooking || isCallBooking;
 
   // Calculate total
   const unitPrice = offer.price_discount || 0;
@@ -132,7 +141,7 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         .update({ number_sold: (offer.number_sold || 0) + quantity })
         .eq('id', offerId);
 
-      // Send purchase notification
+      // Send purchase notification to business
       try {
         const customerName = user.first_name && user.surname
           ? `${user.first_name} ${user.surname}`
@@ -157,11 +166,34 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         console.error('Error sending purchase notification:', notifError);
       }
 
+      // Send notification to user (creates in-app notification)
+      try {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            type: 'offer_claimed',
+            user_id: user.id,
+            offer_id: offerId.toString(),
+            offer_title: offer.name,
+            business_id: businessId?.toString(),
+            business_name: businessName,
+            purchase_type: 'claim',
+            claim_id: data.id.toString(),
+          },
+        });
+      } catch (notifError) {
+        console.error('Error sending user notification:', notifError);
+      }
+
       // Navigate to success screen
       navigation.navigate('ClaimSuccess', {
         purchaseTokenId: data.id,
         offerName: offer.name,
         businessName,
+        // External/call booking data
+        isExternalBooking: requiresExternalBooking,
+        bookingType: offer.booking_type as 'external' | 'call' | undefined,
+        bookingUrl: offer.booking_url,
+        businessPhoneNumber: offer.businesses?.phone_number,
       });
     } catch (error) {
       console.error('Error claiming offer:', error);
@@ -293,13 +325,44 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
           offer_id: offerId,
         });
 
+        // Send loyalty points notification to user
+        try {
+          await supabase.functions.invoke('send-push-notification', {
+            body: {
+              type: 'loyalty_points_earned',
+              user_id: user.id,
+              points_earned: pointsEarned,
+              reason: 'purchase',
+              offer_id: offerId.toString(),
+              offer_title: offer.name,
+            },
+          });
+        } catch (notifError) {
+          console.error('Error sending loyalty points notification:', notifError);
+        }
+
+        // If tier changed, send tier upgrade notification
+        if (newTier !== previousTier) {
+          try {
+            await supabase.functions.invoke('send-push-notification', {
+              body: {
+                type: 'loyalty_upgrade',
+                user_id: user.id,
+                new_tier: newTier,
+              },
+            });
+          } catch (notifError) {
+            console.error('Error sending tier upgrade notification:', notifError);
+          }
+        }
+
         // Refresh user data to update points in context
         if (refreshUser) {
           await refreshUser();
         }
       }
 
-      // Send purchase notification
+      // Send purchase notification to business
       try {
         const customerName = user.first_name && user.surname
           ? `${user.first_name} ${user.surname}`
@@ -324,6 +387,24 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         console.error('Error sending purchase notification:', notifError);
       }
 
+      // Send notification to user (creates in-app notification)
+      try {
+        await supabase.functions.invoke('send-push-notification', {
+          body: {
+            type: 'offer_claimed',
+            user_id: user.id,
+            offer_id: offerId.toString(),
+            offer_title: offer.name,
+            business_id: businessId?.toString(),
+            business_name: businessName,
+            purchase_type: 'purchase',
+            claim_id: data.id.toString(),
+          },
+        });
+      } catch (notifError) {
+        console.error('Error sending user notification:', notifError);
+      }
+
       // Navigate to success screen with tier info
       navigation.navigate('ClaimSuccess', {
         purchaseTokenId: data.id,
@@ -333,6 +414,11 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         previousTier,
         newTier,
         totalPoints: newPoints,
+        // External/call booking data
+        isExternalBooking: requiresExternalBooking,
+        bookingType: offer.booking_type as 'external' | 'call' | undefined,
+        bookingUrl: offer.booking_url,
+        businessPhoneNumber: offer.businesses?.phone_number,
       });
     } catch (error: any) {
       console.error('Payment error:', error);
@@ -352,16 +438,20 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         </TouchableOpacity>
         <View style={styles.headerRight}>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Notifications' as any)}
+            onPress={() => navigation.navigate('Notifications')}
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconnotifications.png')} style={styles.headerButtonIcon} />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>N..</Text>
-            </View>
+            {unreadCount > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.notificationBadgeText}>
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           <TouchableOpacity
-            onPress={() => navigation.navigate('Settings' as any)}
+            onPress={() => navigation.navigate('Settings')}
             style={styles.headerButton}
           >
             <Image source={require('../../../assets/images/iconsettings.png')} style={styles.headerButtonIcon} />
@@ -382,7 +472,13 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
             <Text style={styles.offerName}>{offer.name}</Text>
             <Text style={styles.offerBusiness}>{businessName}</Text>
             {offer.location_area && (
-              <Text style={styles.offerLocation}>📍 {offer.location_area}</Text>
+                <View style={styles.locationNameRow}>
+                  <Image
+                    source={require('../../../assets/images/iconlocation.png')}
+                    style={styles.locationIcon}
+                  />
+                  <Text style={styles.offerLocation}>{offer.location_area}</Text>
+                </View>
             )}
           </View>
         </View>
@@ -418,6 +514,25 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
               <Text style={styles.bookingLabel}>👥 Party Size</Text>
               <Text style={styles.bookingValue}>
                 {partySize} {partySize === 1 ? 'person' : 'people'}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* External/Call Booking Notice */}
+        {requiresExternalBooking && (
+          <View style={styles.externalBookingNotice}>
+            <View style={styles.externalBookingIconContainer}>
+              <Text style={styles.externalBookingIcon}>
+                {isCallBooking ? '📞' : '🌐'}
+              </Text>
+            </View>
+            <View style={styles.externalBookingContent}>
+              <Text style={styles.externalBookingTitle}>
+                {isCallBooking ? 'Book by Phone' : 'Book Online'}
+              </Text>
+              <Text style={styles.externalBookingText}>
+                After claiming, you'll need to {isCallBooking ? 'call' : 'visit'} {businessName} directly to make your booking. Make sure to mention you're using a Ping Local promotion!
               </Text>
             </View>
           </View>
@@ -496,7 +611,7 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         <View style={styles.termsNotice}>
           <Text style={styles.termsText}>
             By {isPayUpfront ? 'purchasing' : 'claiming'} this offer, you agree to the{' '}
-            <Text style={styles.termsLink}>Terms & Conditions</Text>
+            <Text style={styles.termsLink} onPress={() => setShowTermsModal(true)}>Terms & Conditions</Text>
           </Text>
         </View>
 
@@ -537,6 +652,61 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         )}
       </View>
       </SafeAreaView>
+
+      {/* Terms & Conditions Modal */}
+      <Modal
+        visible={showTermsModal}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowTermsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Terms & Conditions</Text>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowTermsModal(false)}
+              >
+                <Text style={styles.modalCloseText}>×</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView style={styles.modalBody}>
+              {/* Business Policy */}
+              {offer?.business_policy && (
+                <>
+                  <Text style={styles.modalSectionTitle}>Business Policy</Text>
+                  <Text style={styles.modalText}>{offer.business_policy}</Text>
+                </>
+              )}
+
+              {/* Policy Notes */}
+              {offer?.policy_notes && (
+                <>
+                  <Text style={[styles.modalSectionTitle, { marginTop: spacing.md }]}>
+                    Additional Notes
+                  </Text>
+                  <Text style={styles.modalText}>{offer.policy_notes}</Text>
+                </>
+              )}
+
+              {/* Fallback if no policy exists */}
+              {!offer?.business_policy && !offer?.policy_notes && (
+                <>
+                  <Text style={styles.modalSectionTitle}>Standard Terms</Text>
+                  <Text style={styles.modalText}>
+                    • This offer is subject to availability{'\n'}
+                    • Cannot be combined with other offers{'\n'}
+                    • Must be redeemed within the validity period{'\n'}
+                    • The business reserves the right to refuse service{'\n'}
+                    • No cash alternative available
+                  </Text>
+                </>
+              )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -628,6 +798,17 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.body,
     color: colors.grayDark,
     marginBottom: spacing.xs,
+  },
+  locationNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    marginBottom: spacing.xs,
+  },
+  locationIcon: {
+    width: 16,
+    height: 16,
+    marginRight: spacing.xs,
   },
   offerLocation: {
     fontSize: fontSize.xs,
@@ -817,5 +998,100 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.body,
     color: colors.grayDark,
     marginTop: 2,
+  },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: colors.white,
+    borderRadius: borderRadius.xl,
+    maxHeight: '80%',
+    width: '100%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.grayLight,
+  },
+  modalTitle: {
+    fontSize: fontSize.lg,
+    fontFamily: fontFamily.headingBold,
+    color: colors.primary,
+  },
+  modalCloseButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.grayLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCloseText: {
+    fontSize: fontSize.xl,
+    color: colors.grayDark,
+    lineHeight: 28,
+  },
+  modalBody: {
+    padding: spacing.md,
+  },
+  modalSectionTitle: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.headingSemiBold,
+    color: colors.primary,
+    marginBottom: spacing.sm,
+  },
+  modalText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
+    color: colors.grayDark,
+    lineHeight: 22,
+  },
+
+  // External/Call Booking Notice
+  externalBookingNotice: {
+    flexDirection: 'row',
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+    backgroundColor: '#FFF9E6',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#F5D75A30',
+  },
+  externalBookingIconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F5D75A40',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: spacing.md,
+  },
+  externalBookingIcon: {
+    fontSize: fontSize.lg,
+  },
+  externalBookingContent: {
+    flex: 1,
+  },
+  externalBookingTitle: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.primary,
+    marginBottom: spacing.xs,
+  },
+  externalBookingText: {
+    fontSize: fontSize.xs,
+    fontFamily: fontFamily.body,
+    color: colors.grayDark,
+    lineHeight: 18,
   },
 });

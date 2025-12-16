@@ -13,6 +13,9 @@ export interface User {
   activate_notifications?: boolean;
   selected_location?: string;
   selected_location_id?: number;
+  pending_level_up?: boolean;
+  pending_level_up_from?: string;
+  pending_level_up_to?: string;
   created: string;
   updated: string;
 }
@@ -119,6 +122,10 @@ export interface PurchaseToken {
   api_last_sync_date?: string;
   created: string;
   updated: string;
+  // External/call booking tracking
+  booking_date?: string; // Date user says they booked for (YYYY-MM-DD)
+  booking_confirmed?: boolean; // Whether user confirmed they made a booking
+  booking_reminder_id?: string; // ID of scheduled reminder notification
   // Joined data
   offers?: Offer;
   businesses?: Business;
@@ -211,6 +218,20 @@ export interface ImageGalleryItem {
   image_url: string;
   display_order: number;
   created: string;
+}
+
+export interface OpeningTime {
+  id: number;
+  name: string; // Day name: Monday, Tuesday, etc.
+  day_number: number; // 1=Monday, 2=Tuesday, ... 7=Sunday
+  is_open: boolean;
+  opening_time?: string; // ISO timestamp
+  closing_time?: string; // ISO timestamp
+  is_special_date: boolean;
+  special_date?: string;
+  business_name: string;
+  created: string;
+  updated: string;
 }
 
 // Tier thresholds
