@@ -1,7 +1,7 @@
 # Final Snagging Plan
 
 ## Notifications
-- [ ] Final testing of notification system
+- [-] Final testing of notification system
 - [-] Create additional notification triggers
 - [-] notifications icon on checkout has placeholder in
 
@@ -11,8 +11,9 @@
 - [-] Finalise pins on map screen
 - [-] Final updates to icons
 - [-] Sort footer opacity issue on claimed pings
-- [ ] Filter menu doesn't seem to feature all locations
-- [ ] quantity can't be empty when creating promotion, needs fixing
+- [-] Filter menu doesn't seem to feature all locations
+- [-] quantity can't be empty when creating promotion, needs fixing
+- [-] login / register page inputs need height fixing
 
 ## Loyalty Page
 - [-] Tweak loyalty page icon design

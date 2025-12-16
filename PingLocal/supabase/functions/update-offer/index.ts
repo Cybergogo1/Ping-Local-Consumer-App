@@ -103,7 +103,14 @@ serve(async (req) => {
 
     for (const field of allowedFields) {
       if (field in updateData) {
-        cleanedData[field] = updateData[field];
+        let value = updateData[field];
+
+        // Handle quantity field: empty string or null means unlimited (store as null)
+        if (field === "quantity" && (value === "" || value === null || value === undefined)) {
+          value = null;
+        }
+
+        cleanedData[field] = value;
       }
     }
 
@@ -216,21 +223,21 @@ serve(async (req) => {
             console.error("Error fetching favorites:", favError);
           }
 
-          let inAppUserIds: string[] = [];
-          let pushUserIds: string[] = [];
+          let inAppUserIds: number[] = [];  // Integer IDs for notifications table
+          let pushUserIds: string[] = [];   // Auth UUIDs for push tokens
           let tokens: string[] = [];
 
           if (favorites && favorites.length > 0) {
-            // favorites.user_id is UUID, but notifications.user_id expects integer
-            // We need to get integer IDs from users table
-            const userUuids = favorites.map((f: { user_id: string }) => f.user_id);
-            console.log("User UUIDs from favorites:", userUuids);
+            // favorites.user_id is auth UUID, notifications.user_id expects integer
+            // Use auth_id column to map from auth UUID to users.id (integer)
+            const authUuids = favorites.map((f: { user_id: string }) => f.user_id);
+            console.log("Auth UUIDs from favorites:", authUuids);
 
-            // Get integer user IDs from users table using the UUIDs
+            // Get integer user IDs from users table using auth_id column
             const { data: usersData, error: usersError } = await supabaseClient
               .from("users")
-              .select("id, activate_notifications")
-              .in("id", userUuids);
+              .select("id, auth_id, activate_notifications")
+              .in("auth_id", authUuids);
 
             if (usersError) {
               console.error("Error fetching users:", usersError);
@@ -240,36 +247,39 @@ serve(async (req) => {
 
             if (usersData && usersData.length > 0) {
               // Get users with new_offers_from_favorites enabled (for in-app notifications)
+              // notification_preferences uses auth UUID as user_id
               const { data: preferences } = await supabaseClient
                 .from("notification_preferences")
                 .select("user_id")
-                .in("user_id", userUuids)
+                .in("user_id", authUuids)
                 .eq("new_offers_from_favorites", true);
 
               // If no preferences found, assume all users want notifications (default true)
-              // Use the integer IDs for in-app notifications
-              const enabledUserUuids = preferences && preferences.length > 0
+              const enabledAuthUuids = preferences && preferences.length > 0
                 ? preferences.map((p: { user_id: string }) => p.user_id)
-                : userUuids;
+                : authUuids;
 
               // Map to integer IDs for notifications table
-              const enabledUsersData = usersData.filter((u: { id: string }) =>
-                enabledUserUuids.includes(u.id)
+              // Filter users whose auth_id is in the enabled list
+              const enabledUsersData = usersData.filter((u: { auth_id: string }) =>
+                enabledAuthUuids.includes(u.auth_id)
               );
-              inAppUserIds = enabledUsersData.map((u: { id: string }) => u.id);
+              // Get integer IDs for in-app notifications
+              inAppUserIds = enabledUsersData.map((u: { id: number }) => u.id);
 
               // For push notifications, filter users with activate_notifications = true
-              const pushEnabledUsers = usersData.filter((u: { id: string, activate_notifications: boolean }) =>
-                u.activate_notifications === true && enabledUserUuids.includes(u.id)
+              const pushEnabledUsers = usersData.filter((u: { auth_id: string, activate_notifications: boolean }) =>
+                u.activate_notifications === true && enabledAuthUuids.includes(u.auth_id)
               );
-              const pushUserUuids = pushEnabledUsers.map((u: { id: string }) => u.id);
+              // Get auth UUIDs for push token lookup (push_tokens uses auth UUID)
+              const pushAuthUuids = pushEnabledUsers.map((u: { auth_id: string }) => u.auth_id);
 
               // Get push tokens for users with push enabled
-              if (pushUserUuids.length > 0) {
+              if (pushAuthUuids.length > 0) {
                 const { data: pushTokens } = await supabaseClient
                   .from("push_tokens")
                   .select("expo_push_token, user_id")
-                  .in("user_id", pushUserUuids)
+                  .in("user_id", pushAuthUuids)
                   .eq("is_active", true);
 
                 tokens = pushTokens?.map((t: { expo_push_token: string }) => t.expo_push_token) || [];

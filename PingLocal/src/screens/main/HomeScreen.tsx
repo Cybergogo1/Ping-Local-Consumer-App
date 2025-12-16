@@ -1135,6 +1135,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: spacing.sm,
+    overflow: 'visible',
   },
   headerIcon: {
     width: 18,
@@ -1142,15 +1143,16 @@ const styles = StyleSheet.create({
   },
   notificationBadge: {
     position: 'absolute',
-    top: -2,
-    right: -2,
+    top: -4,
+    right: -4,
     backgroundColor: colors.accent,
     borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    minWidth: 18,
+    height: 18,
     justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 4,
+    zIndex: 10,
   },
   notificationBadgeText: {
     fontSize: 10,

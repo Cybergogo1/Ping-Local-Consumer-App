@@ -93,6 +93,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (error) throw error;
 
+      // Ensure auth_id is set (maps Supabase Auth UUID to this user record)
+      if (data && !data.auth_id && userId) {
+        await supabase
+          .from('users')
+          .update({ auth_id: userId })
+          .eq('email', email);
+        console.log('Set auth_id for user:', userId);
+      }
+
       // Check local storage for onboarding completion as fallback
       const localOnboardingKey = `${ONBOARDING_COMPLETE_KEY}_${email}`;
       const localOnboardingComplete = await AsyncStorage.getItem(localOnboardingKey);
@@ -178,6 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               onboarding_completed: false,
               notification_permission_status: 'not_asked',
               updated: new Date().toISOString(),
+              auth_id: data.user.id, // Map Supabase Auth UUID to this user
             })
             .eq('email', email)
             .select();
@@ -204,6 +214,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             is_admin: false,
             is_business: false,
             api_requires_sync: false,
+            auth_id: data.user.id, // Map Supabase Auth UUID to this user
           }).select();
 
           if (profileError) {

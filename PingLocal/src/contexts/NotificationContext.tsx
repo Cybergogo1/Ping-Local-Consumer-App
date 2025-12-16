@@ -17,19 +17,25 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
   const fetchUnreadCount = useCallback(async () => {
     if (!user?.id) {
+      console.log('NotificationContext: No user ID, setting unread count to 0');
       setUnreadCount(0);
       return;
     }
 
     try {
+      console.log('NotificationContext: Fetching unread count for user ID:', user.id);
       const { count, error } = await supabase
         .from('notifications')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', user.id)
         .eq('read', false);
 
+      console.log('NotificationContext: Query result - count:', count, 'error:', error);
+
       if (!error && count !== null) {
         setUnreadCount(count);
+      } else if (error) {
+        console.error('NotificationContext: Error fetching unread count:', error);
       }
     } catch (error) {
       console.error('Error fetching unread count:', error);

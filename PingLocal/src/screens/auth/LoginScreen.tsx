@@ -228,7 +228,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: borderRadius.full,
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    height: Platform.OS === 'ios' ? 44 : 48,
+    justifyContent: 'center',
   },
   inputMargin: {
     marginTop: spacing.md,
@@ -237,8 +238,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontFamily: fontFamily.body,
     color: colors.grayDark,
-    height: 24,
-    maxHeight: 45,
+    height: Platform.OS === 'ios' ? 36 : 40,
+    paddingVertical: Platform.OS === 'android' ? 0 : undefined,
+    textAlignVertical: 'center',
   },
   forgotPassword: {
     marginTop: spacing.sm,

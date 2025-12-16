@@ -76,13 +76,14 @@ serve(async (req) => {
         }
 
         if (favorites && favorites.length > 0) {
-          const userIds = favorites.map((f: { user_id: string }) => f.user_id);
+          // favorites.user_id is auth UUID
+          const authUuids = favorites.map((f: { user_id: string }) => f.user_id);
 
           // Get users with new_offers_from_favorites enabled
           const { data: preferences, error: prefError } = await supabase
             .from("notification_preferences")
             .select("user_id")
-            .in("user_id", userIds)
+            .in("user_id", authUuids)
             .eq("new_offers_from_favorites", true);
 
           if (prefError) {
@@ -90,40 +91,53 @@ serve(async (req) => {
           }
 
           // If no preferences found, assume all users want notifications (default true)
-          const enabledUserIds = preferences && preferences.length > 0
+          const enabledAuthUuids = preferences && preferences.length > 0
             ? preferences.map((p: { user_id: string }) => p.user_id)
-            : userIds;
+            : authUuids;
 
-          targetUserIds = enabledUserIds;
-
-          // Also check global push notification setting on users table
-          const { data: usersWithPushEnabled, error: usersError } = await supabase
+          // Get integer user IDs using auth_id column for notifications table
+          const { data: usersData, error: usersError } = await supabase
             .from("users")
-            .select("id")
-            .in("id", enabledUserIds)
-            .eq("activate_notifications", true);
+            .select("id, auth_id, activate_notifications")
+            .in("auth_id", enabledAuthUuids);
 
           if (usersError) {
             console.error("Error fetching users:", usersError);
           }
 
-          const finalUserIds = usersWithPushEnabled
-            ? usersWithPushEnabled.map((u: { id: string }) => u.id)
-            : enabledUserIds;
-
-          // Get push tokens for these users
-          const { data: pushTokens, error: tokenError } = await supabase
-            .from("push_tokens")
-            .select("expo_push_token, user_id")
-            .in("user_id", finalUserIds)
-            .eq("is_active", true);
-
-          if (tokenError) {
-            console.error("Error fetching push tokens:", tokenError);
+          // Map auth UUIDs to integer IDs for in-app notifications
+          const userIdMap = new Map<string, number>();
+          if (usersData) {
+            for (const u of usersData) {
+              if (u.auth_id) {
+                userIdMap.set(u.auth_id, u.id);
+              }
+            }
           }
 
-          tokens = pushTokens?.map((t: { expo_push_token: string }) => t.expo_push_token) || [];
-          targetUserIds = pushTokens?.map((t: { user_id: string }) => t.user_id) || [];
+          // targetUserIds stores integer IDs for notification inserts
+          targetUserIds = usersData?.map((u: { id: number }) => String(u.id)) || [];
+
+          // For push notifications, filter users with activate_notifications = true
+          const pushEnabledUsers = usersData?.filter((u: { activate_notifications: boolean }) =>
+            u.activate_notifications === true
+          ) || [];
+          const pushAuthUuids = pushEnabledUsers.map((u: { auth_id: string }) => u.auth_id);
+
+          // Get push tokens for these users (push_tokens uses auth UUID)
+          if (pushAuthUuids.length > 0) {
+            const { data: pushTokens, error: tokenError } = await supabase
+              .from("push_tokens")
+              .select("expo_push_token, user_id")
+              .in("user_id", pushAuthUuids)
+              .eq("is_active", true);
+
+            if (tokenError) {
+              console.error("Error fetching push tokens:", tokenError);
+            }
+
+            tokens = pushTokens?.map((t: { expo_push_token: string }) => t.expo_push_token) || [];
+          }
         }
 
         title = `New from ${payload.business_name || "a business you follow"}`;
