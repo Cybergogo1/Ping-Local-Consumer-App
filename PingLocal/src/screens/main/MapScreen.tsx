@@ -7,7 +7,6 @@ import {
   ActivityIndicator,
   Image,
   Platform,
-  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MapView, { Marker, Callout, PROVIDER_GOOGLE } from 'react-native-maps';
@@ -19,8 +18,6 @@ import { supabase } from '../../lib/supabase';
 import { Business, Offer } from '../../types/database';
 import { HomeStackParamList } from '../../types/navigation';
 import { useLocation } from '../../contexts/LocationContext';
-
-const { width } = Dimensions.get('window');
 
 type MapScreenNavigationProp = StackNavigationProp<HomeStackParamList>;
 
@@ -178,8 +175,14 @@ export default function MapScreen() {
                 longitude: business.longitude!,
               }}
               onPress={() => handleMarkerPress(business)}
+              tracksViewChanges={false}
+              stopPropagation={true}
             >
-              <View style={styles.markerContainer}>
+              <TouchableOpacity
+                onPress={() => handleMarkerPress(business)}
+                activeOpacity={0.8}
+                style={styles.markerContainer}
+              >
                 <View style={[
                   styles.marker,
                   selectedBusiness?.name === business.name && styles.markerSelected
@@ -191,7 +194,7 @@ export default function MapScreen() {
                     <Text style={styles.markerBadgeText}>{activeOffersCount(business)}</Text>
                   </View>
                 )}
-              </View>
+              </TouchableOpacity>
             </Marker>
           ))}
       </MapView>

@@ -1,6 +1,8 @@
 // PingLocal Theme Constants
 // Based on design system from FINAL_CLAUDE_CODE_PROMPT.md
 
+import { isSmallDevice } from '../utils/responsive';
+
 export const colors = {
   // Primary colors
   primary: '#36566F',
@@ -111,6 +113,12 @@ export const shadows = {
   },
 };
 
+// Responsive spacing for buttons (reduces padding on small devices)
+export const responsiveSpacing = {
+  buttonPaddingVertical: isSmallDevice ? 14 : spacing.md,
+  buttonPaddingHorizontal: isSmallDevice ? 20 : spacing.lg,
+};
+
 export default {
   colors,
   spacing,
@@ -119,4 +127,5 @@ export default {
   fontWeight,
   fontFamily,
   shadows,
+  responsiveSpacing,
 };

@@ -9,8 +9,12 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, borderRadius, fontSize, fontWeight, fontFamily } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, fontWeight, fontFamily, responsiveSpacing } from '../../theme';
+import { constrainedImageSize } from '../../utils/responsive';
 import { WelcomeScreenProps } from '../../types/navigation';
+
+// Calculate responsive image size (aspect ratio ~1.43:1 based on original 400x280)
+const illustrationSize = constrainedImageSize(400, 280, 0.95, 0.30);
 
 export default function WelcomeScreen({ navigation }: WelcomeScreenProps) {
   return (
@@ -95,8 +99,8 @@ const styles = StyleSheet.create({
     marginTop: spacing.xl,
   },
   illustration: {
-    width: '100%',
-    height: 280,
+    width: illustrationSize.width,
+    height: illustrationSize.height,
     marginBottom: spacing.lg,
   },
   logoSection: {
@@ -125,7 +129,7 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     backgroundColor: colors.accent,
-    paddingVertical: spacing.md,
+    paddingVertical: responsiveSpacing.buttonPaddingVertical,
     borderRadius: borderRadius.full,
   },
   loginButtonText: {
@@ -137,7 +141,7 @@ const styles = StyleSheet.create({
   },
   registerButton: {
     backgroundColor: colors.primaryLight,
-    paddingVertical: spacing.md,
+    paddingVertical: responsiveSpacing.buttonPaddingVertical,
     borderRadius: borderRadius.full,
     marginTop: spacing.md,
   },

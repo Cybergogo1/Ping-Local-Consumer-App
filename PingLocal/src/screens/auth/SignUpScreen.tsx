@@ -13,10 +13,14 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, spacing, borderRadius, fontSize, fontWeight, fontFamily } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, fontWeight, fontFamily, responsiveSpacing } from '../../theme';
+import { constrainedImageSize } from '../../utils/responsive';
 import { useAuth } from '../../contexts/AuthContext';
 import { SignUpScreenProps } from '../../types/navigation';
 import { getAuthErrorMessage } from '../../utils/errorMessages';
+
+// Calculate responsive image size (aspect ratio ~1.6:1 based on original 400x250)
+const illustrationSize = constrainedImageSize(400, 250, 0.95, 0.28);
 
 export default function SignUpScreen({ navigation }: SignUpScreenProps) {
   const { signUp } = useAuth();
@@ -210,8 +214,8 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
   },
   illustration: {
-    width: '100%',
-    height: 250,
+    width: illustrationSize.width,
+    height: illustrationSize.height,
     marginBottom: spacing.lg,
   },
   content: {
@@ -279,7 +283,7 @@ const styles = StyleSheet.create({
   },
   signUpButton: {
     backgroundColor: colors.accent,
-    paddingVertical: spacing.md,
+    paddingVertical: responsiveSpacing.buttonPaddingVertical,
     borderRadius: borderRadius.full,
     marginTop: spacing.md,
   },

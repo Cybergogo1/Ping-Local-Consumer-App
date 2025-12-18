@@ -15,12 +15,13 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
-import { colors, spacing, borderRadius, fontSize, shadows, fontFamily } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, shadows, fontFamily, responsiveSpacing } from '../../theme';
+import { isSmallDevice } from '../../utils/responsive';
 import { Offer, LocationArea, Tag, getTierFromPoints } from '../../types/database';
 import { HomeStackParamList } from '../../types/navigation';
 import { useAuth } from '../../contexts/AuthContext';
@@ -62,6 +63,7 @@ export default function HomeScreen() {
   const { user, supabaseUser, checkPendingLevelUp, clearPendingLevelUp } = useAuth();
   const { userLocation, locationPermission, isLocationLoading, requestLocation } = useLocation();
   const { unreadCount } = useNotifications();
+  const insets = useSafeAreaInsets();
   const hasCheckedLevelUp = useRef(false);
 
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -148,14 +150,32 @@ export default function HomeScreen() {
         setLocationAreas(locations);
       }
 
-      // Fetch category tags
-      const { data: categoryTags } = await supabase
-        .from('tags')
-        .select('*')
-        .eq('type', 'Category')
-        .order('name');
+      // Fetch unique business categories from businesses with active offers
+      const { data: offersWithBusiness } = await supabase
+        .from('offers')
+        .select('business_id, businesses!inner(category)')
+        .eq('status', 'Signed Off')
+        .gte('end_date', new Date().toISOString());
 
-      if (categoryTags) {
+      if (offersWithBusiness) {
+        // Extract unique categories from businesses
+        const categorySet = new Set<string>();
+        offersWithBusiness.forEach((offer: any) => {
+          const category = offer.businesses?.category;
+          if (category) {
+            categorySet.add(category);
+          }
+        });
+
+        // Convert to Tag-like objects for compatibility with existing UI
+        const categoryTags: Tag[] = Array.from(categorySet)
+          .sort()
+          .map((name, index) => ({
+            id: String(index + 1),
+            name,
+            type: 'category' as const,
+          }));
+
         setCategories(categoryTags);
       }
 
@@ -239,7 +259,7 @@ export default function HomeScreen() {
     try {
       let query = supabase
         .from('offers')
-        .select('*, businesses!inner(location_area), offer_tags(tags(id, name, type))')
+        .select('*, businesses!inner(location_area, category), offer_tags(tags(id, name, type))')
         .eq('status', 'Signed Off')
         .gte('end_date', new Date().toISOString());
 
@@ -273,22 +293,23 @@ export default function HomeScreen() {
           return includeOffer;
         });
 
-        // Extract unique categories from filtered offers
-        const categoryMap = new Map<number, Tag>();
+        // Extract unique business categories from filtered offers
+        const categorySet = new Set<string>();
         filteredOffers.forEach((offer: any) => {
-          if (offer.offer_tags) {
-            const offerTagsArray = Array.isArray(offer.offer_tags) ? offer.offer_tags : [offer.offer_tags];
-            offerTagsArray.forEach((ot: any) => {
-              if (ot.tags && ot.tags.type === 'Category') {
-                categoryMap.set(ot.tags.id, ot.tags);
-              }
-            });
+          const businessCategory = offer.businesses?.category;
+          if (businessCategory) {
+            categorySet.add(businessCategory);
           }
         });
 
-        const uniqueCategories = Array.from(categoryMap.values()).sort((a, b) =>
-          a.name.localeCompare(b.name)
-        );
+        // Convert to Tag-like objects
+        const uniqueCategories: Tag[] = Array.from(categorySet)
+          .sort()
+          .map((name, index) => ({
+            id: String(index + 1),
+            name,
+            type: 'category' as const,
+          }));
         setAvailableCategories(uniqueCategories);
       }
     } catch (error) {
@@ -301,7 +322,7 @@ export default function HomeScreen() {
     try {
       let query = supabase
         .from('offers')
-        .select('*, businesses!inner(location_area), offer_tags(tags(id, name, type))')
+        .select('*, businesses!inner(location_area, category), offer_tags(tags(id, name, type))')
         .eq('status', 'Signed Off')
         .gte('end_date', new Date().toISOString());
 
@@ -319,13 +340,9 @@ export default function HomeScreen() {
             includeOffer = false;
           }
 
-          // Check category filter
-          if (selectedCategory && offer.offer_tags) {
-            const offerTagsArray = Array.isArray(offer.offer_tags) ? offer.offer_tags : [offer.offer_tags];
-            const hasCategory = offerTagsArray.some((ot: any) =>
-              ot.tags?.name === selectedCategory && ot.tags?.type === 'Category'
-            );
-            if (!hasCategory) includeOffer = false;
+          // Check category filter (using business category)
+          if (selectedCategory && offer.businesses?.category !== selectedCategory) {
+            includeOffer = false;
           }
 
           // Check all currently selected tags (AND logic)
@@ -376,8 +393,8 @@ export default function HomeScreen() {
     }
 
     try {
-      // Build the select query with joins - always include offer_tags for display
-      const selectQuery = '*, businesses!inner(location_area), offer_tags(tag_id, tags(id, name, type))';
+      // Build the select query with joins - always include offer_tags for display and business category for filtering
+      const selectQuery = '*, businesses!inner(location_area, category), offer_tags(tag_id, tags(id, name, type))';
 
       let query = supabase
         .from('offers')
@@ -433,13 +450,9 @@ export default function HomeScreen() {
             // Apply client-side filtering for category and tags (AND logic)
             let includeOffer = true;
 
-            // Check if offer has the selected category (if any)
-            if (selectedCategory && curr.offer_tags) {
-              const offerTagsArray = Array.isArray(curr.offer_tags) ? curr.offer_tags : [curr.offer_tags];
-              const hasCategory = offerTagsArray.some((ot: any) =>
-                ot.tags?.name === selectedCategory && ot.tags?.type === 'Category'
-              );
-              if (!hasCategory) includeOffer = false;
+            // Check if offer's business has the selected category (if any)
+            if (selectedCategory && businesses?.category !== selectedCategory) {
+              includeOffer = false;
             }
 
             // Check if offer has ALL selected tags (if any)
@@ -867,14 +880,14 @@ export default function HomeScreen() {
               { transform: [{ translateX: locationSlideAnim }] },
             ]}
           >
-            <SafeAreaView style={styles.modalSafeArea} edges={['top', 'bottom']}>
+            <View style={[styles.modalSafeArea, { paddingTop: insets.top }]}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Select Location</Text>
                 <TouchableOpacity onPress={closeLocationModal}>
                   <Ionicons name="close" size={24} color={colors.white} />
                 </TouchableOpacity>
               </View>
-              <ScrollView style={styles.modalContent}>
+              <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: insets.bottom }}>
                 {/* All Locations Option */}
                 <TouchableOpacity
                   style={[
@@ -920,7 +933,7 @@ export default function HomeScreen() {
                     </TouchableOpacity>
                   ))}
               </ScrollView>
-            </SafeAreaView>
+            </View>
           </Animated.View>
         </View>
       </Modal>
@@ -944,14 +957,14 @@ export default function HomeScreen() {
               { transform: [{ translateX: filterSlideAnim }] },
             ]}
           >
-            <SafeAreaView style={styles.modalSafeArea} edges={['top', 'bottom']}>
+            <View style={[styles.modalSafeArea, { paddingTop: insets.top }]}>
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>Filters</Text>
                 <TouchableOpacity onPress={closeFilterModal}>
                   <Ionicons name="close" size={24} color={colors.white} />
                 </TouchableOpacity>
               </View>
-              <ScrollView style={styles.modalContent}>
+              <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: insets.bottom }}>
                 {/* Categories Section */}
                 <Text style={styles.filterSectionTitle}>Categories</Text>
                 <View style={styles.pillsContainer}>
@@ -1047,7 +1060,7 @@ export default function HomeScreen() {
 
               {/* Clear All Button */}
               {activeFilterCount > 0 && (
-                <View style={styles.clearButtonContainer}>
+                <View style={[styles.clearButtonContainer, { paddingBottom: insets.bottom }]}>
                   <TouchableOpacity
                     style={styles.clearButton}
                     onPress={clearAllFilters}
@@ -1056,7 +1069,7 @@ export default function HomeScreen() {
                   </TouchableOpacity>
                 </View>
               )}
-            </SafeAreaView>
+            </View>
           </Animated.View>
         </View>
       </Modal>
@@ -1089,29 +1102,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   userInfo: {
-    marginLeft: spacing.sm,
+    marginLeft: isSmallDevice ? spacing.xs : spacing.sm,
+    flexShrink: 1,
   },
   greeting: {
-    fontSize: fontSize.sm,
+    fontSize: isSmallDevice ? fontSize.xs : fontSize.sm,
     color: colors.white,
     fontFamily: fontFamily.bodyMedium,
-    marginBottom: -5,
+    marginBottom: isSmallDevice ? 0 : -2,
   },
   tierName: {
-    fontSize: fontSize.md,
+    fontSize: isSmallDevice ? fontSize.sm : fontSize.md,
     color: colors.accent,
     fontFamily: fontFamily.headingSemiBold,
   },
   avatarContainer: {
-    width: 40,
-    height: 40,
-    padding: 5,
+    width: isSmallDevice ? 38 : 44,
+    height: isSmallDevice ? 38 : 44,
     borderWidth: 2,
     borderColor: colors.accent,
-    borderRadius: 20,
+    borderRadius: isSmallDevice ? 19 : 22,
     backgroundColor: colors.white,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   avatarText: {
     fontSize: fontSize.lg,
@@ -1119,9 +1133,8 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.headingBold,
   },
   avatarImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 20,
+    width: isSmallDevice ? 24 : 28,
+    height: isSmallDevice ? 24 : 28,
   },
   headerRight: {
     flexDirection: 'row',
@@ -1166,8 +1179,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: colors.primary,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 12,
+    paddingHorizontal: responsiveSpacing.buttonPaddingHorizontal,
+    paddingVertical: responsiveSpacing.buttonPaddingVertical,
     borderRadius: borderRadius.full,
     ...shadows.md,
   },
@@ -1262,13 +1275,15 @@ const styles = StyleSheet.create({
   },
   modalSafeArea: {
     flex: 1,
+    backgroundColor: colors.primary,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: '#fff2',
   },

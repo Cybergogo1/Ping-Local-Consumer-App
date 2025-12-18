@@ -7,6 +7,8 @@ import {
   ActivityIndicator,
   Animated,
   ImageBackground,
+  ScrollView,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg';
@@ -16,6 +18,9 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
 import { ClaimedStackParamList } from '../../types/navigation';
 import { RedemptionToken } from '../../types/database';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const MAX_QR_SIZE = Math.min(SCREEN_WIDTH * 0.5, 260); // Cap at 60% screen width or 260px
 
 type QRCodeScreenProps = {
   navigation: StackNavigationProp<ClaimedStackParamList, 'QRCode'>;
@@ -283,55 +288,57 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.content}>
-        {/* Instructions */}
-        <View style={styles.instructionsContainer}>
-          <Text style={styles.instructionsTitle}>Here's your QR Code!</Text>
-          <Text style={styles.instructionsText}>
-            Present this to staff at {businessName} to redeem your offer
-          </Text>
-        </View>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Instructions */}
+            <View style={styles.instructionsContainer}>
+              <Text style={styles.instructionsTitle}>Here's your QR Code!</Text>
+              <Text style={styles.instructionsText}>
+                Present this to staff at {businessName} to redeem your offer
+              </Text>
+            </View>
 
-        {/* QR Code */}
-        <Animated.View
-          style={[
-            styles.qrContainer,
-            { transform: [{ scale: pulseAnim }] },
-          ]}
-        >
-          <View style={styles.qrWrapper}>
-            <QRCode
-              value={String(purchaseToken.id)}
-              size={220}
-              backgroundColor={colors.white}
-              color={colors.primary}
-            />
-          </View>
+            {/* QR Code */}
+            <Animated.View
+              style={[
+                styles.qrContainer,
+                { transform: [{ scale: pulseAnim }] },
+              ]}
+            >
+              <View style={styles.qrWrapper}>
+                <QRCode
+                  value={String(purchaseToken.id)}
+                  size={MAX_QR_SIZE}
+                  backgroundColor={colors.white}
+                  color={colors.primary}
+                />
+              </View>
 
-          {/* Scanning indicator */}
-          <View style={styles.scanningIndicator}>
-            <ActivityIndicator size="small" color={colors.primary} />
-            <Text style={styles.scanningText}>Waiting to be scanned...</Text>
-          </View>
-        </Animated.View>
+              {/* Scanning indicator */}
+              <View style={styles.scanningIndicator}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={styles.scanningText}>Waiting to be scanned...</Text>
+              </View>
+            </Animated.View>
 
-        {/* Offer Details */}
-        <View style={styles.offerDetails}>
-          <Text style={{ fontFamily: fontFamily.bodyMedium, color: colors.grayLight }}>Redeeming</Text> 
-          <Text style={styles.offerName}>{offerName}</Text>
-          <Text style={styles.businessName}>{businessName}</Text>
+            {/* Offer Details */}
+            <View style={styles.offerDetails}>
+              <Text style={{ fontFamily: fontFamily.bodyMedium, color: colors.grayLight }}>Redeeming</Text>
+              <Text style={styles.offerName}>{offerName}</Text>
+              <Text style={styles.businessName}>{businessName}</Text>
+            </View>
 
-          {/* Note: party_size and slot details would need to be fetched separately or stored on purchase_token */}
-        </View>
-
-          {/* Help Text */}
-          <View style={styles.helpContainer}>
-            <Text style={styles.helpIcon}>ℹ️</Text>
-            <Text style={styles.helpText}>
-              Keep this screen visible until staff confirm your redemption. The screen will automatically update when complete.
-            </Text>
-          </View>
-          </View>
+            {/* Help Text */}
+            <View style={styles.helpContainer}>
+              <Text style={styles.helpIcon}>ℹ️</Text>
+              <Text style={styles.helpText}>
+                Keep this screen visible until staff confirm your redemption. The screen will automatically update when complete.
+              </Text>
+            </View>
+          </ScrollView>
         </SafeAreaView>
       </ImageBackground>
     </View>
@@ -348,6 +355,15 @@ const styles = StyleSheet.create({
   },
   safeArea: {
     flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.lg,
   },
   header: {
     flexDirection: 'row',
@@ -367,11 +383,6 @@ const styles = StyleSheet.create({
     fontSize: 35,
     color: colors.primary,
     fontFamily: fontFamily.body,
-  },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
   },
 
   // Instructions
@@ -458,8 +469,8 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.1)',
     padding: spacing.md,
     borderRadius: borderRadius.md,
-    marginTop: 'auto',
-    marginBottom: spacing.lg,
+    marginTop: spacing.lg,
+    width: '100%',
   },
   helpIcon: {
     fontSize: fontSize.lg,

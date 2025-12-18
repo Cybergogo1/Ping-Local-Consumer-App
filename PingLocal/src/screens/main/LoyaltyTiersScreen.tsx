@@ -9,7 +9,7 @@ import {
   Image,
   Modal,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { colors, fontSize, fontFamily, spacing, borderRadius, shadows } from '../../theme';
@@ -63,6 +63,7 @@ const TIERS = [
 
 export default function LoyaltyTiersScreen() {
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const [selectedTier, setSelectedTier] = useState<typeof TIERS[0] | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -112,39 +113,39 @@ export default function LoyaltyTiersScreen() {
           </View>
         </View>
       </Modal>
-      <SafeAreaView style={styles.safeArea} edges={['top']}>
-        {/* Header Section with Trophy */}
-        <View style={styles.headerSection}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-          >
-            <Ionicons name="arrow-back" size={24} color={colors.primary} />
-          </TouchableOpacity>
+      <View style={styles.safeArea}>
+        {/* Back Button - Fixed position with safe area offset */}
+        <TouchableOpacity
+          onPress={() => navigation.goBack()}
+          style={[styles.backButton, { top: insets.top + spacing.sm }]}
+        >
+          <Ionicons name="arrow-back" size={24} color={colors.primary} />
+        </TouchableOpacity>
 
-          {/* Trophy Illustration */}
-          <View style={styles.trophyContainer}>
-            <Image
-              source={require('../../../assets/images/loyaltylandingpage_graphic.png')}
-              style={styles.loyaltyTierImage}
-              resizeMode="cover"
-            />
-          </View>
-
-          <Text style={styles.headerTitle}>Our Loyalty Scheme</Text>
-          <Text style={styles.headerSubtitle}>Earn points while saving money!</Text>
-          <Text style={styles.headerDescription}>
-            Every 10p spent gets you 10 points in app - these count towards your Ping Local Level.
-            Saving enough points will let you upgrade and gain more benefits!
-          </Text>
-        </View>
-
-        {/* Tiers List */}
+        {/* Scrollable Content */}
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top }]}
           showsVerticalScrollIndicator={false}
         >
+          {/* Header Section with Trophy */}
+          <View style={styles.headerSection}>
+            {/* Trophy Illustration */}
+            <View style={styles.trophyContainer}>
+              <Image
+                source={require('../../../assets/images/loyaltylandingpage_graphic.png')}
+                style={styles.loyaltyTierImage}
+                resizeMode="cover"
+              />
+            </View>
+
+            <Text style={styles.headerTitle}>Our Loyalty Scheme</Text>
+            <Text style={styles.headerSubtitle}>Earn points while saving money!</Text>
+            <Text style={styles.headerDescription}>
+              Every 10p spent gets you 10 points in app - these count towards your Ping Local Level.
+              Saving enough points will let you upgrade and gain more benefits!
+            </Text>
+          </View>
           {TIERS.map((tier, index) => (
             <View key={tier.key} style={styles.tierCard}>
               <View style={[styles.tierImageContainer, { backgroundColor: colors.white }]}>
@@ -208,7 +209,7 @@ export default function LoyaltyTiersScreen() {
           {/* Bottom Spacing */}
           <View style={styles.bottomSpacing} />
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </View>
   );
 }
@@ -224,12 +225,13 @@ const styles = StyleSheet.create({
   headerSection: {
     backgroundColor: colors.primary,
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.xl,
+    paddingBottom: spacing.lg,
+    paddingTop: spacing.xl + 20, // Account for back button height
     alignItems: 'center',
   },
   backButton: {
     position: 'absolute',
-    top: spacing.sm,
+    // top is set dynamically with insets.top + spacing.sm
     left: spacing.md,
     width: 40,
     height: 40,
@@ -241,7 +243,6 @@ const styles = StyleSheet.create({
   },
   trophyContainer: {
     alignItems: 'center',
-    marginTop: spacing.xl,
     marginBottom: spacing.lg,
     position: 'relative',
   },
@@ -277,7 +278,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary,
   },
   scrollContent: {
-    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.xl,
   },
   tierCard: {
     flexDirection: 'row',
@@ -286,6 +287,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,
+    marginHorizontal: spacing.md,
   },
   tierImageContainer: {
     width: 70,
@@ -326,6 +328,7 @@ const styles = StyleSheet.create({
   },
   howItWorksSection: {
     marginTop: spacing.lg,
+    paddingHorizontal: spacing.md,
   },
   sectionTitle: {
     fontSize: fontSize.lg,

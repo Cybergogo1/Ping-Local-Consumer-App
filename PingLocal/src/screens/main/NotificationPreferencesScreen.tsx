@@ -84,9 +84,12 @@ const SectionHeader = ({ title }: { title: string }) => (
 
 export default function NotificationPreferencesScreen() {
   const navigation = useNavigation<NotificationPreferencesScreenNavigationProp>();
-  const { user, refreshUser } = useAuth();
+  const { user, supabaseUser, refreshUser } = useAuth();
   const { unreadCount } = useNotifications();
   const insets = useSafeAreaInsets();
+
+  // Get the auth UUID for database operations
+  const authUserId = supabaseUser?.id;
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -95,13 +98,13 @@ export default function NotificationPreferencesScreen() {
 
   // Load preferences from database
   const loadPreferences = useCallback(async () => {
-    if (!user) return;
+    if (!authUserId) return;
 
     try {
       const { data, error } = await supabase
         .from('notification_preferences')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', authUserId)
         .single();
 
       if (error && error.code !== 'PGRST116') {
@@ -124,7 +127,7 @@ export default function NotificationPreferencesScreen() {
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, [authUserId]);
 
   useEffect(() => {
     loadPreferences();
@@ -166,18 +169,27 @@ export default function NotificationPreferencesScreen() {
 
   // Handle individual preference toggle
   const handlePreferenceToggle = async (key: keyof NotificationPreferences, value: boolean) => {
-    if (!user) return;
+    if (!authUserId) return;
 
     // Optimistic update
+    const previousValue = preferences[key];
     setPreferences(prev => ({ ...prev, [key]: value }));
     setIsSaving(true);
 
     try {
+      // Include all preferences to ensure proper upsert
+      const updatedPreferences = { ...preferences, [key]: value };
+
       const { error } = await supabase
         .from('notification_preferences')
         .upsert({
-          user_id: user.id,
-          [key]: value,
+          user_id: authUserId,
+          new_offers_from_favorites: updatedPreferences.new_offers_from_favorites,
+          offer_expiring_soon: updatedPreferences.offer_expiring_soon,
+          redemption_reminders: updatedPreferences.redemption_reminders,
+          loyalty_updates: updatedPreferences.loyalty_updates,
+          weekly_digest: updatedPreferences.weekly_digest,
+          marketing_notifications: updatedPreferences.marketing_notifications,
           updated_at: new Date().toISOString(),
         }, {
           onConflict: 'user_id',
@@ -187,7 +199,7 @@ export default function NotificationPreferencesScreen() {
     } catch (error) {
       console.error('Error updating preference:', error);
       // Revert on error
-      setPreferences(prev => ({ ...prev, [key]: !value }));
+      setPreferences(prev => ({ ...prev, [key]: previousValue }));
       Alert.alert('Error', 'Failed to update preference. Please try again.');
     } finally {
       setIsSaving(false);

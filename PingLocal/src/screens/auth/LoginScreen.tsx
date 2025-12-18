@@ -13,7 +13,7 @@ import {
   StyleSheet,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors, spacing, borderRadius, fontSize, fontFamily } from '../../theme';
+import { colors, spacing, borderRadius, fontSize, fontFamily, responsiveSpacing } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoginScreenProps } from '../../types/navigation';
 import { supabase } from '../../lib/supabase';
@@ -228,8 +228,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: borderRadius.full,
     paddingHorizontal: spacing.lg,
-    height: Platform.OS === 'ios' ? 44 : 48,
+    height: Platform.OS === 'ios' ? 50 : 52,
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   inputMargin: {
     marginTop: spacing.md,
@@ -238,9 +239,11 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontFamily: fontFamily.body,
     color: colors.grayDark,
-    height: Platform.OS === 'ios' ? 36 : 40,
-    paddingVertical: Platform.OS === 'android' ? 0 : undefined,
+    flex: 1,
+    height: '100%',
+    paddingVertical: 0,
     textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   forgotPassword: {
     marginTop: spacing.sm,
@@ -261,7 +264,7 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     backgroundColor: colors.accent,
-    paddingVertical: spacing.md,
+    paddingVertical: responsiveSpacing.buttonPaddingVertical,
     borderRadius: borderRadius.full,
     marginTop: spacing.lg,
   },

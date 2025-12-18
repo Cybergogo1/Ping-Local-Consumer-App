@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { getFocusedRouteNameFromRoute } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MainTabParamList } from '../types/navigation';
 import { colors, spacing, fontSize, fontFamily } from '../theme';
 
@@ -36,6 +37,8 @@ const tabIcons = {
 
 // Custom Tab Bar Component
 function CustomTabBar({ state, descriptors, navigation }: any) {
+  const insets = useSafeAreaInsets();
+
   // Check if we should hide the tab bar based on the current route
   const currentRoute = state.routes[state.index];
   const { options } = descriptors[currentRoute.key];
@@ -45,8 +48,11 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
     return null;
   }
 
+  // Use safe area bottom inset, with minimum of 20 for devices without home indicator
+  const bottomPadding = Math.max(insets.bottom, 10);
+
   return (
-    <View style={styles.tabBar}>
+    <View style={[styles.tabBar, { paddingBottom: bottomPadding }]}>
       {state.routes.map((route: any, index: number) => {
         const { options } = descriptors[route.key];
         const label = route.name;
@@ -151,11 +157,10 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     backgroundColor: colors.primary,
-    paddingBottom: 20, // Safe area padding
     paddingTop: spacing.sm,
     alignItems: 'flex-end',
     justifyContent: 'space-around',
-    height: 85,
+    minHeight: 65,
   },
   tabItem: {
     flex: 1,
