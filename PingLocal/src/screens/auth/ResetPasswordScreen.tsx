@@ -28,7 +28,7 @@ type ResetPasswordScreenProps = {
 
 export default function ResetPasswordScreen({ navigation, route }: ResetPasswordScreenProps) {
   const { email } = route.params;
-  const { verifyPasswordResetOtp, updatePassword } = useAuth();
+  const { verifyPasswordResetOtp, updatePassword, finishPasswordRecovery, signOut } = useAuth();
   const insets = useSafeAreaInsets();
 
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
@@ -102,23 +102,36 @@ export default function ResetPasswordScreen({ navigation, route }: ResetPassword
     setError('');
     setIsLoading(true);
 
+    console.log('[ResetPassword] Calling updatePassword...');
+
     const { error: updateError } = await updatePassword(newPassword);
 
+    console.log('[ResetPassword] updatePassword returned:', { hasError: !!updateError, error: updateError?.message });
+
     if (updateError) {
+      console.log('[ResetPassword] Error occurred, setting error state');
       setError(getAuthErrorMessage(updateError));
       setIsLoading(false);
       return;
     }
 
+    console.log('[ResetPassword] Success! Setting isLoading to false');
     setIsLoading(false);
 
+    console.log('[ResetPassword] Showing success alert');
     Alert.alert(
       'Password Reset Successful',
       'Your password has been reset. Please log in with your new password.',
       [
         {
           text: 'Log In',
-          onPress: () => navigation.navigate('Login'),
+          onPress: async () => {
+            console.log('[ResetPassword] User pressed Log In');
+            // Sign out and clear recovery mode so user can log in fresh
+            finishPasswordRecovery();
+            await signOut();
+            navigation.navigate('Login');
+          },
         },
       ]
     );
@@ -343,9 +356,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderRadius: borderRadius.md,
     textAlign: 'center',
+    textAlignVertical: 'center',
     fontSize: fontSize.xl,
     fontFamily: fontFamily.bodyBold,
     color: colors.primary,
+    padding: 0,
+    includeFontPadding: false,
   },
   inputContainer: {
     backgroundColor: colors.white,
@@ -360,8 +376,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontFamily: fontFamily.body,
     color: colors.grayDark,
-    height: 24,
-    maxHeight: 45,
+    height: 40,
+    padding: 0,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   passwordHint: {
     color: colors.white,

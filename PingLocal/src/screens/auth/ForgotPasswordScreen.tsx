@@ -253,8 +253,10 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontFamily: fontFamily.body,
     color: colors.grayDark,
-    height: 24,
-    maxHeight: 45,
+    height: 40,
+    padding: 0,
+    textAlignVertical: 'center',
+    includeFontPadding: false,
   },
   errorText: {
     color: colors.accent,

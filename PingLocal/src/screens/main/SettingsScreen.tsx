@@ -166,6 +166,10 @@ export default function SettingsScreen() {
     navigation.navigate('EditProfile');
   };
 
+  const handleChangePassword = () => {
+    navigation.navigate('ChangePassword');
+  };
+
   const handleNotifications = () => {
     navigation.navigate('NotificationPreferences');
   };
@@ -283,6 +287,13 @@ export default function SettingsScreen() {
               title="Edit Profile"
               subtitle="Update your personal information"
               onPress={handleEditProfile}
+            />
+            <View style={styles.divider} />
+            <SettingItem
+              icon="lock-closed-outline"
+              title="Change Password"
+              subtitle="Update your password"
+              onPress={handleChangePassword}
             />
             <View style={styles.divider} />
             <SettingItem

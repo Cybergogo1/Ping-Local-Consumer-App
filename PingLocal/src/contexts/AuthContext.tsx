@@ -17,6 +17,7 @@ interface AuthContextType {
   user: User | null;
   supabaseUser: SupabaseUser | null;
   isLoading: boolean;
+  isRecoveringPassword: boolean;
   signUp: (email: string, password: string, firstName: string, surname: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -29,6 +30,7 @@ interface AuthContextType {
   requestPasswordReset: (email: string) => Promise<{ error: Error | null }>;
   verifyPasswordResetOtp: (email: string, token: string) => Promise<{ error: Error | null }>;
   updatePassword: (newPassword: string) => Promise<{ error: Error | null }>;
+  finishPasswordRecovery: () => void;
   checkPendingLevelUp: () => Promise<PendingLevelUp | null>;
   clearPendingLevelUp: () => Promise<void>;
 }
@@ -40,18 +42,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setSupabaseUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserProfile(session.user.id, session.user.email);
-      } else {
+    let isInitialized = false;
+
+    // 5-second failsafe timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (!isInitialized) {
+        console.warn('Auth initialization timed out after 5 seconds');
         setIsLoading(false);
       }
-    });
+    }, 5000);
+
+    // Get initial session
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        setSession(session);
+        setSupabaseUser(session?.user ?? null);
+        if (session?.user) {
+          fetchUserProfile(session.user.id, session.user.email);
+        } else {
+          setIsLoading(false);
+        }
+        isInitialized = true;
+      })
+      .catch((error) => {
+        console.error('Error getting session:', error);
+        setIsLoading(false);
+        isInitialized = true;
+      });
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -67,7 +87,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      clearTimeout(timeoutId);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const fetchUserProfile = async (userId: string, email?: string) => {
@@ -377,28 +400,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const verifyPasswordResetOtp = async (email: string, token: string) => {
     try {
+      // Set flag to prevent navigation while in recovery mode
+      setIsRecoveringPassword(true);
       const { error } = await supabase.auth.verifyOtp({
         email,
         token,
         type: 'recovery',
       });
-      if (error) throw error;
+      if (error) {
+        setIsRecoveringPassword(false);
+        throw error;
+      }
       return { error: null };
     } catch (error) {
+      setIsRecoveringPassword(false);
       return { error: error as Error };
     }
   };
 
   const updatePassword = async (newPassword: string) => {
+    console.log('[AuthContext] updatePassword called');
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword,
+      // Check current session state
+      const { data: sessionData } = await supabase.auth.getSession();
+      console.log('[AuthContext] Current session:', {
+        hasSession: !!sessionData.session,
+        userId: sessionData.session?.user?.id,
+        email: sessionData.session?.user?.email
       });
-      if (error) throw error;
+
+      if (!sessionData.session) {
+        throw new Error('No active session for password update');
+      }
+
+      console.log('[AuthContext] Calling Supabase REST API to update password...');
+
+      // Use the Supabase REST API directly to avoid the hanging issue with supabase.auth.updateUser
+      const response = await fetch(
+        'https://pyufvauhjqfffezptuxl.supabase.co/auth/v1/user',
+        {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionData.session.access_token}`,
+            'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InB5dWZ2YXVoanFmZmZlenB0dXhsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM3NTExMDQsImV4cCI6MjA3OTMyNzEwNH0.IEhzK1gNDqaS2q9656CBsx9JZBRHYZAfHYYKIVd4S5g',
+          },
+          body: JSON.stringify({ password: newPassword }),
+        }
+      );
+
+      console.log('[AuthContext] REST API response status:', response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[AuthContext] REST API error:', errorData);
+        throw new Error(errorData.message || errorData.error_description || 'Failed to update password');
+      }
+
+      console.log('[AuthContext] Password updated successfully');
+
+      // Don't clear recovery flag here - let the calling screen handle it
+      // via finishPasswordRecovery() after showing success message
       return { error: null };
     } catch (error) {
+      console.error('[AuthContext] updatePassword error:', error);
       return { error: error as Error };
     }
+  };
+
+  const finishPasswordRecovery = () => {
+    setIsRecoveringPassword(false);
   };
 
   const checkPendingLevelUp = async (): Promise<PendingLevelUp | null> => {
@@ -461,6 +532,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         supabaseUser,
         isLoading,
+        isRecoveringPassword,
         signUp,
         signIn,
         signOut,
@@ -473,6 +545,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         requestPasswordReset,
         verifyPasswordResetOtp,
         updatePassword,
+        finishPasswordRecovery,
         checkPendingLevelUp,
         clearPendingLevelUp,
       }}

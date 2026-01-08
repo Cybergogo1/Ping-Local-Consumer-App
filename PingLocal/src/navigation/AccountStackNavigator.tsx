@@ -8,6 +8,7 @@ import NotificationsScreen from '../screens/main/NotificationsScreen';
 import NotificationDetailScreen from '../screens/main/NotificationDetailScreen';
 import NotificationPreferencesScreen from '../screens/main/NotificationPreferencesScreen';
 import EditProfileScreen from '../screens/main/EditProfileScreen';
+import ChangePasswordScreen from '../screens/main/ChangePasswordScreen';
 import FAQsScreen from '../screens/main/FAQsScreen';
 import OnboardingReplayScreen from '../screens/onboarding/OnboardingReplayScreen';
 
@@ -27,6 +28,7 @@ export default function AccountStackNavigator() {
       <Stack.Screen name="NotificationDetail" component={NotificationDetailScreen} />
       <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} />
       <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
       <Stack.Screen name="FAQs" component={FAQsScreen} />
       <Stack.Screen name="OnboardingReplay" component={OnboardingReplayScreen} />
     </Stack.Navigator>

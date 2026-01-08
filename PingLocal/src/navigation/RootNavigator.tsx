@@ -11,12 +11,12 @@ import MainTabNavigator from './MainTabNavigator';
 const Stack = createStackNavigator<RootStackParamList>();
 
 export default function RootNavigator() {
-  const { session, user, supabaseUser, isLoading } = useAuth();
+  const { session, user, supabaseUser, isLoading, isRecoveringPassword } = useAuth();
 
   // Keep loading if:
   // 1. Initial auth state is loading, OR
-  // 2. We have a session but user profile hasn't loaded yet
-  if (isLoading || (session && !user)) {
+  // 2. We have a session but user profile hasn't loaded yet (unless recovering password)
+  if (isLoading || (session && !user && !isRecoveringPassword)) {
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#36566F" />
@@ -31,14 +31,16 @@ export default function RootNavigator() {
     hasSession: !!session,
     isEmailVerified,
     isOnboardingComplete,
+    isRecoveringPassword,
     userId: user?.id,
   });
 
   // Create a unique key based on navigation state to force re-render
   const navigationKey = `${!!session}-${isEmailVerified}-${isOnboardingComplete}`;
 
-  // Determine which screens to show based on auth state
-  if (!session || !isEmailVerified) {
+  // During password recovery, keep user in Auth flow to complete password reset
+  // Also show Auth for non-authenticated or non-verified users
+  if (!session || !isEmailVerified || isRecoveringPassword) {
     return (
       <Stack.Navigator key="auth" screenOptions={{ headerShown: false }}>
         <Stack.Screen name="Auth" component={AuthNavigator} />

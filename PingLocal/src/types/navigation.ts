@@ -151,6 +151,7 @@ export type AccountStackParamList = {
   Settings: undefined;
   FAQs: undefined;
   EditProfile: undefined;
+  ChangePassword: undefined;
   Notifications: undefined;
   NotificationDetail: { notification: NotificationItem };
   NotificationPreferences: undefined;

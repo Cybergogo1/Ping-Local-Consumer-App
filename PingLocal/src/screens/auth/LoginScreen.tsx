@@ -239,11 +239,9 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontFamily: fontFamily.body,
     color: colors.grayDark,
-    flex: 1,
-    height: '100%',
-    paddingVertical: 0,
+    height: Platform.OS === 'ios' ? 40 : 44,
+    paddingVertical: Platform.OS === 'android' ? 0 : undefined,
     textAlignVertical: 'center',
-    includeFontPadding: false,
   },
   forgotPassword: {
     marginTop: spacing.sm,

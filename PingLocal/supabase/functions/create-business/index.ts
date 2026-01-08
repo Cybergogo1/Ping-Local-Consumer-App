@@ -65,9 +65,10 @@ Deno.serve(async (req)=>{
       // Update existing
       result = await supabaseClient.from('businesses').update(businessData).eq('id', body.id).select().single();
     } else {
-      // Create new
+      // Create new - explicitly set is_signed_off to false (Adalo sends null instead of false)
       result = await supabaseClient.from('businesses').insert({
         ...businessData,
+        is_signed_off: businessData.is_signed_off ?? false,
         created: new Date().toISOString()
       }).select().single();
     }
