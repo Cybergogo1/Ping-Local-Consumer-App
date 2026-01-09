@@ -196,8 +196,8 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
             // Get bill amount (database uses bill_input_total)
             const billAmount = newToken.bill_input_total || newToken.bill_amount;
 
-            // If finished and has bill amount, navigate to bill confirmation
-            if (newToken.status === 'Finished' && billAmount) {
+            // Pay on the day: status='Submitted' with bill amount -> go to bill confirmation
+            if (newToken.status === 'Submitted' && billAmount) {
               navigation.replace('BillConfirmation', {
                 purchaseTokenId: purchaseToken.id,
                 redemptionTokenId: newToken.id,
@@ -205,8 +205,23 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
                 offerName,
                 businessName,
               });
-            } else if (newToken.status === 'Finished') {
-              // No bill amount needed, go to success
+              return;
+            }
+
+            // If scanned or status is 'In Progress', navigate to waiting screen
+            // This applies to ALL promotions
+            if ((newToken.scanned || newToken.status === 'In Progress') && newToken.status !== 'Finished') {
+              navigation.replace('RedemptionWaiting', {
+                purchaseTokenId: purchaseToken.id,
+                redemptionTokenId: newToken.id,
+                offerName,
+                businessName,
+              });
+              return;
+            }
+
+            // Regular offer: status='Finished' -> go to success
+            if (newToken.status === 'Finished') {
               navigation.replace('RedemptionSuccess', {
                 offerName,
                 businessName,
@@ -242,22 +257,36 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
         // Get bill amount (database uses bill_input_total)
         const billAmount = data.bill_input_total || data.bill_amount;
 
-        // Navigate based on status
+        // Pay on the day: status='Submitted' with bill amount -> go to bill confirmation
+        if (data.status === 'Submitted' && billAmount) {
+          navigation.replace('BillConfirmation', {
+            purchaseTokenId: purchaseToken.id,
+            redemptionTokenId: data.id,
+            billAmount: billAmount,
+            offerName,
+            businessName,
+          });
+          return;
+        }
+
+        // If scanned or status is 'In Progress', navigate to waiting screen
+        // This applies to ALL promotions
+        if ((data.scanned || data.status === 'In Progress') && data.status !== 'Finished') {
+          navigation.replace('RedemptionWaiting', {
+            purchaseTokenId: purchaseToken.id,
+            redemptionTokenId: data.id,
+            offerName,
+            businessName,
+          });
+          return;
+        }
+
+        // Regular offer: status='Finished' -> go to success
         if (data.status === 'Finished') {
-          if (billAmount) {
-            navigation.replace('BillConfirmation', {
-              purchaseTokenId: purchaseToken.id,
-              redemptionTokenId: data.id,
-              billAmount: billAmount,
-              offerName,
-              businessName,
-            });
-          } else {
-            navigation.replace('RedemptionSuccess', {
-              offerName,
-              businessName,
-            });
-          }
+          navigation.replace('RedemptionSuccess', {
+            offerName,
+            businessName,
+          });
         }
       }
     } catch (error) {

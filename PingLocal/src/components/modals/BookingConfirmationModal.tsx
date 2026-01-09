@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -33,12 +33,35 @@ export default function BookingConfirmationModal({
   onBookingConfirmed,
 }: BookingConfirmationModalProps) {
   const isEditing = !!existingBookingDate;
-  const [step, setStep] = useState<'ask' | 'date' | 'notyet'>(isEditing ? 'date' : 'ask');
+  const [step, setStep] = useState<'ask' | 'date' | 'time' | 'notyet'>(isEditing ? 'date' : 'ask');
   const [bookingDate, setBookingDate] = useState(
     existingBookingDate ? new Date(existingBookingDate) : new Date()
   );
+  const [bookingTime, setBookingTime] = useState(() => {
+    if (existingBookingDate) {
+      const existing = new Date(existingBookingDate);
+      // Check if time was stored (not midnight)
+      if (existing.getHours() !== 0 || existing.getMinutes() !== 0) {
+        return existing;
+      }
+    }
+    // Default to 12:00 PM
+    const defaultTime = new Date();
+    defaultTime.setHours(12, 0, 0, 0);
+    return defaultTime;
+  });
   const [showDatePicker, setShowDatePicker] = useState(Platform.OS === 'ios');
+  const [showTimePicker, setShowTimePicker] = useState(Platform.OS === 'ios');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Reset to date step when modal opens
+  useEffect(() => {
+    if (visible) {
+      setStep(isEditing ? 'date' : 'ask');
+      setShowDatePicker(Platform.OS === 'ios');
+      setShowTimePicker(Platform.OS === 'ios');
+    }
+  }, [visible, isEditing]);
 
   const handleDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     if (Platform.OS === 'android') {
@@ -49,10 +72,28 @@ export default function BookingConfirmationModal({
     }
   };
 
+  const handleTimeChange = (event: DateTimePickerEvent, selectedTime?: Date) => {
+    if (Platform.OS === 'android') {
+      setShowTimePicker(false);
+    }
+    if (selectedTime) {
+      setBookingTime(selectedTime);
+    }
+  };
+
+  // Combine date and time into a single datetime
+  const getCombinedDateTime = () => {
+    const combined = new Date(bookingDate);
+    combined.setHours(bookingTime.getHours(), bookingTime.getMinutes(), 0, 0);
+    return combined;
+  };
+
   const handleConfirm = async () => {
     setIsSaving(true);
 
     try {
+      const combinedDateTime = getCombinedDateTime();
+
       // Cancel existing reminder if there is one
       if (existingReminderId) {
         try {
@@ -63,7 +104,7 @@ export default function BookingConfirmationModal({
       }
 
       // Calculate reminder time (day before at 10am)
-      const reminderDate = new Date(bookingDate);
+      const reminderDate = new Date(combinedDateTime);
       reminderDate.setDate(reminderDate.getDate() - 1);
       reminderDate.setHours(10, 0, 0, 0);
 
@@ -84,11 +125,11 @@ export default function BookingConfirmationModal({
         );
       }
 
-      // Update purchase token with booking info
+      // Update purchase token with booking info (store full datetime)
       const { error } = await supabase
         .from('purchase_tokens')
         .update({
-          booking_date: bookingDate.toISOString().split('T')[0],
+          booking_date: combinedDateTime.toISOString(),
           booking_confirmed: true,
           booking_reminder_id: notificationId,
         })
@@ -96,7 +137,7 @@ export default function BookingConfirmationModal({
 
       if (error) throw error;
 
-      onBookingConfirmed?.(bookingDate);
+      onBookingConfirmed?.(combinedDateTime);
       onClose();
     } catch (error) {
       console.error('Error saving booking confirmation:', error);
@@ -116,9 +157,24 @@ export default function BookingConfirmationModal({
     }
   };
 
+  const handleDateNext = () => {
+    setStep('time');
+    if (Platform.OS === 'android') {
+      setShowTimePicker(true);
+    }
+  };
+
+  const handleBackToDate = () => {
+    setStep('date');
+    if (Platform.OS === 'android') {
+      setShowDatePicker(true);
+    }
+  };
+
   const resetAndClose = () => {
     setStep(isEditing ? 'date' : 'ask');
     setShowDatePicker(Platform.OS === 'ios');
+    setShowTimePicker(Platform.OS === 'ios');
     onClose();
   };
 
@@ -165,10 +221,10 @@ export default function BookingConfirmationModal({
             <>
               <Text style={styles.icon}>📅</Text>
               <Text style={styles.title}>
-                {isEditing ? 'Update Booking Date' : 'When is your booking?'}
+                {isEditing ? 'Update Booking Date' : 'What date is your booking?'}
               </Text>
               <Text style={styles.subtitle}>
-                We'll send you a reminder the day before
+                Select the date you've booked for
               </Text>
 
               {Platform.OS === 'android' && !showDatePicker && (
@@ -210,18 +266,80 @@ export default function BookingConfirmationModal({
               )}
 
               <TouchableOpacity
-                style={[styles.confirmButton, isSaving && styles.confirmButtonDisabled]}
-                onPress={handleConfirm}
-                disabled={isSaving}
+                style={styles.confirmButton}
+                onPress={handleDateNext}
               >
-                {isSaving ? (
-                  <ActivityIndicator color={colors.primary} />
-                ) : (
-                  <Text style={styles.confirmButtonText}>
-                    {isEditing ? 'Update Booking' : 'Confirm Booking'}
-                  </Text>
-                )}
+                <Text style={styles.confirmButtonText}>Next</Text>
               </TouchableOpacity>
+            </>
+          )}
+
+          {step === 'time' && (
+            <>
+              <Text style={styles.icon}>🕐</Text>
+              <Text style={styles.title}>What time is your booking?</Text>
+              <Text style={styles.subtitle}>
+                We'll send you a reminder the day before
+              </Text>
+
+              {Platform.OS === 'android' && !showTimePicker && (
+                <TouchableOpacity
+                  style={styles.dateButton}
+                  onPress={() => setShowTimePicker(true)}
+                >
+                  <Text style={styles.dateButtonText}>
+                    {bookingTime.toLocaleTimeString('en-GB', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {showTimePicker && (
+                <DateTimePicker
+                  value={bookingTime}
+                  mode="time"
+                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                  onChange={handleTimeChange}
+                  style={styles.datePicker}
+                />
+              )}
+
+              {Platform.OS === 'ios' && (
+                <Text style={styles.selectedDateText}>
+                  {bookingDate.toLocaleDateString('en-GB', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                  })} at {bookingTime.toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+              )}
+
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  style={styles.backButton}
+                  onPress={handleBackToDate}
+                >
+                  <Text style={styles.backButtonText}>Back</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.confirmButtonFlex, isSaving && styles.confirmButtonDisabled]}
+                  onPress={handleConfirm}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <ActivityIndicator color={colors.primary} />
+                  ) : (
+                    <Text style={styles.confirmButtonText}>
+                      {isEditing ? 'Update' : 'Confirm'}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </>
           )}
 
@@ -361,6 +479,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
+  confirmButtonFlex: {
+    flex: 1,
+    backgroundColor: colors.accent,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+  },
   confirmButtonDisabled: {
     opacity: 0.7,
   },
@@ -368,6 +493,18 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontFamily: fontFamily.bodyBold,
     color: colors.primary,
+  },
+  backButton: {
+    flex: 1,
+    backgroundColor: colors.grayLight,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+  },
+  backButtonText: {
+    fontSize: fontSize.md,
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.grayDark,
   },
   gotItButton: {
     backgroundColor: colors.primary,

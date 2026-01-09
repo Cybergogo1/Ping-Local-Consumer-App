@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -19,7 +20,7 @@ import { colors, fontSize, fontWeight, spacing, borderRadius, shadows, fontFamil
 import { PurchaseToken } from '../../types/database';
 import ClaimedOfferCard from '../../components/claimed/ClaimedOfferCard';
 
-type FilterType = 'active' | 'redeemed' | 'all';
+type FilterType = 'active' | 'redeemed' | 'cancelled' | 'all';
 
 export default function ClaimedScreen() {
   const { user } = useAuth();
@@ -146,16 +147,21 @@ export default function ClaimedScreen() {
   // Filter tokens based on active filter
   const filteredTokens = purchaseTokens.filter((token) => {
     if (activeFilter === 'active') {
-      return !token.redeemed;
+      // Active = not redeemed AND not cancelled
+      return !token.redeemed && !token.cancelled;
     }
     if (activeFilter === 'redeemed') {
       return token.redeemed;
     }
+    if (activeFilter === 'cancelled') {
+      return token.cancelled;
+    }
     return true; // 'all'
   });
 
-  const activeCount = purchaseTokens.filter((t) => !t.redeemed).length;
+  const activeCount = purchaseTokens.filter((t) => !t.redeemed && !t.cancelled).length;
   const redeemedCount = purchaseTokens.filter((t) => t.redeemed).length;
+  const cancelledCount = purchaseTokens.filter((t) => t.cancelled).length;
 
   const renderEmptyState = () => {
     if (activeFilter === 'active') {
@@ -187,6 +193,18 @@ export default function ClaimedScreen() {
           <Text style={styles.emptyTitle}>No Redeemed Offers</Text>
           <Text style={styles.emptyText}>
             Your redemption history will appear here
+          </Text>
+        </View>
+      );
+    }
+
+    if (activeFilter === 'cancelled') {
+      return (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyIcon}>✕</Text>
+          <Text style={styles.emptyTitle}>No Cancelled Bookings</Text>
+          <Text style={styles.emptyText}>
+            Any bookings you cancel will appear here
           </Text>
         </View>
       );
@@ -254,7 +272,12 @@ export default function ClaimedScreen() {
 
       <SafeAreaView style={styles.safeArea} edges={['left', 'right']}>
         {/* Filter Tabs */}
-        <View style={styles.filterContainer}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScrollView}
+          contentContainerStyle={styles.filterContainer}
+        >
           <TouchableOpacity
             style={[styles.filterTab, activeFilter === 'active' && styles.filterTabActive]}
             onPress={() => setActiveFilter('active')}
@@ -279,6 +302,20 @@ export default function ClaimedScreen() {
             </Text>
           </TouchableOpacity>
 
+          {cancelledCount > 0 && (
+            <TouchableOpacity
+              style={[styles.filterTab, activeFilter === 'cancelled' && styles.filterTabActive]}
+              onPress={() => setActiveFilter('cancelled')}
+            >
+              <Text style={[
+                styles.filterTabText,
+                activeFilter === 'cancelled' && styles.filterTabTextActive,
+              ]}>
+                Cancelled ({cancelledCount})
+              </Text>
+            </TouchableOpacity>
+          )}
+
           <TouchableOpacity
             style={[styles.filterTab, activeFilter === 'all' && styles.filterTabActive]}
             onPress={() => setActiveFilter('all')}
@@ -290,7 +327,7 @@ export default function ClaimedScreen() {
               All
             </Text>
           </TouchableOpacity>
-        </View>
+        </ScrollView>
 
         {/* List */}
         <FlatList
@@ -392,10 +429,13 @@ const styles = StyleSheet.create({
   },
 
   // Filter Tabs
+  filterScrollView: {
+    flexGrow: 0,
+    paddingBottom: spacing.md,
+  },
   filterContainer: {
     flexDirection: 'row',
     paddingHorizontal: spacing.md,
-    paddingBottom: spacing.md,
   },
   filterTab: {
     paddingHorizontal: spacing.md,
@@ -405,6 +445,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.white,
     borderWidth: 1,
     borderColor: '#eee',
+    minHeight: 37,
   },
   filterTabActive: {
     backgroundColor: colors.primary,

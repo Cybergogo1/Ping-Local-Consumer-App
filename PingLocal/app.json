@@ -14,7 +14,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.ping-local-dan.ios",
-      "buildNumber": "4",
+      "buildNumber": "5",
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "PingLocal needs your location to show nearby businesses and offers",
@@ -31,7 +31,8 @@
         "googleMapsApiKey": "AIzaSyA3UvWRia-94eCIGPuyr4mMm3p-UJVpeGQ"
       },
       "entitlements": {
-        "aps-environment": "production"
+        "aps-environment": "production",
+        "com.apple.developer.in-app-payments": ["merchant.com.pinglocal.consumer"]
       }
     },
     "android": {
@@ -78,7 +79,14 @@
           "sounds": []
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.pinglocal.consumer",
+          "enableGooglePay": true
+        }
+      ]
     ],
     "extra": {
       "eas": {

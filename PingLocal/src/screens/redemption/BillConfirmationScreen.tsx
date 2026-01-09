@@ -135,12 +135,37 @@ export default function BillConfirmationScreen({ navigation, route }: BillConfir
   const handleDispute = () => {
     Alert.alert(
       'Dispute Bill',
-      'If the bill amount is incorrect, please speak with the staff at the venue. Would you like to go back?',
+      'If the bill amount is incorrect, please speak with the staff at the venue. They will update the amount for you.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Go Back',
-          onPress: () => navigation.goBack(),
+          text: 'Wait for Update',
+          onPress: async () => {
+            try {
+              // Set redemption token status to 'Rejected' so business app can listen for it
+              const { error } = await supabase
+                .from('redemption_tokens')
+                .update({ status: 'Rejected' })
+                .eq('id', redemptionTokenId);
+
+              if (error) {
+                console.error('Error updating redemption token status:', error);
+                Alert.alert('Error', 'Failed to dispute bill. Please try again.');
+                return;
+              }
+
+              navigation.replace('BillDisputeWaiting', {
+                purchaseTokenId,
+                redemptionTokenId,
+                currentBillAmount: billAmount,
+                offerName,
+                businessName,
+              });
+            } catch (error) {
+              console.error('Error disputing bill:', error);
+              Alert.alert('Error', 'Failed to dispute bill. Please try again.');
+            }
+          },
         },
       ]
     );

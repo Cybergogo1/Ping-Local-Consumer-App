@@ -162,12 +162,7 @@ export default function ClaimSuccessScreen({ navigation, route }: ClaimSuccessSc
     if (bookingType === 'call' && businessPhoneNumber) {
       const phoneUrl = `tel:${businessPhoneNumber}`;
       try {
-        const supported = await Linking.canOpenURL(phoneUrl);
-        if (supported) {
-          await Linking.openURL(phoneUrl);
-        } else {
-          Alert.alert('Error', 'Unable to make phone call on this device');
-        }
+        await Linking.openURL(phoneUrl);
       } catch (error) {
         Alert.alert('Error', 'Unable to make phone call');
       }
@@ -244,49 +239,51 @@ export default function ClaimSuccessScreen({ navigation, route }: ClaimSuccessSc
             {/* Loyalty Points Section - Only for paid offers */}
             {hasPaidWithPoints && (
               <View style={styles.loyaltySection}>
-                {/* Points Earned Badge */}
-                <Animated.View
-                  style={[
-                    styles.pointsBadge,
-                    { transform: [{ scale: pointsScaleAnim }] },
-                  ]}
-                >
-                  <Text style={styles.pointsEarnedLabel}>Points Earned</Text>
-                  <Text style={styles.pointsEarnedValue}>+{pointsEarned}</Text>
-                </Animated.View>
+                <View style={styles.loyaltyRow}>
+                  {/* Points Earned Badge */}
+                  <Animated.View
+                    style={[
+                      styles.pointsBadge,
+                      { transform: [{ scale: pointsScaleAnim }] },
+                    ]}
+                  >
+                    <Text style={styles.pointsEarnedLabel}>Points Earned</Text>
+                    <Text style={styles.pointsEarnedValue}>+{pointsEarned}</Text>
+                  </Animated.View>
 
-                {/* Current Tier & Progress */}
-                <View style={styles.tierProgressContainer}>
-                  <View style={styles.tierRow}>
-                    <Text style={styles.currentTierLabel}>
-                      {TIER_DISPLAY_NAMES[newTier as TierName] || 'Member'}
-                    </Text>
-                    <Text style={styles.pointsTotal}>{totalPoints} pts</Text>
+                  {/* Current Tier & Progress */}
+                  <View style={styles.tierProgressContainer}>
+                    <View style={styles.tierRow}>
+                      <Text style={styles.currentTierLabel}>
+                        {TIER_DISPLAY_NAMES[newTier as TierName] || 'Member'}
+                      </Text>
+                      <Text style={styles.pointsTotal}>{totalPoints} pts</Text>
+                    </View>
+
+                    {/* Progress Bar */}
+                    <View style={styles.progressBarContainer}>
+                      <Animated.View
+                        style={[
+                          styles.progressBarFill,
+                          {
+                            width: progressAnim.interpolate({
+                              inputRange: [0, 100],
+                              outputRange: ['0%', '100%'],
+                            }),
+                          },
+                        ]}
+                      />
+                    </View>
+
+                    {nextTierPoints !== totalPoints && (
+                      <Text style={styles.nextTierText}>
+                        {nextTierPoints - (totalPoints || 0)} pts to next level
+                      </Text>
+                    )}
                   </View>
-
-                  {/* Progress Bar */}
-                  <View style={styles.progressBarContainer}>
-                    <Animated.View
-                      style={[
-                        styles.progressBarFill,
-                        {
-                          width: progressAnim.interpolate({
-                            inputRange: [0, 100],
-                            outputRange: ['0%', '100%'],
-                          }),
-                        },
-                      ]}
-                    />
-                  </View>
-
-                  {nextTierPoints !== totalPoints && (
-                    <Text style={styles.nextTierText}>
-                      {nextTierPoints - (totalPoints || 0)} pts to next level
-                    </Text>
-                  )}
                 </View>
 
-                {/* Level Up Button */}
+                {/* Level Up Button - Centered below the row */}
                 {leveledUp && (
                   <TouchableOpacity style={styles.levelUpButton} onPress={handleViewLevelUp}>
                     <Text style={styles.levelUpButtonText}>
@@ -421,8 +418,12 @@ const styles = StyleSheet.create({
   loyaltySection: {
     width: '100%',
     alignItems: 'center',
+  },
+  loyaltyRow: {
     flexDirection: 'row',
-    maxWidth: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
   },
   pointsBadge: {
     backgroundColor: colors.accent,

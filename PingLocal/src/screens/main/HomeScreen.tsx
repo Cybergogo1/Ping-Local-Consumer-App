@@ -39,6 +39,13 @@ const TIER_ICONS = {
   legend: require('../../../assets/images/loyaltytiericon_legend.png'),
 };
 
+const TIER_DISPLAY_NAMES: Record<string, string> = {
+  member: 'Ping Local Member',
+  hero: 'Ping Local Hero',
+  champion: 'Ping Local Champion',
+  legend: 'Ping Local Legend',
+};
+
 // Area coordinates for distance calculations
 const areaCoords: Record<string, { lat: number; lng: number }> = {
   'Oxton': { lat: 53.3847, lng: -3.0414 },
@@ -141,10 +148,15 @@ export default function HomeScreen() {
   const fetchFilters = async () => {
     try {
       // Fetch location areas
-      const { data: locations } = await supabase
+      const { data: locations, error: locError } = await supabase
         .from('location_areas')
         .select('*')
         .order('name');
+
+      console.log('[DEBUG fetchFilters] location_areas query:', {
+        error: locError,
+        locations: locations?.map(l => ({ id: l.id, name: l.name })),
+      });
 
       if (locations) {
         setLocationAreas(locations);
@@ -199,11 +211,25 @@ export default function HomeScreen() {
     try {
       let query = supabase
         .from('offers')
-        .select('*, businesses!inner(location_area), offer_tags(tags(id, name, type))')
+        .select('*, businesses!inner(location_area, name), offer_tags(tags(id, name, type))')
         .eq('status', 'Signed Off')
         .gte('end_date', new Date().toISOString());
 
       const { data, error } = await query;
+
+      console.log('[DEBUG fetchAvailableLocations] Raw query result:', {
+        error,
+        offerCount: data?.length,
+        offers: data?.map((o: any) => ({
+          id: o.id,
+          title: o.title,
+          status: o.status,
+          end_date: o.end_date,
+          business_name: o.businesses?.name,
+          business_location_area: o.businesses?.location_area,
+          offer_location_area: o.location_area,
+        })),
+      });
 
       if (error) throw error;
 
@@ -247,6 +273,8 @@ export default function HomeScreen() {
         });
 
         const uniqueLocations = Array.from(locationSet).sort();
+        console.log('[DEBUG fetchAvailableLocations] Extracted unique locations:', uniqueLocations);
+        console.log('[DEBUG fetchAvailableLocations] locationAreas from table:', locationAreas.map(a => a.name));
         setAvailableLocations(uniqueLocations);
       }
     } catch (error) {
@@ -685,7 +713,6 @@ export default function HomeScreen() {
   };
 
   const userName = user?.first_name || 'Guest';
-  const userTier = user?.loyalty_tier || 'Ping Local Member';
   const currentTier = getTierFromPoints(user?.loyalty_points || 0);
 
   return (
@@ -696,15 +723,18 @@ export default function HomeScreen() {
       <SafeAreaView style={styles.headerSafeArea} edges={['top']}>
         <View style={styles.header}>
           {/* Left side - Avatar and User info */}
-          <View style={styles.headerLeft}>
+          <TouchableOpacity
+            style={styles.headerLeft}
+            onPress={() => navigation.getParent()?.navigate('Account')}
+          >
             <View style={styles.avatarContainer}>
               <Image source={TIER_ICONS[currentTier]} style={styles.avatarImage} />
             </View>
             <View style={styles.userInfo}>
               <Text style={styles.greeting}>Hello {userName}</Text>
-              <Text style={styles.tierName}>{userTier}</Text>
+              <Text style={styles.tierName}>{TIER_DISPLAY_NAMES[currentTier]}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
 
           {/* Right side - Icons */}
           <View style={styles.headerRight}>
@@ -908,6 +938,7 @@ export default function HomeScreen() {
                 </TouchableOpacity>
 
                 {/* Location Areas - Only show available locations (case-insensitive match) */}
+                {console.log('[DEBUG Modal Render] locationAreas:', locationAreas.map(a => a.name), 'availableLocations:', availableLocations, 'filtered:', locationAreas.filter((area) => availableLocations.some(loc => loc.toLowerCase() === area.name.toLowerCase())).map(a => a.name))}
                 {locationAreas
                   .filter((area) => availableLocations.some(
                     loc => loc.toLowerCase() === area.name.toLowerCase()
@@ -1115,6 +1146,7 @@ const styles = StyleSheet.create({
     fontSize: isSmallDevice ? fontSize.sm : fontSize.md,
     color: colors.accent,
     fontFamily: fontFamily.headingSemiBold,
+    marginTop: -3,
   },
   avatarContainer: {
     width: isSmallDevice ? 38 : 44,
@@ -1329,17 +1361,19 @@ const styles = StyleSheet.create({
   clearButtonContainer: {
     padding: spacing.md,
     borderTopWidth: 1,
-    borderTopColor: colors.grayLight,
+    borderTopColor: colors.primaryLight,
   },
   clearButton: {
-    backgroundColor: colors.accent,
-    paddingVertical: spacing.md,
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
     alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.white,
   },
   clearButtonText: {
     fontSize: fontSize.md,
-    color: colors.grayDark,
+    color: colors.white,
     fontFamily: fontFamily.bodySemiBold,
   },
   sortContainer: {

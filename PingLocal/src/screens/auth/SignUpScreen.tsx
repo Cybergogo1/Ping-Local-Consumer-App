@@ -108,6 +108,8 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
                       value={firstName}
                       onChangeText={setFirstName}
                       autoCapitalize="words"
+                      autoComplete="given-name"
+                      textContentType="givenName"
                       style={styles.input}
                     />
                   </View>
@@ -118,6 +120,8 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
                       value={surname}
                       onChangeText={setSurname}
                       autoCapitalize="words"
+                      autoComplete="family-name"
+                      textContentType="familyName"
                       style={styles.input}
                     />
                   </View>
@@ -131,6 +135,8 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
                     onChangeText={setEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    autoComplete="email"
+                    textContentType="emailAddress"
                     style={styles.input}
                   />
                 </View>
@@ -142,6 +148,8 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
+                    autoComplete="new-password"
+                    textContentType="newPassword"
                     style={styles.input}
                   />
                 </View>

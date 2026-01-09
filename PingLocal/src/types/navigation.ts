@@ -116,14 +116,27 @@ export type ClaimedStackParamList = {
   QRCode: {
     purchaseToken: import('./database').PurchaseToken;
   };
+  RedemptionWaiting: {
+    purchaseTokenId: number;
+    redemptionTokenId: number;
+    offerName: string;
+    businessName: string;
+  };
   RedemptionSuccess: {
     offerName: string;
     businessName: string;
   };
   BillConfirmation: {
     purchaseTokenId: number;
-    redemptionTokenId: string; // RedemptionToken uses string ID
+    redemptionTokenId: number; // RedemptionToken uses number ID
     billAmount: number;
+    offerName: string;
+    businessName: string;
+  };
+  BillDisputeWaiting: {
+    purchaseTokenId: number;
+    redemptionTokenId: number;
+    currentBillAmount: number;
     offerName: string;
     businessName: string;
   };

@@ -113,6 +113,8 @@ export default function ChangePasswordScreen({ navigation }: ChangePasswordScree
                     value={newPassword}
                     onChangeText={setNewPassword}
                     secureTextEntry
+                    autoComplete="new-password"
+                    textContentType="newPassword"
                     style={styles.input}
                   />
                 </View>
@@ -124,6 +126,8 @@ export default function ChangePasswordScreen({ navigation }: ChangePasswordScree
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry
+                    autoComplete="new-password"
+                    textContentType="newPassword"
                     style={styles.input}
                   />
                 </View>

@@ -11,13 +11,29 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
+  Dimensions,
 } from 'react-native';
+
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const HEADER_IMAGE_HEIGHT = SCREEN_HEIGHT * 0.3;
+
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, fontSize, fontFamily, responsiveSpacing } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { LoginScreenProps } from '../../types/navigation';
 import { supabase } from '../../lib/supabase';
 import { getAuthErrorMessage } from '../../utils/errorMessages';
+
+// Memoized header to prevent re-renders during typing
+const HeaderImage = React.memo(() => (
+  <View style={styles.headerImage}>
+    <Image
+      source={require('../../../assets/images/signin_background.png')}
+      style={styles.backgroundImage}
+      resizeMode="cover"
+    />
+  </View>
+));
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
   const { signIn } = useAuth();
@@ -70,6 +86,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           <ScrollView
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
+            bounces={false}
+            showsVerticalScrollIndicator={false}
           >
             {/* Back button */}
             <TouchableOpacity
@@ -80,13 +98,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             </TouchableOpacity>
 
             {/* Header image */}
-            <View style={styles.headerImage}>
-              <Image
-                source={require('../../../assets/images/signin_background.png')}
-                style={styles.backgroundImage}
-                resizeMode="cover"
-              />
-            </View>
+            <HeaderImage />
 
             {/* Content */}
             <View style={styles.content}>
@@ -103,6 +115,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                     onChangeText={setEmail}
                     keyboardType="email-address"
                     autoCapitalize="none"
+                    autoComplete="email"
+                    textContentType="emailAddress"
                     style={styles.input}
                   />
                 </View>
@@ -114,6 +128,8 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                     value={password}
                     onChangeText={setPassword}
                     secureTextEntry
+                    autoComplete="password"
+                    textContentType="password"
                     style={styles.input}
                   />
                 </View>
@@ -194,7 +210,7 @@ const styles = StyleSheet.create({
     height: 16,
   },
   headerImage: {
-    height: '30%',
+    height: HEADER_IMAGE_HEIGHT,
     overflow: 'hidden',
     borderBottomLeftRadius: borderRadius.xl,
     borderBottomRightRadius: borderRadius.xl,
@@ -231,6 +247,7 @@ const styles = StyleSheet.create({
     height: Platform.OS === 'ios' ? 50 : 52,
     justifyContent: 'center',
     overflow: 'hidden',
+    width: '100%',
   },
   inputMargin: {
     marginTop: spacing.md,

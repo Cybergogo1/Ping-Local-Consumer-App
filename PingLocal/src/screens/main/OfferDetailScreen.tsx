@@ -12,15 +12,17 @@ import {
   LayoutAnimation,
   Platform,
   UIManager,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, fontSize, fontFamily, shadows } from '../../theme';
-import { Offer, ImageGalleryItem } from '../../types/database';
+import { Offer, ImageGalleryItem, PurchaseToken } from '../../types/database';
 import { OfferDetailScreenProps } from '../../types/navigation';
 import { ImageCarousel } from '../../components/ImageCarousel';
+import { canCancelClaim, cancelClaim } from '../../services/claimCancellationService';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -40,6 +42,9 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
   const [offerTags, setOfferTags] = useState<{ id: number; name: string; type: string }[]>([]);
   const [hasAlreadyClaimed, setHasAlreadyClaimed] = useState(false);
   const [showAlreadyClaimedModal, setShowAlreadyClaimedModal] = useState(false);
+  const [existingClaim, setExistingClaim] = useState<PurchaseToken | null>(null);
+  const [canCancel, setCanCancel] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   useEffect(() => {
     fetchOffer();
@@ -166,7 +171,7 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
     try {
       const { data, error } = await supabase
         .from('purchase_tokens')
-        .select('id')
+        .select('*, offers(*)')
         .eq('user_email', user.email)
         .eq('offer_id', offerId)
         .eq('cancelled', false)
@@ -179,10 +184,51 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
 
       if (data && data.length > 0) {
         setHasAlreadyClaimed(true);
+        const claim = data[0] as PurchaseToken;
+        setExistingClaim(claim);
+        // Check if this claim can be cancelled
+        setCanCancel(canCancelClaim(claim, offer || undefined));
+      } else {
+        setHasAlreadyClaimed(false);
+        setExistingClaim(null);
+        setCanCancel(false);
       }
     } catch (error) {
       console.error('Error checking existing claim:', error);
     }
+  };
+
+  const handleCancelClaim = () => {
+    if (!existingClaim) return;
+
+    Alert.alert(
+      'Cancel Booking?',
+      'Are you sure you want to cancel this booking? You can reclaim this offer afterwards.',
+      [
+        { text: 'Keep Booking', style: 'cancel' },
+        {
+          text: 'Cancel Booking',
+          style: 'destructive',
+          onPress: async () => {
+            setIsCancelling(true);
+            const result = await cancelClaim(existingClaim);
+            setIsCancelling(false);
+
+            if (result.success) {
+              Alert.alert('Booking Cancelled', 'Your booking has been cancelled successfully.');
+              // Reset the claim state
+              setHasAlreadyClaimed(false);
+              setExistingClaim(null);
+              setCanCancel(false);
+              // Refresh the offer data
+              fetchOffer();
+            } else {
+              Alert.alert('Error', result.error || 'Failed to cancel booking. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const toggleFavourite = async () => {
@@ -463,38 +509,6 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
             )}
         </View>
 
-        {/* One Per Customer Notice */}
-        {offer.one_per_customer && (
-          <View style={styles.onePerCustomerSection}>
-            <View style={styles.onePerCustomerBadge}>
-              <Text style={styles.onePerCustomerBadgeText}>1</Text>
-            </View>
-            <View style={styles.onePerCustomerContent}>
-              <Text style={styles.onePerCustomerTitle}>
-                {hasAlreadyClaimed ? "You've Already Claimed This Offer" : "Limited to 1 Per Customer"}
-              </Text>
-              <Text style={styles.onePerCustomerText}>
-                {hasAlreadyClaimed
-                  ? "You can view your claimed offer in the 'Claimed' section."
-                  : "This offer can only be claimed once per customer."
-                }
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* Expired Banner */}
-        {expired && (
-          <View style={styles.expiredBanner}>
-            <View style={styles.expiredTextContainer}>
-              <Text style={styles.expiredTitle}>This Promotion ended {formatDate(offer.end_date)}</Text>
-              <Text style={styles.expiredSubtitle}>
-                Check out your feed for more great promotions, or add this business to your favourites to be notified!
-              </Text>
-            </View>
-          </View>
-        )}
-
         {/* Promotion Details Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Promotion Details</Text>
@@ -520,6 +534,52 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
             </TouchableOpacity>
           )}
         </View>
+
+        {/* One Per Customer Notice */}
+        {offer.one_per_customer && (
+          <View style={styles.onePerCustomerSection}>
+            <View style={styles.onePerCustomerBadge}>
+              <Text style={styles.onePerCustomerBadgeText}>1</Text>
+            </View>
+            <View style={styles.onePerCustomerContent}>
+              <Text style={styles.onePerCustomerTitle}>
+                {hasAlreadyClaimed ? "You've Already Claimed This Offer" : "Limited to 1 Per Customer"}
+              </Text>
+              <Text style={styles.onePerCustomerText}>
+                {hasAlreadyClaimed
+                  ? "You can view your claimed offer in the 'Claimed' section."
+                  : "This offer can only be claimed once per customer."
+                }
+              </Text>
+              {/* Cancel button for eligible claims */}
+              {hasAlreadyClaimed && canCancel && (
+                <TouchableOpacity
+                  style={[styles.cancelClaimButton, isCancelling && styles.cancelClaimButtonDisabled]}
+                  onPress={handleCancelClaim}
+                  disabled={isCancelling}
+                >
+                  {isCancelling ? (
+                    <ActivityIndicator size="small" color={colors.error} />
+                  ) : (
+                    <Text style={styles.cancelClaimButtonText}>Cancel Booking</Text>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
+
+        {/* Expired Banner */}
+        {expired && (
+          <View style={styles.expiredBanner}>
+            <View style={styles.expiredTextContainer}>
+              <Text style={styles.expiredTitle}>This Promotion ended {formatDate(offer.end_date)}</Text>
+              <Text style={styles.expiredSubtitle}>
+                Check out your feed for more great promotions, or add this business to your favourites to be notified!
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* Special Notes */}
         {offer.special_notes && (
@@ -1156,8 +1216,8 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.md,
     marginTop: spacing.md,
     borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: '#36566F24',
+    borderWidth: 2,
+    borderColor: colors.primary,
     alignItems: 'center',
   },
   onePerCustomerBadge: {
@@ -1187,6 +1247,24 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.grayDark,
     fontFamily: fontFamily.body,
+  },
+  cancelClaimButton: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: '#FFF0F0',
+    borderWidth: 1,
+    borderColor: colors.error,
+    borderRadius: borderRadius.full,
+    alignSelf: 'flex-start',
+  },
+  cancelClaimButtonDisabled: {
+    opacity: 0.7,
+  },
+  cancelClaimButtonText: {
+    fontSize: fontSize.sm,
+    color: colors.error,
+    fontFamily: fontFamily.bodySemiBold,
   },
 
   // Buy Button Claimed State

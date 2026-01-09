@@ -10,16 +10,23 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import * as Notifications from 'expo-notifications';
 import { colors, fontSize, spacing, borderRadius, shadows, fontFamily } from '../../theme';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { supabase } from '../../lib/supabase';
 import { AccountStackParamList } from '../../types/navigation';
+import {
+  registerForPushNotificationsAsync,
+  savePushTokenToDatabase,
+} from '../../services/notificationService';
 
 type NotificationPreferencesScreenNavigationProp = StackNavigationProp<AccountStackParamList, 'NotificationPreferences'>;
 
@@ -140,8 +147,8 @@ export default function NotificationPreferencesScreen() {
     }
   }, [user?.activate_notifications]);
 
-  // Handle master push notification toggle
-  const handleMasterPushToggle = async (value: boolean) => {
+  // Helper to update the notification preference in database
+  const updateNotificationPreference = async (value: boolean) => {
     if (!user) return;
 
     setMasterPushEnabled(value);
@@ -164,6 +171,88 @@ export default function NotificationPreferencesScreen() {
       Alert.alert('Error', 'Failed to update notification setting. Please try again.');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Handle master push notification toggle
+  const handleMasterPushToggle = async (value: boolean) => {
+    if (!user) return;
+
+    // If DISABLING notifications, show alert directing user to device settings
+    if (!value) {
+      Alert.alert(
+        'Disable Notifications',
+        Platform.OS === 'ios'
+          ? 'To fully disable notifications, you also need to turn them off in iOS Settings. Would you like to open Settings now?\n\nWe will also update your preferences in the app.'
+          : 'To fully disable notifications, you also need to turn them off in Android Settings. Would you like to open Settings now?\n\nWe will also update your preferences in the app.',
+        [
+          {
+            text: 'Not Now',
+            style: 'cancel',
+            onPress: () => updateNotificationPreference(false),
+          },
+          {
+            text: 'Open Settings',
+            onPress: async () => {
+              await updateNotificationPreference(false);
+              Linking.openSettings();
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    // ENABLING notifications - check OS permission status first
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+
+    if (existingStatus === 'granted') {
+      // Permission already granted - just update DB and register token
+      await updateNotificationPreference(true);
+      const token = await registerForPushNotificationsAsync();
+      if (token) {
+        await savePushTokenToDatabase(token);
+      }
+    } else if (existingStatus === 'denied') {
+      // Permission was previously denied - need to go to settings
+      Alert.alert(
+        'Enable Notifications',
+        Platform.OS === 'ios'
+          ? 'To receive notifications, you need to enable them in iOS Settings. Would you like to open Settings now?'
+          : 'To receive notifications, you need to enable them in Android Settings. Would you like to open Settings now?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Open Settings',
+            onPress: async () => {
+              // Update DB preference first so it's ready when they return
+              await updateNotificationPreference(true);
+              Linking.openSettings();
+            },
+          },
+        ]
+      );
+    } else {
+      // Permission not yet determined - request it
+      const { status: newStatus } = await Notifications.requestPermissionsAsync();
+
+      if (newStatus === 'granted') {
+        await updateNotificationPreference(true);
+        const token = await registerForPushNotificationsAsync();
+        if (token) {
+          await savePushTokenToDatabase(token);
+        }
+      } else {
+        // User denied the permission request
+        Alert.alert(
+          'Notifications Disabled',
+          'You denied notification permissions. You can enable them later in your device settings.',
+          [{ text: 'OK' }]
+        );
+      }
     }
   };
 
@@ -350,7 +439,9 @@ export default function NotificationPreferencesScreen() {
           {/* Info Text */}
           <View style={styles.infoContainer}>
             <Text style={styles.infoText}>
-              You can also manage notification permissions in your device settings.
+              {Platform.OS === 'ios'
+                ? 'To fully control notifications, you may also need to manage them in iOS Settings > Ping Local > Notifications.'
+                : 'To fully control notifications, you may also need to manage them in Android Settings > Apps > Ping Local > Notifications.'}
             </Text>
           </View>
 

@@ -48,7 +48,7 @@ export default function App() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <StripeProvider
         publishableKey={STRIPE_PUBLISHABLE_KEY}
-        merchantIdentifier="merchant.com.pinglocal"
+        merchantIdentifier="merchant.com.pinglocal.consumer"
       >
         <SafeAreaProvider>
           <AuthProvider>

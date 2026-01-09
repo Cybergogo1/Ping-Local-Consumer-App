@@ -9,11 +9,13 @@ import {
   Alert,
   AppState,
   AppStateStatus,
+  ActivityIndicator,
 } from 'react-native';
 import { format, parseISO } from 'date-fns';
 import { colors, spacing, borderRadius, fontSize, shadows, fontFamily } from '../../theme';
 import { PurchaseToken } from '../../types/database';
 import BookingConfirmationModal from '../modals/BookingConfirmationModal';
+import { canCancelClaim, cancelClaim } from '../../services/claimCancellationService';
 
 const placeholderImage = require('../../../assets/images/placeholder_offer.jpg');
 
@@ -45,8 +47,12 @@ export default function ClaimedOfferCard({
 
   // Modal state
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const hasOpenedExternalLink = React.useRef(false);
   const appStateRef = React.useRef(AppState.currentState);
+
+  // Check if this claim can be cancelled
+  const showCancelButton = canCancelClaim(purchaseToken);
 
   // We don't have expiry date without joining to offers table
   const daysUntilExpiry = null;
@@ -105,6 +111,33 @@ export default function ClaimedOfferCard({
     onBookingUpdated?.();
   };
 
+  // Handle cancel booking press
+  const handleCancelPress = () => {
+    Alert.alert(
+      'Cancel Booking?',
+      'Are you sure you want to cancel this booking? You can reclaim this offer afterwards.',
+      [
+        { text: 'Keep Booking', style: 'cancel' },
+        {
+          text: 'Cancel Booking',
+          style: 'destructive',
+          onPress: async () => {
+            setIsCancelling(true);
+            const result = await cancelClaim(purchaseToken);
+            setIsCancelling(false);
+
+            if (result.success) {
+              Alert.alert('Booking Cancelled', 'Your booking has been cancelled successfully.');
+              onBookingUpdated?.();
+            } else {
+              Alert.alert('Error', result.error || 'Failed to cancel booking. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   // AppState listener for detecting return from external link
   React.useEffect(() => {
     if (!isExternalBooking || hasBookingConfirmed) return;
@@ -127,9 +160,17 @@ export default function ClaimedOfferCard({
   // Use 'created' field instead of 'created_at'
   const claimedDate = purchaseToken.created ? format(parseISO(purchaseToken.created), 'MMM d, yyyy') : '';
 
-  // Format booking date for display
+  // Format booking date for display (include time if set)
   const formattedBookingDate = bookingDate
-    ? format(parseISO(bookingDate), 'EEE, MMM d, yyyy')
+    ? (() => {
+        const parsed = parseISO(bookingDate);
+        // Check if time was stored (not midnight UTC)
+        const hasTime = parsed.getHours() !== 0 || parsed.getMinutes() !== 0;
+        if (hasTime) {
+          return format(parsed, 'EEE, MMM d, yyyy \'at\' h:mm a');
+        }
+        return format(parsed, 'EEE, MMM d, yyyy');
+      })()
     : null;
 
   return (
@@ -168,7 +209,7 @@ export default function ClaimedOfferCard({
             }}
           >
             <Text style={styles.bookingDateIcon}>📅</Text>
-            <Text style={styles.bookingDateText}>Booking: {formattedBookingDate}</Text>
+            <Text style={styles.bookingDateText}>{formattedBookingDate}</Text>
             <Text style={styles.bookingDateEdit}>Edit</Text>
           </TouchableOpacity>
         )}
@@ -202,6 +243,29 @@ export default function ClaimedOfferCard({
           >
             <Text style={styles.qrButtonIcon}>📱</Text>
             <Text style={styles.qrButtonText}>Show QR Code</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* Cancel Button - Only shown for eligible bookings */}
+        {showCancelButton && (
+          <TouchableOpacity
+            style={[styles.cancelButton, isCancelling && styles.cancelButtonDisabled]}
+            onPress={(e) => {
+              e.stopPropagation();
+              if (!isCancelling) {
+                handleCancelPress();
+              }
+            }}
+            disabled={isCancelling}
+          >
+            {isCancelling ? (
+              <ActivityIndicator size="small" color={colors.error} />
+            ) : (
+              <>
+                <Text style={styles.cancelButtonIcon}>✕</Text>
+                <Text style={styles.cancelButtonText}>Cancel Booking</Text>
+              </>
+            )}
           </TouchableOpacity>
         )}
       </View>
@@ -330,7 +394,7 @@ const styles = StyleSheet.create({
   },
   bookingDateText: {
     flex: 1,
-    fontSize: fontSize.sm,
+    fontSize: fontSize.xs,
     fontFamily: fontFamily.bodySemiBold,
     color: colors.primary,
   },
@@ -360,6 +424,33 @@ const styles = StyleSheet.create({
   bookNowButtonText: {
     fontSize: fontSize.sm,
     color: colors.primary,
+    fontFamily: fontFamily.bodySemiBold,
+  },
+
+  // Cancel Button
+  cancelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF0F0',
+    borderWidth: 1,
+    borderColor: colors.error,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.full,
+    marginTop: spacing.sm,
+  },
+  cancelButtonDisabled: {
+    opacity: 0.7,
+  },
+  cancelButtonIcon: {
+    fontSize: fontSize.md,
+    marginRight: spacing.sm,
+    color: colors.error,
+  },
+  cancelButtonText: {
+    fontSize: fontSize.sm,
+    color: colors.error,
     fontFamily: fontFamily.bodySemiBold,
   },
 });

@@ -123,7 +123,7 @@ export interface PurchaseToken {
   created: string;
   updated: string;
   // External/call booking tracking
-  booking_date?: string; // Date user says they booked for (YYYY-MM-DD)
+  booking_date?: string; // Date and time user says they booked for (ISO timestamp)
   booking_confirmed?: boolean; // Whether user confirmed they made a booking
   booking_reminder_id?: string; // ID of scheduled reminder notification
   // Joined data
@@ -137,7 +137,7 @@ export interface RedemptionToken {
   id: number;
   purchase_token_id: number;
   scanned: boolean;
-  status: 'Pending' | 'In Progress' | 'Finished' | 'Cancelled';
+  status: 'Pending' | 'In Progress' | 'Finished' | 'Cancelled' | 'Rejected' | 'Submitted';
   bill_input_total?: number; // Bill amount entered by business (Pay on Day)
   customer_name?: string;
   customer_id?: number;

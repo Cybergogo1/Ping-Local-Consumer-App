@@ -506,33 +506,14 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
           </View>
         )}
 
-        {/* Party Size (if no slot but has booking and requires_booking is true) */}
-        {!hasSlot && partySize > 0 && offer.requires_booking && (
+        {/* Party Size (if no slot but has booking and requires_booking is true, exclude external/call bookings) */}
+        {!hasSlot && partySize > 0 && offer.requires_booking && !requiresExternalBooking && (
           <View style={styles.bookingDetailsCard}>
             <Text style={styles.cardTitle}>Booking Details</Text>
             <View style={styles.bookingRow}>
               <Text style={styles.bookingLabel}>👥 Party Size</Text>
               <Text style={styles.bookingValue}>
                 {partySize} {partySize === 1 ? 'person' : 'people'}
-              </Text>
-            </View>
-          </View>
-        )}
-
-        {/* External/Call Booking Notice */}
-        {requiresExternalBooking && (
-          <View style={styles.externalBookingNotice}>
-            <View style={styles.externalBookingIconContainer}>
-              <Text style={styles.externalBookingIcon}>
-                {isCallBooking ? '📞' : '🌐'}
-              </Text>
-            </View>
-            <View style={styles.externalBookingContent}>
-              <Text style={styles.externalBookingTitle}>
-                {isCallBooking ? 'Book by Phone' : 'Book Online'}
-              </Text>
-              <Text style={styles.externalBookingText}>
-                After claiming, you'll need to {isCallBooking ? 'call' : 'visit'} {businessName} directly to make your booking. Make sure to mention you're using a Ping Local promotion!
               </Text>
             </View>
           </View>
@@ -568,6 +549,25 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
           </View>
         )}
 
+        {/* External/Call Booking Notice */}
+        {requiresExternalBooking && (
+          <View style={styles.externalBookingNotice}>
+            <View style={styles.externalBookingIconContainer}>
+              <Text style={styles.externalBookingIcon}>
+                {isCallBooking ? '📞' : '🌐'}
+              </Text>
+            </View>
+            <View style={styles.externalBookingContent}>
+              <Text style={styles.externalBookingTitle}>
+                {isCallBooking ? 'Book by Phone' : 'Book Online'}
+              </Text>
+              <Text style={styles.externalBookingText}>
+                After claiming, you'll need to {isCallBooking ? 'call' : 'visit'} {businessName} directly to make your booking. Make sure to mention you're using a Ping Local promotion!
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Price Breakdown */}
         <View style={styles.priceCard}>
           <Text style={styles.cardTitle}>Price Details</Text>
@@ -590,14 +590,14 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
             </>
           )}
 
-          {!unitPrice && (
+          {!unitPrice && isPayUpfront && (
             <View style={styles.priceRow}>
               <Text style={styles.priceLabel}>This offer is free!</Text>
               <Text style={styles.priceValue}>£0.00</Text>
             </View>
           )}
 
-          {!isPayUpfront && unitPrice > 0 && (
+          {!isPayUpfront && (
             <View style={styles.payOnDayNote}>
               <Text style={styles.payOnDayIcon}>ℹ️</Text>
               <Text style={styles.payOnDayText}>
@@ -933,10 +933,9 @@ const styles = StyleSheet.create({
   payOnDayNote: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    backgroundColor: colors.accent,
+    backgroundColor: colors.white,
     padding: spacing.sm,
     borderRadius: borderRadius.sm,
-    marginTop: spacing.sm,
   },
   payOnDayIcon: {
     fontSize: fontSize.md,
@@ -947,6 +946,7 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     fontFamily: fontFamily.body,
     color: colors.grayDark,
+    marginTop: spacing.xs,
   },
 
   // Terms Notice
