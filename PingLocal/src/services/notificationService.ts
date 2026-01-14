@@ -182,11 +182,14 @@ export async function removeAllPushTokens(): Promise<void> {
  * Call this periodically to track active devices
  */
 export async function updateTokenLastUsed(): Promise<void> {
-  const { data: { user } } = await supabase.auth.getUser();
+  // Wrap with a 5-second timeout to prevent hanging on app resume
+  const TIMEOUT_MS = 5000;
 
-  if (!user) return;
+  const updateWithTimeout = async (): Promise<void> => {
+    const { data: { user } } = await supabase.auth.getUser();
 
-  try {
+    if (!user) return;
+
     const tokenData = await Notifications.getExpoPushTokenAsync({
       projectId: EAS_PROJECT_ID,
     });
@@ -196,9 +199,18 @@ export async function updateTokenLastUsed(): Promise<void> {
       .update({ last_used_at: new Date().toISOString() })
       .eq('user_id', user.id)
       .eq('expo_push_token', tokenData.data);
+  };
+
+  try {
+    await Promise.race([
+      updateWithTimeout(),
+      new Promise<void>((_, reject) =>
+        setTimeout(() => reject(new Error('updateTokenLastUsed timed out')), TIMEOUT_MS)
+      ),
+    ]);
   } catch (error) {
     // Silent fail - not critical
-    console.error('Error updating token last used:', error);
+    console.warn('Error updating token last used:', error);
   }
 }
 

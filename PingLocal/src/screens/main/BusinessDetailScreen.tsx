@@ -440,6 +440,16 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
                   </View>
                   <Text style={styles.mapTitle}>Where to find {business.name}</Text>
                   <Text style={styles.mapAddress}>{business.location}</Text>
+
+                  {/* Opening Hours under address */}
+                  {business.opening_times && (
+                    <View style={styles.mapOpeningHours}>
+                      <Text style={styles.mapOpeningHoursIcon}>🕐</Text>
+                      <Text style={styles.mapOpeningHoursText}>
+                        {business.opening_times}
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
                 <TouchableOpacity
@@ -721,6 +731,25 @@ const styles = StyleSheet.create({
     color: colors.grayDark,
     textAlign: 'center',
     marginTop: spacing.xs,
+  },
+  mapOpeningHours: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  mapOpeningHoursIcon: {
+    fontSize: 14,
+  },
+  mapOpeningHoursText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
+    color: colors.grayDark,
+  },
+  mapOpeningHoursOpen: {
+    color: colors.success,
+    fontFamily: fontFamily.bodySemiBold,
   },
   mapContainer: {
     height: 150,

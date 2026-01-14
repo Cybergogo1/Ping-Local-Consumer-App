@@ -1,7 +1,8 @@
 // supabase/functions/complete-redemption/index.ts
-// Called by Adalo business app when staff confirms redemption
-// Updates redemption_token to status='Finished', sets bill amount if Pay on Day
-// Also marks purchase_token as redeemed
+// Called by Adalo business app when staff enters bill/confirms redemption
+// For Pay on Day: Sets status='Submitted' (awaits customer confirmation)
+// For Pay up Front: Sets status='Finished' (immediate completion)
+// Sets bill amount for Pay on Day offers
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -66,12 +67,44 @@ serve(async (req) => {
       .eq('id', redemption_token_id)
       .single()
 
-    if (findError || !redemptionToken) {
+    if (findError) {
+      console.error('Error fetching redemption token:', findError)
+      return new Response(
+        JSON.stringify({ error: 'Redemption token not found', details: findError.message }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
+      )
+    }
+
+    if (!redemptionToken) {
       return new Response(
         JSON.stringify({ error: 'Redemption token not found' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 404 }
       )
     }
+
+    console.log('Redemption token fetched:', JSON.stringify(redemptionToken, null, 2))
+
+    // Get the offer details via purchase_token
+    let offer = null
+    if (redemptionToken.purchase_token_id) {
+      const { data: purchaseToken, error: purchaseError } = await supabaseClient
+        .from('purchase_tokens')
+        .select('offer_id')
+        .eq('id', redemptionToken.purchase_token_id)
+        .single()
+
+      if (!purchaseError && purchaseToken?.offer_id) {
+        const { data: offerData } = await supabaseClient
+          .from('offers')
+          .select('offer_type, customer_bill_input')
+          .eq('id', purchaseToken.offer_id)
+          .single()
+
+        offer = offerData
+      }
+    }
+
+    console.log('Offer fetched:', offer)
 
     // Check if already completed
     if (redemptionToken.status === 'Finished' || redemptionToken.completed) {
@@ -81,21 +114,45 @@ serve(async (req) => {
       )
     }
 
+    // Determine if this is a Pay on Day offer
+    const isPayOnDay = offer?.offer_type === 'Pay on the day' || offer?.customer_bill_input === true
+
+    console.log('Offer details:', {
+      offer_type: offer?.offer_type,
+      customer_bill_input: offer?.customer_bill_input,
+      isPayOnDay,
+      bill_amount
+    })
+
     const now = new Date()
 
-    // Update redemption token to finished
+    // Update redemption token
     const updateData: Record<string, any> = {
-      status: 'Finished',
-      completed: true,
-      time_redeemed: now.toISOString(),
-      date_redeemed: now.toISOString().split('T')[0],
       updated: now.toISOString(),
     }
 
-    // If bill amount provided (Pay on Day), set it
-    if (bill_amount !== undefined && bill_amount !== null) {
-      updateData.bill_input_total = bill_amount
+    if (isPayOnDay) {
+      // Pay on Day: Set to 'Submitted' status (awaits customer confirmation)
+      updateData.status = 'Submitted'
+
+      // Bill amount is required for Pay on Day
+      if (bill_amount !== undefined && bill_amount !== null) {
+        updateData.bill_input_total = bill_amount
+      } else {
+        return new Response(
+          JSON.stringify({ error: 'bill_amount is required for Pay on Day offers' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        )
+      }
+    } else {
+      // Pay up Front: Complete immediately
+      updateData.status = 'Finished'
+      updateData.completed = true
+      updateData.time_redeemed = now.toISOString()
+      updateData.date_redeemed = now.toISOString().split('T')[0]
     }
+
+    console.log('Update data:', updateData)
 
     const { error: updateError } = await supabaseClient
       .from('redemption_tokens')
@@ -106,8 +163,9 @@ serve(async (req) => {
       throw updateError
     }
 
-    // Also mark the purchase token as redeemed
-    if (redemptionToken.purchase_token_id) {
+    // Only mark purchase token as redeemed if Pay up Front (immediate completion)
+    // For Pay on Day, this happens when customer confirms the bill
+    if (!isPayOnDay && redemptionToken.purchase_token_id) {
       const { error: purchaseUpdateError } = await supabaseClient
         .from('purchase_tokens')
         .update({
@@ -126,8 +184,10 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         redemption_token_id: redemption_token_id,
-        status: 'Finished',
+        status: updateData.status,
+        is_pay_on_day: isPayOnDay,
         bill_amount: bill_amount || null,
+        requires_customer_confirmation: isPayOnDay,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     )

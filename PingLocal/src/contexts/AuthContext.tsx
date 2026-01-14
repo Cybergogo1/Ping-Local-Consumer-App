@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef } from 'react';
 import { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { User } from '../types/database';
@@ -43,39 +44,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
+  const appState = useRef(AppState.currentState);
+  const isRefreshingSession = useRef(false);
+
+  // Helper function to create a timeout promise
+  const withTimeout = <T,>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> => {
+    return Promise.race([
+      promise,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error(errorMessage)), ms)
+      ),
+    ]);
+  };
 
   useEffect(() => {
-    let isInitialized = false;
+    let isMounted = true;
 
-    // 5-second failsafe timeout to prevent infinite loading
-    const timeoutId = setTimeout(() => {
-      if (!isInitialized) {
-        console.warn('Auth initialization timed out after 5 seconds');
-        setIsLoading(false);
-      }
-    }, 5000);
+    const initializeAuth = async () => {
+      try {
+        // Wrap getSession with a 5-second timeout
+        const { data: { session } } = await withTimeout(
+          supabase.auth.getSession(),
+          5000,
+          'Session fetch timed out'
+        );
 
-    // Get initial session
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
+        if (!isMounted) return;
+
         setSession(session);
         setSupabaseUser(session?.user ?? null);
+
         if (session?.user) {
-          fetchUserProfile(session.user.id, session.user.email);
+          // fetchUserProfile has its own internal timeout
+          await fetchUserProfile(session.user.id, session.user.email);
         } else {
           setIsLoading(false);
         }
-        isInitialized = true;
-      })
-      .catch((error) => {
-        console.error('Error getting session:', error);
-        setIsLoading(false);
-        isInitialized = true;
-      });
+      } catch (error) {
+        console.error('Auth initialization error:', error);
+        if (isMounted) {
+          // On any error (including timeout), clear loading state
+          setIsLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (_event, session) => {
+        if (!isMounted) return;
         setSession(session);
         setSupabaseUser(session?.user ?? null);
         if (session?.user) {
@@ -88,41 +107,104 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => {
-      clearTimeout(timeoutId);
+      isMounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
+  // Handle app state changes - refresh session when returning from background
+  useEffect(() => {
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active' &&
+        !isRefreshingSession.current
+      ) {
+        // App has come to foreground - verify session is still valid
+        isRefreshingSession.current = true;
+
+        try {
+          const { data: { session: currentSession }, error } = await withTimeout(
+            supabase.auth.getSession(),
+            5000,
+            'Session refresh timed out'
+          );
+
+          if (error) {
+            console.warn('Session refresh error:', error);
+            // Don't clear user state on network errors - they might recover
+          } else if (currentSession?.user && user) {
+            // Session still valid - optionally refresh user profile
+            // Only refresh if session user matches current user
+            setSession(currentSession);
+            setSupabaseUser(currentSession.user);
+          } else if (!currentSession && session) {
+            // Session was invalidated while in background
+            console.log('Session invalidated while in background');
+            setSession(null);
+            setSupabaseUser(null);
+            setUser(null);
+          }
+        } catch (error) {
+          console.warn('Session refresh failed:', error);
+          // Don't clear state on timeout - might just be slow network
+        } finally {
+          isRefreshingSession.current = false;
+        }
+      }
+      appState.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => subscription.remove();
+  }, [session, user]);
+
   const fetchUserProfile = async (userId: string, email?: string) => {
-    try {
+    // Wrap the entire profile fetch with a 10-second timeout
+    const PROFILE_FETCH_TIMEOUT = 10000;
+
+    const fetchWithTimeout = async (): Promise<void> => {
       // Query by email since the users table (from Adalo) uses numeric IDs
       // while Supabase Auth uses UUIDs
       if (!email) {
-        const { data: { user: authUser } } = await supabase.auth.getUser();
+        const { data: { user: authUser } } = await withTimeout(
+          supabase.auth.getUser(),
+          5000,
+          'Get user timed out'
+        );
         email = authUser?.email;
       }
 
       if (!email) {
         console.error('No email available to fetch user profile');
-        setIsLoading(false);
         return;
       }
 
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('email', email)
-        .single();
+      const { data, error } = await withTimeout(
+        Promise.resolve(
+          supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .single()
+        ),
+        5000,
+        'Profile query timed out'
+      );
 
       if (error) throw error;
 
       // Ensure auth_id is set (maps Supabase Auth UUID to this user record)
       if (data && !data.auth_id && userId) {
-        await supabase
-          .from('users')
-          .update({ auth_id: userId })
-          .eq('email', email);
-        console.log('Set auth_id for user:', userId);
+        // Don't await this - it's not critical for loading
+        Promise.resolve(
+          supabase
+            .from('users')
+            .update({ auth_id: userId })
+            .eq('email', email)
+        )
+          .then(() => console.log('Set auth_id for user:', userId))
+          .catch((err: Error) => console.warn('Failed to set auth_id:', err));
       }
 
       // Check local storage for onboarding completion as fallback
@@ -146,6 +228,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...data,
         onboarding_completed: effectiveOnboardingComplete
       });
+    };
+
+    try {
+      await withTimeout(
+        fetchWithTimeout(),
+        PROFILE_FETCH_TIMEOUT,
+        'Profile fetch timed out after 10 seconds'
+      );
     } catch (error: any) {
       console.error('Error fetching user profile:', error);
 
@@ -156,6 +246,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setSession(null);
       }
+      // For timeout errors, user will be null but session exists
+      // RootNavigator will show loading briefly then timeout
     } finally {
       setIsLoading(false);
     }

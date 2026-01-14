@@ -37,7 +37,9 @@
       "Bash(grep:*)",
       "Bash(xargs ls:*)",
       "Bash(npm uninstall:*)",
-      "Bash(del \"c:\\Users\\cyber\\OneDrive\\Documents\\Claude\\Ping-Local-Consumer-App\\PingLocal\\supabase\\functions\\send-push-notification\\config.toml\")"
+      "Bash(del \"c:\\Users\\cyber\\OneDrive\\Documents\\Claude\\Ping-Local-Consumer-App\\PingLocal\\supabase\\functions\\send-push-notification\\config.toml\")",
+      "Bash(supabase functions deploy:*)",
+      "Bash(supabase functions logs:*)"
     ],
     "deny": [],
     "ask": []

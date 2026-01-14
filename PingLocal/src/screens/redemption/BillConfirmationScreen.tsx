@@ -12,9 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, fontSize, fontWeight, shadows } from '../../theme';
-import { getTierFromPoints } from '../../types/database';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp, CommonActions } from '@react-navigation/native';
+import { RouteProp } from '@react-navigation/native';
 import { ClaimedStackParamList } from '../../types/navigation';
 
 type BillConfirmationScreenProps = {
@@ -53,66 +52,71 @@ export default function BillConfirmationScreen({ navigation, route }: BillConfir
     ]).start();
   }, [billAmount]);
 
+  // Add realtime subscription to detect if status changes from elsewhere
+  useEffect(() => {
+    console.log('BillConfirmation: Setting up realtime subscription for redemptionTokenId:', redemptionTokenId);
+
+    const channel = supabase
+      .channel(`bill_confirmation_${redemptionTokenId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'redemption_tokens',
+          filter: `id=eq.${redemptionTokenId}`,
+        },
+        (payload) => {
+          console.log('BillConfirmation: Redemption token updated:', payload);
+          if (payload.new && payload.new.status === 'Finished') {
+            console.log('BillConfirmation: Status changed to Finished, navigating to success');
+            navigation.replace('RedemptionSuccess', {
+              offerName,
+              businessName,
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      console.log('BillConfirmation: Cleaning up realtime subscription');
+      supabase.removeChannel(channel);
+    };
+  }, [redemptionTokenId, offerName, businessName]);
+
   const handleConfirm = async () => {
     if (!user) return;
 
+    console.log('=== CONFIRM BUTTON CLICKED ===');
+    console.log('Confirming bill:', { redemptionTokenId, userId: user.id });
     setIsConfirming(true);
 
     try {
-      // Add points to user
-      const oldPoints = user.loyalty_points || 0;
-      const newPoints = oldPoints + pointsEarned;
+      console.log('About to call supabase.functions.invoke...');
 
-      // Detect tier change
-      const previousTier = getTierFromPoints(oldPoints);
-      const newTier = getTierFromPoints(newPoints);
-
-      const { error: userError } = await supabase
-        .from('users')
-        .update({
-          loyalty_points: newPoints,
-        })
-        .eq('id', user.id);
-
-      if (userError) throw userError;
-
-      // Create loyalty points record
-      await supabase.from('loyalty_points').insert({
-        user_id: user.id,
-        points: pointsEarned,
-        reason: `Redeemed: ${offerName}`,
-        offer_id: null, // Could link to offer_id if needed
+      // Call the confirm-bill edge function
+      const { data, error } = await supabase.functions.invoke('confirm-bill', {
+        body: {
+          redemption_token_id: redemptionTokenId,
+          user_id: user.id,
+        },
       });
 
-      // Send loyalty points notification to user
-      try {
-        await supabase.functions.invoke('send-push-notification', {
-          body: {
-            type: 'loyalty_points_earned',
-            user_id: user.id,
-            points_earned: pointsEarned,
-            reason: 'redemption',
-            offer_title: offerName,
-          },
-        });
-      } catch (notifError) {
-        console.error('Error sending loyalty points notification:', notifError);
+      console.log('=== FUNCTION RESPONSE RECEIVED ===');
+      console.log('Confirm bill response:', JSON.stringify({ data, error }, null, 2));
+
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw error;
       }
 
-      // If tier changed, send tier upgrade notification
-      if (newTier !== previousTier) {
-        try {
-          await supabase.functions.invoke('send-push-notification', {
-            body: {
-              type: 'loyalty_upgrade',
-              user_id: user.id,
-              new_tier: newTier,
-            },
-          });
-        } catch (notifError) {
-          console.error('Error sending tier upgrade notification:', notifError);
-        }
+      if (!data?.success) {
+        console.error('Function returned error:', data?.error);
+        throw new Error(data?.error || 'Failed to confirm bill');
       }
+
+      console.log('Bill confirmed successfully, refreshing user...');
 
       // Refresh user data to update points in context
       if (refreshUser) {
@@ -120,13 +124,14 @@ export default function BillConfirmationScreen({ navigation, route }: BillConfir
       }
 
       // Navigate to success
+      console.log('Navigating to success screen');
       navigation.replace('RedemptionSuccess', {
         offerName,
         businessName,
       });
     } catch (error) {
       console.error('Error confirming bill:', error);
-      Alert.alert('Error', 'Failed to confirm bill. Please try again.');
+      Alert.alert('Error', `Failed to confirm bill: ${error.message || 'Unknown error'}. Please try again.`);
     } finally {
       setIsConfirming(false);
     }
