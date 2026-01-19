@@ -27,6 +27,7 @@ serve(async (req) => {
     const businessId = url.searchParams.get('business_id')
     const redeemed = url.searchParams.get('redeemed')
     const cancelled = url.searchParams.get('cancelled')
+    const purchaseType = url.searchParams.get('purchase_type')
     const limit = parseInt(url.searchParams.get('limit') || '50')
     const offset = parseInt(url.searchParams.get('offset') || '0')
 
@@ -52,6 +53,9 @@ serve(async (req) => {
     }
     if (cancelled !== null) {
       query = query.eq('cancelled', cancelled === 'true')
+    }
+    if (purchaseType) {
+      query = query.eq('purchase_type', purchaseType)
     }
 
     query = query.order('created', { ascending: false })

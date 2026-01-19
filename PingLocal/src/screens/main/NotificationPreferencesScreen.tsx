@@ -412,15 +412,6 @@ export default function NotificationPreferencesScreen() {
               onValueChange={(v) => handlePreferenceToggle('loyalty_updates', v)}
               disabled={!masterPushEnabled}
             />
-            <View style={styles.divider} />
-            <SettingItem
-              icon="calendar"
-              title="Weekly Digest"
-              subtitle="Summary of new offers in your area each week"
-              value={preferences.weekly_digest}
-              onValueChange={(v) => handlePreferenceToggle('weekly_digest', v)}
-              disabled={!masterPushEnabled}
-            />
           </View>
 
           {/* Marketing */}

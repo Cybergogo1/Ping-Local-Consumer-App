@@ -774,7 +774,7 @@ export default function HomeScreen() {
 
             {/* Showing Text */}
             <Text style={styles.showingText}>
-              Showing: {selectedLocation || 'All Locations'}
+              Showing: {selectedLocation || 'All'}
             </Text>
           </View>
 

@@ -244,6 +244,9 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         defaultBillingDetails: {
           email: user.email,
         },
+        applePay: {
+          merchantCountryCode: 'GB',
+        },
       });
 
       if (initError) {

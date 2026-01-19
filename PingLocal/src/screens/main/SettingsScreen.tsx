@@ -78,7 +78,6 @@ const SectionHeader = ({ title }: { title: string }) => (
 );
 
 const STORAGE_KEYS = {
-  EMAIL_NOTIFICATIONS: '@ping_local_email_notifications',
   LOCATION_SERVICES: '@ping_local_location_services',
 };
 
@@ -90,7 +89,6 @@ export default function SettingsScreen() {
 
   // Settings state - push notifications from database, others from AsyncStorage
   const [pushNotifications, setPushNotifications] = useState(user?.activate_notifications ?? true);
-  const [emailNotifications, setEmailNotifications] = useState(true);
   const [locationServices, setLocationServices] = useState(true);
 
   // Load preferences from storage on mount
@@ -107,12 +105,7 @@ export default function SettingsScreen() {
 
   const loadPreferences = async () => {
     try {
-      const [emailPref, locationPref] = await Promise.all([
-        AsyncStorage.getItem(STORAGE_KEYS.EMAIL_NOTIFICATIONS),
-        AsyncStorage.getItem(STORAGE_KEYS.LOCATION_SERVICES),
-      ]);
-
-      if (emailPref !== null) setEmailNotifications(emailPref === 'true');
+      const locationPref = await AsyncStorage.getItem(STORAGE_KEYS.LOCATION_SERVICES);
       if (locationPref !== null) setLocationServices(locationPref === 'true');
     } catch (error) {
       console.error('Error loading preferences:', error);
@@ -141,15 +134,6 @@ export default function SettingsScreen() {
       // Revert on error
       setPushNotifications(!value);
       Alert.alert('Error', 'Failed to update notification preference. Please try again.');
-    }
-  };
-
-  const handleEmailNotificationsChange = async (value: boolean) => {
-    setEmailNotifications(value);
-    try {
-      await AsyncStorage.setItem(STORAGE_KEYS.EMAIL_NOTIFICATIONS, String(value));
-    } catch (error) {
-      console.error('Error saving email notification preference:', error);
     }
   };
 
@@ -316,21 +300,6 @@ export default function SettingsScreen() {
                 <Switch
                   value={pushNotifications}
                   onValueChange={handlePushNotificationsChange}
-                  trackColor={{ false: colors.grayLight, true: colors.primary }}
-                  thumbColor={colors.white}
-                />
-              }
-            />
-            <View style={styles.divider} />
-            <SettingItem
-              icon="mail-outline"
-              title="Email Notifications"
-              subtitle="Receive updates via email"
-              showArrow={false}
-              rightElement={
-                <Switch
-                  value={emailNotifications}
-                  onValueChange={handleEmailNotificationsChange}
                   trackColor={{ false: colors.grayLight, true: colors.primary }}
                   thumbColor={colors.white}
                 />

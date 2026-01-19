@@ -88,16 +88,18 @@ serve(async (req) => {
     // Get purchase token and offer name
     let offerName = 'Offer'
     let offerId = null
+    let businessId = null
     if (redemptionToken.purchase_token_id) {
       const { data: purchaseToken } = await supabaseClient
         .from('purchase_tokens')
-        .select('offer_name, offer_id')
+        .select('offer_name, offer_id, business_id')
         .eq('id', redemptionToken.purchase_token_id)
         .single()
 
       if (purchaseToken) {
         offerName = purchaseToken.offer_name || offerName
         offerId = purchaseToken.offer_id
+        businessId = purchaseToken.business_id
       }
     }
 
@@ -125,6 +127,20 @@ serve(async (req) => {
         JSON.stringify({ error: 'Invalid bill amount' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
+    }
+
+    // Get business cut_percent to calculate PingTake
+    let pingTake = 0
+    if (businessId) {
+      const { data: business } = await supabaseClient
+        .from('businesses')
+        .select('cut_percent')
+        .eq('id', businessId)
+        .single()
+
+      if (business && business.cut_percent) {
+        pingTake = billAmount * (business.cut_percent / 100)
+      }
     }
 
     const now = new Date()
@@ -191,6 +207,7 @@ serve(async (req) => {
         time_redeemed: now.toISOString(),
         date_redeemed: now.toISOString().split('T')[0],
         updated: now.toISOString(),
+        PingTake: pingTake,
       })
       .eq('id', redemption_token_id)
 

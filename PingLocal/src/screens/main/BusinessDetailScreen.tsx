@@ -360,20 +360,25 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
               </View>
             )}
 
-            {/* About Section */}
-            <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Who is {business.name}?</Text>
-              {(business.description_summary || business.description) && (
+            {/* About Section - Summary */}
+            {business.description_summary && (
+              <View style={styles.section}>
                 <Text style={styles.descriptionText}>
-                  {business.description_summary || 'No description available.'}
+                  {business.description_summary}
                 </Text>
-              )}
+              </View>
+            )}
 
-              {isDescriptionExpanded && business.description && (
-                <Text style={styles.fullDescriptionText}>{business.description}</Text>
-              )}
-
-              {business.description && (
+            {/* Full Description Section */}
+            {business.description && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>About {business.name}</Text>
+                <Text
+                  style={styles.descriptionText}
+                  numberOfLines={isDescriptionExpanded ? undefined : 2}
+                >
+                  {business.description}
+                </Text>
                 <TouchableOpacity
                   style={styles.readMoreButton}
                   onPress={() => {
@@ -385,8 +390,8 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
                     {isDescriptionExpanded ? 'Show less' : 'Read more...'}
                   </Text>
                 </TouchableOpacity>
-              )}
-            </View>
+              </View>
+            )}
 
             {/* Opening Hours Section */}
             {openingTimes.length > 0 && (

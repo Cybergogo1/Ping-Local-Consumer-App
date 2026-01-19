@@ -72,7 +72,7 @@ serve(async (req) => {
       OwnerID: business.owner_id,
       Category: business.category,
       'Sub Categories': business.sub_categories,
-      'Stripe Account No.': business.stripe_account_no,
+      'Stripe Account No': business.stripe_account_no,
       LeadRate: business.lead_rate,
       CutPercent: business.cut_percent,
       'Currently Trading': business.currently_trading,

@@ -60,6 +60,24 @@ serve(async (req) => {
       );
     }
 
+    // Fetch the business to get its location_area
+    const { data: business, error: businessError } = await supabaseClient
+      .from("businesses")
+      .select("location_area")
+      .eq("id", requestData.business_id)
+      .single();
+
+    if (businessError) {
+      console.error("Error fetching business:", businessError);
+      return new Response(
+        JSON.stringify({ data: null, error: "Business not found" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 404,
+        }
+      );
+    }
+
     // Prepare offer data with defaults
     const offerData = {
       name: requestData.name,
@@ -89,7 +107,7 @@ serve(async (req) => {
       custom_feed_text: requestData.custom_feed_text || null,
       business_policy_id: requestData.business_policy_id || null,
       policy_notes: requestData.policy_notes || null,
-      location_area: requestData.location_area || null,
+      location_area: business.location_area || null,
       business_location: requestData.business_location || null,
     };
 

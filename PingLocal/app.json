@@ -14,7 +14,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.ping-local-dan.ios",
-      "buildNumber": "5",
+      "buildNumber": "6",
       "supportsTablet": true,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "PingLocal needs your location to show nearby businesses and offers",
@@ -23,6 +23,7 @@
         "NSPhotoLibraryUsageDescription": "PingLocal needs access to your photos to upload images",
         "NSUserTrackingUsageDescription": "This allows us to provide personalized offers based on your activity",
         "UIBackgroundModes": [
+          "remote-notification",
           "remote-notification"
         ],
         "ITSAppUsesNonExemptEncryption": false
@@ -32,7 +33,10 @@
       },
       "entitlements": {
         "aps-environment": "production",
-        "com.apple.developer.in-app-payments": ["merchant.com.pinglocal.consumer"]
+        "com.apple.developer.in-app-payments": [
+          "merchant.com.pinglocal.consumer",
+          "merchant.com.pinglocal.consumer"
+        ]
       }
     },
     "android": {
@@ -43,6 +47,15 @@
         "backgroundColor": "#ffffff"
       },
       "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION",
+        "CAMERA",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE",
+        "VIBRATE",
+        "RECEIVE_BOOT_COMPLETED",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",
         "CAMERA",
@@ -93,6 +106,12 @@
         "projectId": "e3a2debb-38ae-4e21-bb81-5668f8cb0aee"
       }
     },
-    "owner": "cybergogo"
+    "owner": "cybergogo",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/e3a2debb-38ae-4e21-bb81-5668f8cb0aee"
+    }
   }
 }

@@ -33,6 +33,13 @@ Deno.serve(async (req)=>{
     });
     // Parse Adalo-formatted request body
     const body = await req.json();
+
+    // Debug logging - see what Adalo is sending
+    console.log('=== UPDATE BUSINESS REQUEST ===');
+    console.log('Request body:', JSON.stringify(body, null, 2));
+    console.log('Stripe Account No. value:', body['Stripe Account No.']);
+    console.log('All keys in body:', Object.keys(body));
+
     // Get id from body OR from URL path (e.g., /update-business/123)
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/');
@@ -71,7 +78,11 @@ Deno.serve(async (req)=>{
     if (body.OwnerID !== undefined) businessData.owner_id = body.OwnerID;
     if (body.Category !== undefined) businessData.category = body.Category;
     if (body['Sub Categories'] !== undefined) businessData.sub_categories = body['Sub Categories'];
-    if (body['Stripe Account No.'] !== undefined) businessData.stripe_account_no = body['Stripe Account No.'];
+    // Accept both with and without period for Stripe Account No
+    const stripeAcctNo = body['Stripe Account No'] ?? body['Stripe Account No.'];
+    if (stripeAcctNo !== undefined && stripeAcctNo !== null && typeof stripeAcctNo === 'string') {
+      businessData.stripe_account_no = stripeAcctNo;
+    }
     if (body.LeadRate !== undefined) businessData.lead_rate = body.LeadRate;
     if (body.CutPercent !== undefined) businessData.cut_percent = body.CutPercent;
     if (body['Currently Trading'] !== undefined) businessData.currently_trading = body['Currently Trading'];
@@ -99,7 +110,7 @@ Deno.serve(async (req)=>{
       OwnerID: data.owner_id,
       Category: data.category,
       'Sub Categories': data.sub_categories,
-      'Stripe Account No.': data.stripe_account_no,
+      'Stripe Account No': data.stripe_account_no,
       LeadRate: data.lead_rate,
       CutPercent: data.cut_percent,
       'Currently Trading': data.currently_trading,
