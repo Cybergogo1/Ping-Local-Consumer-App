@@ -109,7 +109,8 @@ export type DirectoryStackParamList = {
 
 // Claimed Stack (nested in Claimed tab)
 export type ClaimedStackParamList = {
-  ClaimedMain: undefined;
+  ClaimedMain: { initialFilter?: 'active' | 'redeemed' | 'cancelled' | 'all' } | undefined;
+  OfferDetail: { offerId: number };
   Notifications: undefined;
   NotificationDetail: { notification: NotificationItem };
   Settings: undefined;

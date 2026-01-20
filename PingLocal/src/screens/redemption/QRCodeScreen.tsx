@@ -32,7 +32,6 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
   const [isRedeemed, setIsRedeemed] = useState(false);
   const [redemptionToken, setRedemptionToken] = useState<RedemptionToken | null>(null);
   const [redemptionTokenId, setRedemptionTokenId] = useState<number | null>(null);
-  const isScannedRef = useRef(false);
   const pulseAnim = useRef(new Animated.Value(1)).current;
 
   // Use fields directly from purchase token (no joins)
@@ -42,40 +41,46 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
   // Create redemption token on mount, delete on unmount if not scanned
   useEffect(() => {
     let createdTokenId: number | null = null;
+    let isMounted = true;
+
+    console.log('[QR] === useEffect MOUNT === purchaseToken.id:', purchaseToken.id);
 
     const createRedemptionToken = async () => {
       try {
-        // Check if a redemption token already exists for this purchase
-        const { data: existing } = await supabase
+        console.log('[QR] Step 1: Checking for existing tokens...');
+
+        // Check if there's a finished redemption (already fully redeemed)
+        const { data: finishedToken } = await supabase
           .from('redemption_tokens')
-          .select('id, scanned, status')
+          .select('id, status')
           .eq('purchase_token_id', purchaseToken.id)
+          .eq('status', 'Finished')
           .single();
 
-        if (existing) {
-          // If token exists but wasn't scanned, we can reuse it
-          if (!existing.scanned && existing.status === 'Pending') {
-            createdTokenId = existing.id;
-            setRedemptionTokenId(existing.id);
-            isScannedRef.current = false;
-            return;
-          }
-
-          // If token was scanned or is in progress/finished, delete it and create fresh
-          // (This handles the case where user left screen and came back)
-          if (!existing.scanned || existing.status === 'Pending') {
-            await supabase
-              .from('redemption_tokens')
-              .delete()
-              .eq('id', existing.id);
-          } else {
-            // Token was already scanned, use it
-            createdTokenId = existing.id;
-            setRedemptionTokenId(existing.id);
-            isScannedRef.current = existing.scanned;
-            return;
-          }
+        if (finishedToken) {
+          console.log('[QR] Found finished token, offer already redeemed:', finishedToken.id);
+          // Could show an error to user here if needed
+          return;
         }
+
+        // Delete any unscanned tokens (abandoned attempts) for database tidiness
+        // Keep scanned tokens so Adalo can still use them
+        console.log('[QR] Deleting any previous unscanned tokens...');
+        const deleteResult = await supabase
+          .from('redemption_tokens')
+          .delete()
+          .eq('purchase_token_id', purchaseToken.id)
+          .eq('scanned', false);
+
+        console.log('[QR] Delete result:', deleteResult.error ? deleteResult.error : 'success');
+
+        // Check if component unmounted during the delete
+        if (!isMounted) {
+          console.log('[QR] Component unmounted during delete, aborting');
+          return;
+        }
+
+        console.log('[QR] Step 2: Creating new redemption token...');
 
         // Create new redemption token
         const { data, error } = await supabase
@@ -84,6 +89,7 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
             purchase_token_id: purchaseToken.id,
             customer_id: purchaseToken.user_id,
             customer_name: purchaseToken.user_email,
+            customer_phone_no: purchaseToken.customer_phone_no || null,
             offer_name: purchaseToken.offer_name,
             promotion_id: purchaseToken.offer_id,
             business_id: purchaseToken.business_id,
@@ -95,35 +101,56 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
           .single();
 
         if (error) {
-          console.error('Error creating redemption token:', error);
+          console.error('[QR] ERROR creating redemption token:', error);
+          return;
+        }
+
+        console.log('[QR] Created token successfully. ID:', data.id);
+
+        // Check if component unmounted during the insert
+        if (!isMounted) {
+          console.log('[QR] Component unmounted during insert, cleaning up token:', data.id);
+          // Clean up the token we just created since component is gone
+          await supabase
+            .from('redemption_tokens')
+            .delete()
+            .eq('id', data.id)
+            .eq('scanned', false);
           return;
         }
 
         createdTokenId = data.id;
+        console.log('[QR] Step 3: Setting state. redemptionTokenId =', data.id);
         setRedemptionTokenId(data.id);
-        console.log('Created redemption token:', data.id);
       } catch (error) {
-        console.error('Error in createRedemptionToken:', error);
+        console.error('[QR] EXCEPTION in createRedemptionToken:', error);
       }
     };
 
     createRedemptionToken();
 
-    // Cleanup: delete token if not scanned when user leaves
+    // Cleanup: delete token only if it hasn't been scanned yet
     return () => {
-      if (createdTokenId && !isScannedRef.current) {
+      console.log('[QR] === useEffect CLEANUP ===');
+      console.log('[QR] createdTokenId:', createdTokenId);
+
+      isMounted = false;
+      if (createdTokenId) {
+        console.log('[QR] Deleting unscanned token:', createdTokenId);
         supabase
           .from('redemption_tokens')
           .delete()
           .eq('id', createdTokenId)
-          .eq('scanned', false) // Only delete if still not scanned
+          .eq('scanned', false) // Only delete if NOT scanned - keep scanned tokens for Adalo
           .then(({ error }) => {
             if (error) {
-              console.error('Error deleting redemption token:', error);
+              console.error('[QR] ERROR deleting token in cleanup:', error);
             } else {
-              console.log('Deleted unused redemption token:', createdTokenId);
+              console.log('[QR] Successfully deleted token in cleanup:', createdTokenId);
             }
           });
+      } else {
+        console.log('[QR] No token to delete');
       }
     };
   }, [purchaseToken.id]);
@@ -171,33 +198,52 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
       )
       .subscribe();
 
-    // Also subscribe to redemption_tokens for this purchase
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [purchaseToken.id]);
+
+  // Subscribe to redemption token updates - only when we have a valid redemptionTokenId
+  useEffect(() => {
+    console.log('[QR] === Subscription useEffect === redemptionTokenId:', redemptionTokenId);
+
+    if (!redemptionTokenId) {
+      console.log('[QR] No redemptionTokenId yet, skipping subscription setup');
+      return;
+    }
+
+    // Use redemptionTokenId in channel name to ensure unique subscription per token
+    const channelName = `redemption_token_${redemptionTokenId}_${Date.now()}`;
+    console.log('[QR] Setting up realtime subscription. Channel:', channelName);
+    console.log('[QR] Filter: id=eq.' + redemptionTokenId);
+
     const redemptionChannel = supabase
-      .channel(`redemption_token_${purchaseToken.id}`)
+      .channel(channelName)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'redemption_tokens',
-          filter: `purchase_token_id=eq.${purchaseToken.id}`,
+          filter: `id=eq.${redemptionTokenId}`,
         },
         (payload) => {
-          console.log('Redemption token update:', payload);
+          console.log('[QR] ========== REALTIME EVENT RECEIVED ==========');
+          console.log('[QR] Event type:', payload.eventType);
+          console.log('[QR] Old:', JSON.stringify(payload.old));
+          console.log('[QR] New:', JSON.stringify(payload.new));
+
           if (payload.new) {
             const newToken = payload.new as RedemptionToken;
+            console.log('[QR] Token scanned:', newToken.scanned, 'status:', newToken.status);
             setRedemptionToken(newToken);
-
-            // Update scanned ref so cleanup doesn't delete
-            if (newToken.scanned) {
-              isScannedRef.current = true;
-            }
 
             // Get bill amount (database uses bill_input_total)
             const billAmount = newToken.bill_input_total || newToken.bill_amount;
 
             // Pay on the day: status='Submitted' with bill amount -> go to bill confirmation
             if (newToken.status === 'Submitted' && billAmount) {
+              console.log('[QR] Navigating to BillConfirmation');
               navigation.replace('BillConfirmation', {
                 purchaseTokenId: purchaseToken.id,
                 redemptionTokenId: newToken.id,
@@ -211,6 +257,7 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
             // If scanned or status is 'In Progress', navigate to waiting screen
             // This applies to ALL promotions
             if ((newToken.scanned || newToken.status === 'In Progress') && newToken.status !== 'Finished') {
+              console.log('[QR] Navigating to RedemptionWaiting');
               navigation.replace('RedemptionWaiting', {
                 purchaseTokenId: purchaseToken.id,
                 redemptionTokenId: newToken.id,
@@ -222,6 +269,7 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
 
             // Regular offer: status='Finished' -> go to success
             if (newToken.status === 'Finished') {
+              console.log('[QR] Navigating to RedemptionSuccess');
               navigation.replace('RedemptionSuccess', {
                 offerName,
                 businessName,
@@ -230,13 +278,15 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log('[QR] Subscription status:', status);
+      });
 
     return () => {
-      supabase.removeChannel(channel);
+      console.log('[QR] Removing subscription channel:', channelName);
       supabase.removeChannel(redemptionChannel);
     };
-  }, [purchaseToken.id]);
+  }, [redemptionTokenId, purchaseToken.id]);
 
   const fetchRedemptionToken = async () => {
     try {
@@ -248,11 +298,6 @@ export default function QRCodeScreen({ navigation, route }: QRCodeScreenProps) {
 
       if (data && !error) {
         setRedemptionToken(data);
-
-        // Update scanned ref
-        if (data.scanned) {
-          isScannedRef.current = true;
-        }
 
         // Get bill amount (database uses bill_input_total)
         const billAmount = data.bill_input_total || data.bill_amount;

@@ -72,7 +72,6 @@ export default function MapScreen() {
         .eq('is_signed_off', true);
 
       if (businessError) throw businessError;
-      console.log('Map: Fetched businesses:', businessData?.length || 0);
 
       // Fetch all active offers
       const { data: offersData, error: offersError } = await supabase
@@ -82,7 +81,6 @@ export default function MapScreen() {
         .gte('end_date', new Date().toISOString());
 
       if (offersError) throw offersError;
-      console.log('Map: Fetched offers:', offersData?.length || 0);
 
       // Group offers by business_name (since businesses table has no 'id' column)
       const offersByBusiness: Record<string, Offer[]> = {};
@@ -95,7 +93,6 @@ export default function MapScreen() {
           offersByBusiness[offerTyped.business_name].push(offerTyped);
         }
       });
-      console.log('Map: Businesses with offers:', Object.keys(offersByBusiness));
 
       // Filter businesses that have at least one active offer and have coordinates
       const businessesWithLocation = (businessData || [])
@@ -109,7 +106,6 @@ export default function MapScreen() {
           offers: offersByBusiness[business.name] || [],
         }));
 
-      console.log('Map: Final businesses with location:', businessesWithLocation.length, businessesWithLocation.map(b => b.name));
       setBusinesses(businessesWithLocation);
     } catch (error) {
       console.error('Error fetching businesses:', error);

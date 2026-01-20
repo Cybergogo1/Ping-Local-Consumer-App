@@ -58,7 +58,7 @@ Deno.serve(async (req)=>{
       });
     }
     // Build update object - only include fields that are provided
-    const businessData = {
+    const businessData: Record<string, any> = {
       updated: new Date().toISOString()
     };
     // Map Adalo fields to Supabase fields - only if provided
@@ -88,6 +88,17 @@ Deno.serve(async (req)=>{
     if (body['Currently Trading'] !== undefined) businessData.currently_trading = body['Currently Trading'];
     if (body.latitude !== undefined) businessData.latitude = body.latitude;
     if (body.longitude !== undefined) businessData.longitude = body.longitude;
+
+    // Extract coordinates from Location field if lat/lng not explicitly provided
+    // Adalo location format: { address: string, latitude: number, longitude: number }
+    if (body.Location && typeof body.Location === 'object') {
+      if (businessData.latitude === undefined && body.Location.latitude !== undefined) {
+        businessData.latitude = body.Location.latitude;
+      }
+      if (businessData.longitude === undefined && body.Location.longitude !== undefined) {
+        businessData.longitude = body.Location.longitude;
+      }
+    }
     // Update the business
     const { data, error } = await supabaseClient.from('businesses').update(businessData).eq('id', id).select().single();
     if (error) throw error;

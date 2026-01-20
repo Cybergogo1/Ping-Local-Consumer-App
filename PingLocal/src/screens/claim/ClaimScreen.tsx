@@ -51,9 +51,10 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
   const isCallBooking = offer.booking_type === 'call';
   const requiresExternalBooking = isExternalBooking || isCallBooking;
 
-  // Calculate total
+  // Calculate total - use partySize for slot-based bookings, quantity for item-based
   const unitPrice = offer.price_discount || 0;
-  const total = unitPrice * quantity;
+  const effectiveQuantity = hasSlot ? partySize : quantity;
+  const total = unitPrice * effectiveQuantity;
 
   const formatTime = (timeString: string) => {
     const [hours, minutes] = timeString.split(':');
@@ -103,6 +104,8 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
       }
 
       // Create purchase token - matching actual Supabase table columns
+      // Use partySize for slot-based bookings, otherwise use quantity
+      const effectiveQty = hasSlot ? partySize : quantity;
       const purchaseTokenData = {
         user_id: user.id,
         user_email: user.email,
@@ -113,6 +116,8 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         customer_price: isPayUpfront ? total : null,
         ping_local_take: pingLocalTake,
         offer_slot: selectedSlot?.id || null,
+        quantity: effectiveQty,
+        customer_phone_no: user.phone_no || null,
         redeemed: false,
         cancelled: false,
         ping_invoiced: false,
@@ -266,6 +271,8 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
       }
 
       // 4. Payment successful - create the purchase token with payment info
+      // Use partySize for slot-based bookings, otherwise use quantity
+      const effectiveQty = hasSlot ? partySize : quantity;
       const purchaseTokenData = {
         user_id: user.id,
         user_email: user.email,
@@ -276,6 +283,8 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         customer_price: total,
         ping_local_take: paymentData.platformFee / 100, // Convert from cents
         offer_slot: selectedSlot?.id || null,
+        quantity: effectiveQty,
+        customer_phone_no: user.phone_no || null,
         redeemed: false,
         cancelled: false,
         ping_invoiced: false,
@@ -522,8 +531,8 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
           </View>
         )}
 
-        {/* Quantity Selector (if quantity_item) */}
-        {offer.quantity_item && (
+        {/* Quantity Selector (if quantity_item and not one_per_customer) */}
+        {offer.quantity_item && !offer.one_per_customer && (
           <View style={styles.quantityCard}>
             <Text style={styles.cardTitle}>Quantity</Text>
             <View style={styles.quantitySelector}>
@@ -579,10 +588,17 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
             <>
               <View style={styles.priceRow}>
                 <Text style={styles.priceLabel}>
-                  {offer.name}{offer.quantity_item ? ` x ${quantity}` : ''}
+                  {offer.name}{hasSlot && partySize > 1 ? ` x ${partySize}` : ''}{offer.quantity_item && !hasSlot ? ` x ${quantity}` : ''}
                 </Text>
-                <Text style={styles.priceValue}>£{(unitPrice * quantity).toFixed(2)}</Text>
+                <Text style={styles.priceValue}>£{total.toFixed(2)}</Text>
               </View>
+
+              {(hasSlot && partySize > 1) && (
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>£{unitPrice.toFixed(2)} per person</Text>
+                  <Text style={styles.priceValue}></Text>
+                </View>
+              )}
 
               <View style={styles.priceDivider} />
 

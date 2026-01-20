@@ -19,7 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { colors, spacing, borderRadius, fontSize, fontFamily, shadows } from '../../theme';
-import { Offer, ImageGalleryItem, PurchaseToken } from '../../types/database';
+import { Offer, ImageGalleryItem, PurchaseToken, BusinessPolicy } from '../../types/database';
 import { OfferDetailScreenProps } from '../../types/navigation';
 import { ImageCarousel } from '../../components/ImageCarousel';
 import { canCancelClaim, cancelClaim } from '../../services/claimCancellationService';
@@ -45,6 +45,7 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
   const [existingClaim, setExistingClaim] = useState<PurchaseToken | null>(null);
   const [canCancel, setCanCancel] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [businessPolicy, setBusinessPolicy] = useState<BusinessPolicy | null>(null);
 
   useEffect(() => {
     fetchOffer();
@@ -60,6 +61,32 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
       checkExistingClaim();
     }
   }, [offer?.id, offer?.one_per_customer, user?.email]);
+
+  // Fetch business policy when offer has a business_policy_id
+  useEffect(() => {
+    if (offer?.business_policy_id) {
+      fetchBusinessPolicy(offer.business_policy_id);
+    }
+  }, [offer?.business_policy_id]);
+
+  const fetchBusinessPolicy = async (policyId: number) => {
+    try {
+      const { data, error } = await supabase
+        .from('business_policies')
+        .select('id, name, returns_policy, redemption, category, created_by_ping, created_at, updated_at')
+        .eq('id', policyId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching business policy:', error);
+        return;
+      }
+
+      setBusinessPolicy(data);
+    } catch (error) {
+      console.error('Error fetching business policy:', error);
+    }
+  };
 
   const fetchOffer = async () => {
     try {
@@ -171,7 +198,7 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
     try {
       const { data, error } = await supabase
         .from('purchase_tokens')
-        .select('*, offers(*)')
+        .select('*')
         .eq('user_email', user.email)
         .eq('offer_id', offerId)
         .eq('cancelled', false)
@@ -665,10 +692,23 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
             </View>
             <ScrollView style={styles.modalBody}>
               {/* Business Policy */}
-              {offer?.business_policy && (
+              {businessPolicy && (
                 <>
-                  <Text style={styles.modalSectionTitle}>Business Policy</Text>
-                  <Text style={styles.modalText}>{offer.business_policy}</Text>
+                  <Text style={styles.modalSectionTitle}>{businessPolicy.name}</Text>
+
+                  {businessPolicy.returns_policy && (
+                    <>
+                      <Text style={styles.modalSubsectionTitle}>Returns Policy</Text>
+                      <Text style={styles.modalText}>{businessPolicy.returns_policy}</Text>
+                    </>
+                  )}
+
+                  {businessPolicy.redemption && (
+                    <>
+                      <Text style={[styles.modalSubsectionTitle, { marginTop: spacing.sm }]}>Redemption</Text>
+                      <Text style={styles.modalText}>{businessPolicy.redemption}</Text>
+                    </>
+                  )}
                 </>
               )}
 
@@ -683,7 +723,7 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
               )}
 
               {/* Fallback if no policy exists */}
-              {!offer?.business_policy && !offer?.policy_notes && (
+              {!businessPolicy && !offer?.policy_notes && (
                 <>
                   <Text style={styles.modalSectionTitle}>Standard Terms</Text>
                   <Text style={styles.modalText}>
@@ -1205,6 +1245,13 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     fontFamily: fontFamily.bodySemiBold,
     color: colors.primary,
+    marginBottom: spacing.xs,
+  },
+  modalSubsectionTitle: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.grayDark,
+    marginTop: spacing.sm,
     marginBottom: spacing.xs,
   },
 

@@ -12,12 +12,13 @@ import {
   ScrollView,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { colors, fontSize, fontWeight, spacing, borderRadius, shadows, fontFamily } from '../../theme';
 import { PurchaseToken } from '../../types/database';
+import { ClaimedStackParamList } from '../../types/navigation';
 import ClaimedOfferCard from '../../components/claimed/ClaimedOfferCard';
 
 type FilterType = 'active' | 'redeemed' | 'cancelled' | 'all';
@@ -26,12 +27,23 @@ export default function ClaimedScreen() {
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
   const navigation = useNavigation<any>();
+  const route = useRoute<RouteProp<ClaimedStackParamList, 'ClaimedMain'>>();
   const insets = useSafeAreaInsets();
+
+  // Get initial filter from route params, default to 'active'
+  const initialFilter = route.params?.initialFilter ?? 'active';
 
   const [purchaseTokens, setPurchaseTokens] = useState<PurchaseToken[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<FilterType>('active');
+  const [activeFilter, setActiveFilter] = useState<FilterType>(initialFilter);
+
+  // Update filter when route params change
+  useEffect(() => {
+    if (route.params?.initialFilter) {
+      setActiveFilter(route.params.initialFilter);
+    }
+  }, [route.params?.initialFilter]);
 
   const fetchPurchaseTokens = async () => {
     if (!user) return;
@@ -137,9 +149,17 @@ export default function ClaimedScreen() {
     navigation.navigate('QRCode', { purchaseToken });
   };
 
+  const handleViewOffer = (purchaseToken: PurchaseToken) => {
+    if (purchaseToken.offer_id) {
+      navigation.navigate('OfferDetail', { offerId: purchaseToken.offer_id });
+    }
+  };
+
   const handleCardPress = (purchaseToken: PurchaseToken) => {
-    // Could navigate to a detail view, for now just show QR
-    if (!purchaseToken.redeemed) {
+    // Navigate to offer detail if available, otherwise show QR for active claims
+    if (purchaseToken.offer_id) {
+      handleViewOffer(purchaseToken);
+    } else if (!purchaseToken.redeemed) {
       handleShowQR(purchaseToken);
     }
   };
@@ -338,6 +358,7 @@ export default function ClaimedScreen() {
               purchaseToken={item}
               onPress={() => handleCardPress(item)}
               onShowQR={() => handleShowQR(item)}
+              onViewOffer={() => handleViewOffer(item)}
               onBookingUpdated={fetchPurchaseTokens}
             />
           )}

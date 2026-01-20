@@ -153,11 +153,6 @@ export default function HomeScreen() {
         .select('*')
         .order('name');
 
-      console.log('[DEBUG fetchFilters] location_areas query:', {
-        error: locError,
-        locations: locations?.map(l => ({ id: l.id, name: l.name })),
-      });
-
       if (locations) {
         setLocationAreas(locations);
       }
@@ -217,20 +212,6 @@ export default function HomeScreen() {
 
       const { data, error } = await query;
 
-      console.log('[DEBUG fetchAvailableLocations] Raw query result:', {
-        error,
-        offerCount: data?.length,
-        offers: data?.map((o: any) => ({
-          id: o.id,
-          title: o.title,
-          status: o.status,
-          end_date: o.end_date,
-          business_name: o.businesses?.name,
-          business_location_area: o.businesses?.location_area,
-          offer_location_area: o.location_area,
-        })),
-      });
-
       if (error) throw error;
 
       if (data) {
@@ -273,8 +254,6 @@ export default function HomeScreen() {
         });
 
         const uniqueLocations = Array.from(locationSet).sort();
-        console.log('[DEBUG fetchAvailableLocations] Extracted unique locations:', uniqueLocations);
-        console.log('[DEBUG fetchAvailableLocations] locationAreas from table:', locationAreas.map(a => a.name));
         setAvailableLocations(uniqueLocations);
       }
     } catch (error) {
@@ -938,7 +917,6 @@ export default function HomeScreen() {
                 </TouchableOpacity>
 
                 {/* Location Areas - Only show available locations (case-insensitive match) */}
-                {console.log('[DEBUG Modal Render] locationAreas:', locationAreas.map(a => a.name), 'availableLocations:', availableLocations, 'filtered:', locationAreas.filter((area) => availableLocations.some(loc => loc.toLowerCase() === area.name.toLowerCase())).map(a => a.name))}
                 {locationAreas
                   .filter((area) => availableLocations.some(
                     loc => loc.toLowerCase() === area.name.toLowerCase()

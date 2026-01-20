@@ -46,6 +46,17 @@ export interface Business {
   updated: string;
 }
 
+export interface BusinessPolicy {
+  id: number;
+  name: string;
+  returns_policy?: string;
+  redemption?: string;
+  category?: string;
+  created_by_ping?: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Offer {
   id: number;
   name: string;
@@ -73,7 +84,7 @@ export interface Offer {
   customer_bill_input: boolean;
   change_button_text?: string;
   custom_feed_text?: string;
-  business_policy?: string;
+  business_policy_id?: number;
   policy_notes?: string;
   location_area?: string;
   business_location?: string;
@@ -82,6 +93,7 @@ export interface Offer {
   // Joined data
   businesses?: Business;
   gallery_images?: ImageGalleryItem[];
+  business_policy?: BusinessPolicy;
 }
 
 // Legacy - keeping for reference but using PurchaseToken/RedemptionToken instead
@@ -122,6 +134,10 @@ export interface PurchaseToken {
   api_last_sync_date?: string;
   created: string;
   updated: string;
+  // Quantity tracking (party size for bookings, item quantity for purchases)
+  quantity?: number;
+  // Customer phone number at time of purchase
+  customer_phone_no?: string;
   // External/call booking tracking
   booking_date?: string; // Date and time user says they booked for (ISO timestamp)
   booking_confirmed?: boolean; // Whether user confirmed they made a booking
@@ -141,6 +157,7 @@ export interface RedemptionToken {
   bill_input_total?: number; // Bill amount entered by business (Pay on Day)
   customer_name?: string;
   customer_id?: number;
+  customer_phone_no?: string;
   offer_name?: string;
   business_name?: string;
   promotion_id?: number;

@@ -3,6 +3,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { ClaimedStackParamList } from '../types/navigation';
 
 import ClaimedScreen from '../screens/main/ClaimedScreen';
+import OfferDetailScreen from '../screens/main/OfferDetailScreen';
 import QRCodeScreen from '../screens/redemption/QRCodeScreen';
 import RedemptionWaitingScreen from '../screens/redemption/RedemptionWaitingScreen';
 import RedemptionSuccessScreen from '../screens/redemption/RedemptionSuccessScreen';
@@ -22,6 +23,7 @@ export default function ClaimedStackNavigator() {
       }}
     >
       <Stack.Screen name="ClaimedMain" component={ClaimedScreen} />
+      <Stack.Screen name="OfferDetail" component={OfferDetailScreen} />
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="NotificationDetail" component={NotificationDetailScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />

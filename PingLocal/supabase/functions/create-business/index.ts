@@ -33,6 +33,21 @@ Deno.serve(async (req)=>{
     });
     // Parse Adalo-formatted request body
     const body = await req.json();
+
+    // Extract coordinates from Location field if lat/lng not explicitly provided
+    // Adalo location format: { address: string, latitude: number, longitude: number }
+    let latitude = body.latitude;
+    let longitude = body.longitude;
+
+    if (body.Location && typeof body.Location === 'object') {
+      if (latitude === undefined && body.Location.latitude !== undefined) {
+        latitude = body.Location.latitude;
+      }
+      if (longitude === undefined && body.Location.longitude !== undefined) {
+        longitude = body.Location.longitude;
+      }
+    }
+
     // Transform from Adalo format to Supabase format
     const businessData = {
       name: body.Name,
@@ -55,8 +70,8 @@ Deno.serve(async (req)=>{
       lead_rate: body.LeadRate,
       cut_percent: body.CutPercent,
       currently_trading: body['Currently Trading'],
-      latitude: body.latitude,
-      longitude: body.longitude,
+      latitude: latitude,
+      longitude: longitude,
       updated: new Date().toISOString()
     };
     // Check if updating (id provided) or creating

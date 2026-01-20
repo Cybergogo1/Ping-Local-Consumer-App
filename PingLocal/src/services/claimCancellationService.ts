@@ -116,8 +116,8 @@ export async function cancelClaim(purchaseToken: PurchaseToken): Promise<CancelC
       if (slotFetchError) {
         console.warn('Could not fetch slot for booked_count update:', slotFetchError);
       } else if (slot) {
-        // Default party size to 1 if not stored
-        const partySize = 1;
+        // Use stored quantity (party size), default to 1 for backwards compatibility
+        const partySize = purchaseToken.quantity ?? 1;
         const newBookedCount = Math.max(0, (slot.booked_count || 1) - partySize);
         const { error: slotUpdateError } = await supabase
           .from('offer_slots')

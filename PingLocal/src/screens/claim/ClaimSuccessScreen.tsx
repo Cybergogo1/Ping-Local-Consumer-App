@@ -132,7 +132,10 @@ export default function ClaimSuccessScreen({ navigation, route }: ClaimSuccessSc
         routes: [{ name: 'HomeFeed' }],
       })
     );
-    navigation.getParent()?.navigate('Claimed');
+    navigation.getParent()?.navigate('Claimed', {
+      screen: 'ClaimedMain',
+      params: { initialFilter: 'active' },
+    });
   };
 
   const handleBackToFeed = () => {

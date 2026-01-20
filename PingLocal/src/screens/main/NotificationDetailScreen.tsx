@@ -51,11 +51,20 @@ export default function NotificationDetailScreen() {
 
   const markAsRead = async () => {
     try {
-      await supabase
+      // Check if already read in database to prevent double-decrement
+      const { data } = await supabase
         .from('notifications')
-        .update({ read: true })
-        .eq('id', notification.id);
-      decrementUnreadCount();
+        .select('read')
+        .eq('id', notification.id)
+        .single();
+
+      if (data && !data.read) {
+        await supabase
+          .from('notifications')
+          .update({ read: true })
+          .eq('id', notification.id);
+        decrementUnreadCount();
+      }
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }

@@ -9,6 +9,7 @@ import {
   updateTokenLastUsed,
 } from '../services/notificationService';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 
 // Navigation reference for handling notifications when app is not mounted
 let navigationRef: NavigationContainerRef<any> | null = null;
@@ -31,6 +32,7 @@ interface NotificationData {
  */
 export function usePushNotifications() {
   const { user } = useAuth();
+  const { refreshUnreadCount } = useNotifications();
   const appState = useRef(AppState.currentState);
 
   // Handle notification navigation
@@ -105,7 +107,8 @@ export function usePushNotifications() {
       // When notification is received while app is in foreground
       (notification: Notifications.Notification) => {
         console.log('Notification received in foreground:', notification);
-        // You could show an in-app notification banner here
+        // Refresh unread count when a new notification arrives
+        refreshUnreadCount();
       },
       // When user taps on notification
       (response: Notifications.NotificationResponse) => {
@@ -116,7 +119,7 @@ export function usePushNotifications() {
     );
 
     return cleanup;
-  }, [user, handleNotificationNavigation]);
+  }, [user, handleNotificationNavigation, refreshUnreadCount]);
 
   // Handle app state changes to update token last used
   useEffect(() => {
@@ -124,8 +127,9 @@ export function usePushNotifications() {
 
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
       if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
-        // App has come to foreground - update token last used
+        // App has come to foreground - update token last used and refresh notification count
         updateTokenLastUsed();
+        refreshUnreadCount();
       }
       appState.current = nextAppState;
     });
@@ -133,7 +137,7 @@ export function usePushNotifications() {
     return () => {
       subscription.remove();
     };
-  }, [user]);
+  }, [user, refreshUnreadCount]);
 
   // Check if app was opened from a notification
   useEffect(() => {

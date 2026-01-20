@@ -23,6 +23,7 @@ interface ClaimedOfferCardProps {
   purchaseToken: PurchaseToken;
   onPress: () => void;
   onShowQR: () => void;
+  onViewOffer?: () => void; // Navigate to offer detail screen
   onBookingUpdated?: () => void; // Callback to refresh list after booking update
 }
 
@@ -30,6 +31,7 @@ export default function ClaimedOfferCard({
   purchaseToken,
   onPress,
   onShowQR,
+  onViewOffer,
   onBookingUpdated,
 }: ClaimedOfferCardProps) {
   // Use data from purchase token and joined offer data
@@ -173,8 +175,17 @@ export default function ClaimedOfferCard({
       })()
     : null;
 
+  // Handle card press - navigate to offer detail if available
+  const handleCardPress = () => {
+    if (onViewOffer && purchaseToken.offer_id) {
+      onViewOffer();
+    } else {
+      onPress();
+    }
+  };
+
   return (
-    <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.8}>
+    <TouchableOpacity style={styles.card} onPress={handleCardPress} activeOpacity={0.8}>
       {/* Image - use featured_image from joined offer data */}
       <Image
         source={featuredImage ? { uri: featuredImage } : placeholderImage}

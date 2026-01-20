@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Animated,
+  AppState,
+  AppStateStatus,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
@@ -30,6 +32,7 @@ export default function RedemptionWaitingScreen({ navigation, route }: Redemptio
 
   // Pulse animation for the icon
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const appState = useRef(AppState.currentState);
 
   useEffect(() => {
     const pulse = Animated.loop(
@@ -49,6 +52,73 @@ export default function RedemptionWaitingScreen({ navigation, route }: Redemptio
     pulse.start();
     return () => pulse.stop();
   }, []);
+
+  // Function to check the current redemption token status
+  const checkRedemptionStatus = useCallback(async () => {
+    try {
+      console.log('Checking redemption token status after app foreground...');
+      const { data, error } = await supabase
+        .from('redemption_tokens')
+        .select('*')
+        .eq('id', redemptionTokenId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching redemption token:', error);
+        return;
+      }
+
+      if (data) {
+        const updatedToken = data as RedemptionToken;
+        const billAmount = updatedToken.bill_input_total || updatedToken.bill_amount;
+
+        console.log('Redemption token status:', updatedToken.status, 'Bill amount:', billAmount);
+
+        // Pay on the day: status='Submitted' with bill amount -> go to bill confirmation
+        if (updatedToken.status === 'Submitted' && billAmount) {
+          navigation.replace('BillConfirmation', {
+            purchaseTokenId,
+            redemptionTokenId,
+            billAmount,
+            offerName,
+            businessName,
+          });
+          return;
+        }
+
+        // Regular offer: status='Finished' -> go to success
+        if (updatedToken.status === 'Finished') {
+          navigation.replace('RedemptionSuccess', {
+            offerName,
+            businessName,
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Error checking redemption status:', error);
+    }
+  }, [redemptionTokenId, purchaseTokenId, offerName, businessName, navigation]);
+
+  // Listen for app state changes to re-check status when returning from background
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      // App has come to the foreground from background/inactive
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        console.log('App returned to foreground, checking redemption status...');
+        checkRedemptionStatus();
+      }
+      appState.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [checkRedemptionStatus]);
 
   // Subscribe to realtime updates on the redemption token
   // Navigate when:

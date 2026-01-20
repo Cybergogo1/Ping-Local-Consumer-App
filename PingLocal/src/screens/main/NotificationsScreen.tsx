@@ -107,8 +107,14 @@ export default function NotificationsScreen() {
   };
 
   const handleNotificationPress = async (notification: Notification) => {
-    // Navigate to notification detail screen
-    navigation.navigate('NotificationDetail', { notification });
+    // Mark as read before navigating (if not already read)
+    if (!notification.read) {
+      await handleMarkAsRead(notification.id);
+    }
+    // Navigate with the updated notification (read: true)
+    navigation.navigate('NotificationDetail', {
+      notification: { ...notification, read: true }
+    });
   };
 
   const getNotificationIcon = (category?: string): keyof typeof Ionicons.glyphMap => {
