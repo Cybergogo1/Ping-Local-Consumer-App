@@ -482,7 +482,7 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
                 <Text style={styles.priceAmount}>
                   {offer.price_discount
                     ? `£${offer.price_discount.toFixed(2)}`
-                    : offer.custom_feed_text || 'Book Now'}
+                : offer.custom_feed_text || 'Free to Claim!'}
                 </Text>
                 {!!offer.price_discount && offer.unit_of_measurement && (
                   <Text style={styles.priceUnit}>per {offer.unit_of_measurement}</Text>
