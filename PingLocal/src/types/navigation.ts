@@ -37,6 +37,11 @@ export type HomeStackParamList = {
   NotificationDetail: { notification: NotificationItem };
   LoyaltyInfo: undefined;
   Settings: undefined;
+  EditProfile: undefined;
+  ChangePassword: undefined;
+  NotificationPreferences: undefined;
+  FAQs: undefined;
+  OnboardingReplay: undefined;
   // Claim flow screens
   SlotBooking: { offerId: number; offer: import('./database').Offer };
   ExternalBooking: { offerId: number; offer: import('./database').Offer };

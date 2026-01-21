@@ -360,12 +360,12 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
       return;
     }
 
-    // Route based on booking type
-    if (offer.booking_type === 'online' || (offer.requires_booking && !offer.booking_type)) {
+    // Route based on booking type - only check booking_type if requires_booking is explicitly true
+    if (offer.requires_booking === true && (offer.booking_type === 'online' || !offer.booking_type)) {
       // Slot-based booking - go to calendar
       navigation.navigate('SlotBooking', { offerId: offer.id, offer });
     } else {
-      // External/call booking or no booking - go directly to claim
+      // No booking required, or external/call booking - go directly to claim
       // For external/call, user will book AFTER claiming via ClaimSuccessScreen
       navigation.navigate('Claim', { offerId: offer.id, offer });
     }
