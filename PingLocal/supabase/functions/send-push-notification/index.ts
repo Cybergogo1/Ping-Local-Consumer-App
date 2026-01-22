@@ -141,7 +141,7 @@ serve(async (req) => {
         }
 
         title = `New from ${payload.business_name || "a business you follow"}`;
-        body = payload.offer_title || "Check out their latest offer!";
+        body = payload.offer_title ? `The promotion '${payload.offer_title}' is now available!` : "Check out their latest offer!";
         data = { type: "new_offer", offerId: payload.offer_id, businessId: payload.business_id };
         channelId = "offers";
         break;
@@ -184,7 +184,7 @@ serve(async (req) => {
         }
 
         title = "Offer Expiring Soon";
-        body = `${payload.offer_title || "An offer you claimed"} expires tomorrow!`;
+        body = payload.offer_title ? `The promotion '${payload.offer_title}' expires tomorrow!` : "An offer you claimed expires tomorrow!";
         data = { type: "offer_expiring", offerId: payload.offer_id };
         channelId = "reminders";
         break;
@@ -218,7 +218,7 @@ serve(async (req) => {
         }
 
         title = "Redemption Reminder";
-        body = `Don't forget to redeem your ${payload.offer_title || "offer"}!`;
+        body = payload.offer_title ? `Don't forget to redeem the promotion '${payload.offer_title}'!` : "Don't forget to redeem your offer!";
         data = { type: "redemption_reminder", claimId: payload.claim_id, offerId: payload.offer_id };
         channelId = "reminders";
         break;
@@ -315,8 +315,12 @@ serve(async (req) => {
         const isPurchase = payload.purchase_type === "purchase";
         title = isPurchase ? "Purchase Confirmed!" : "Offer Claimed!";
         body = isPurchase
-          ? `You've purchased ${payload.offer_title || "an offer"} from ${payload.business_name || "a business"}. Show your QR code to redeem!`
-          : `You've claimed ${payload.offer_title || "an offer"} from ${payload.business_name || "a business"}. Show your QR code to redeem!`;
+          ? payload.offer_title
+            ? `You've purchased the promotion '${payload.offer_title}' from ${payload.business_name || "a business"}. Show your QR code to redeem!`
+            : `You've purchased an offer from ${payload.business_name || "a business"}. Show your QR code to redeem!`
+          : payload.offer_title
+            ? `You've claimed the promotion '${payload.offer_title}' from ${payload.business_name || "a business"}. Show your QR code to redeem!`
+            : `You've claimed an offer from ${payload.business_name || "a business"}. Show your QR code to redeem!`;
         data = { type: "offer_claimed", offerId: payload.offer_id, businessId: payload.business_id, claimId: payload.claim_id };
         channelId = "offers";
         break;

@@ -86,21 +86,25 @@ serve(async (req) => {
 
     // Get the offer details via purchase_token
     let offer = null
+    let purchaseTokenData = null
     if (redemptionToken.purchase_token_id) {
       const { data: purchaseToken, error: purchaseError } = await supabaseClient
         .from('purchase_tokens')
-        .select('offer_id')
+        .select('offer_id, customer_price')
         .eq('id', redemptionToken.purchase_token_id)
         .single()
 
-      if (!purchaseError && purchaseToken?.offer_id) {
-        const { data: offerData } = await supabaseClient
-          .from('offers')
-          .select('offer_type, customer_bill_input')
-          .eq('id', purchaseToken.offer_id)
-          .single()
+      if (!purchaseError && purchaseToken) {
+        purchaseTokenData = purchaseToken
+        if (purchaseToken.offer_id) {
+          const { data: offerData } = await supabaseClient
+            .from('offers')
+            .select('offer_type, customer_bill_input')
+            .eq('id', purchaseToken.offer_id)
+            .single()
 
-        offer = offerData
+          offer = offerData
+        }
       }
     }
 
@@ -150,6 +154,11 @@ serve(async (req) => {
       updateData.completed = true
       updateData.time_redeemed = now.toISOString()
       updateData.date_redeemed = now.toISOString().split('T')[0]
+
+      // Set bill_input_total from customer_price for display purposes in Adalo
+      if (purchaseTokenData?.customer_price !== undefined && purchaseTokenData?.customer_price !== null) {
+        updateData.bill_input_total = purchaseTokenData.customer_price
+      }
     }
 
     console.log('Update data:', updateData)

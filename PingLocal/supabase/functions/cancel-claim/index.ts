@@ -195,8 +195,8 @@ serve(async (req) => {
       // Build notification content
       const title = "Booking Cancelled";
       const notificationBody = reason
-        ? `${businessName} has cancelled your booking for ${offerName}. Reason: ${reason}`
-        : `${businessName} has cancelled your booking for ${offerName}.`;
+        ? `${businessName} has cancelled your booking for the promotion '${offerName}'. Reason: ${reason}`
+        : `${businessName} has cancelled your booking for the promotion '${offerName}'.`;
 
       const notificationData = {
         type: "claim_cancelled",

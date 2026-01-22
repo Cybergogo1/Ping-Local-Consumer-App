@@ -182,7 +182,7 @@ serve(async (req) => {
           to: token,
           sound: "default",
           title: "Purchase Confirmed!",
-          body: `You bought ${offer_name} from ${business_name}`,
+          body: `You bought the promotion '${offer_name}' from ${business_name}`,
           data: {
             type: "purchase_confirmed",
             offerId: offer_id,
@@ -214,7 +214,7 @@ serve(async (req) => {
               user_id: consumer_user_id,
               notification_type: "purchase_confirmed",
               title: "Purchase Confirmed!",
-              body: `You bought ${offer_name} from ${business_name}`,
+              body: `You bought the promotion '${offer_name}' from ${business_name}`,
               data: { offerId: offer_id, businessId: business_id },
               expo_ticket_id: ticketData?.id || null,
               status,
