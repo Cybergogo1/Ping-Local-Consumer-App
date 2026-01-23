@@ -45,6 +45,7 @@ serve(async (req) => {
     const slotDate = requestData.slot_date || requestData.slotDate || requestData['Slot Date'] || requestData['slot date'] || body.slot_date
     const slotTime = requestData.slot_time || requestData.slotTime || requestData['Slot Time'] || requestData['slot time'] || body.slot_time
     const capacity = requestData.capacity || requestData.Capacity || body.capacity || 10
+    const minPeople = requestData.min_people || requestData.minPeople || requestData['Min People'] || requestData['min people'] || body.min_people || 1
 
     // Validate required fields
     if (!offerId) {
@@ -74,6 +75,7 @@ serve(async (req) => {
       slot_date: slotDate,
       slot_time: slotTime,
       capacity: capacity,
+      min_people: minPeople,
       booked_count: 0,
       available: true,
     }

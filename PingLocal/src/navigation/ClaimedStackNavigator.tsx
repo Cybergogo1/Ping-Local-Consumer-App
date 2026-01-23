@@ -12,6 +12,11 @@ import BillDisputeWaitingScreen from '../screens/redemption/BillDisputeWaitingSc
 import NotificationsScreen from '../screens/main/NotificationsScreen';
 import NotificationDetailScreen from '../screens/main/NotificationDetailScreen';
 import SettingsScreen from '../screens/main/SettingsScreen';
+import EditProfileScreen from '../screens/main/EditProfileScreen';
+import ChangePasswordScreen from '../screens/main/ChangePasswordScreen';
+import NotificationPreferencesScreen from '../screens/main/NotificationPreferencesScreen';
+import FAQsScreen from '../screens/main/FAQsScreen';
+import OnboardingReplayScreen from '../screens/onboarding/OnboardingReplayScreen';
 
 const Stack = createStackNavigator<ClaimedStackParamList>();
 
@@ -27,6 +32,11 @@ export default function ClaimedStackNavigator() {
       <Stack.Screen name="Notifications" component={NotificationsScreen} />
       <Stack.Screen name="NotificationDetail" component={NotificationDetailScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
+      <Stack.Screen name="NotificationPreferences" component={NotificationPreferencesScreen} />
+      <Stack.Screen name="FAQs" component={FAQsScreen} />
+      <Stack.Screen name="OnboardingReplay" component={OnboardingReplayScreen} />
       <Stack.Screen
         name="QRCode"
         component={QRCodeScreen}

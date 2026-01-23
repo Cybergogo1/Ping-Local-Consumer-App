@@ -14,8 +14,8 @@
     },
     "ios": {
       "bundleIdentifier": "com.ping-local-dan.ios",
-      "buildNumber": "6",
-      "supportsTablet": true,
+      "buildNumber": "7",
+      "supportsTablet": false,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "PingLocal needs your location to show nearby businesses and offers",
         "NSLocationAlwaysAndWhenInUseUsageDescription": "PingLocal needs your location to show nearby businesses and offers",

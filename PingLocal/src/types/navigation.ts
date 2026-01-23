@@ -81,6 +81,11 @@ export type DirectoryStackParamList = {
   Notifications: undefined;
   NotificationDetail: { notification: NotificationItem };
   Settings: undefined;
+  EditProfile: undefined;
+  ChangePassword: undefined;
+  NotificationPreferences: undefined;
+  FAQs: undefined;
+  OnboardingReplay: undefined;
   // Claim flow screens (duplicated for directory navigation)
   SlotBooking: { offerId: number; offer: import('./database').Offer };
   ExternalBooking: { offerId: number; offer: import('./database').Offer };
@@ -119,6 +124,11 @@ export type ClaimedStackParamList = {
   Notifications: undefined;
   NotificationDetail: { notification: NotificationItem };
   Settings: undefined;
+  EditProfile: undefined;
+  ChangePassword: undefined;
+  NotificationPreferences: undefined;
+  FAQs: undefined;
+  OnboardingReplay: undefined;
   QRCode: {
     purchaseToken: import('./database').PurchaseToken;
   };
@@ -185,6 +195,11 @@ export type FavouritesStackParamList = {
   Notifications: undefined;
   NotificationDetail: { notification: NotificationItem };
   Settings: undefined;
+  EditProfile: undefined;
+  ChangePassword: undefined;
+  NotificationPreferences: undefined;
+  FAQs: undefined;
+  OnboardingReplay: undefined;
   // Claim flow screens for favourited offers
   SlotBooking: { offerId: number; offer: import('./database').Offer };
   ExternalBooking: { offerId: number; offer: import('./database').Offer };
