@@ -49,10 +49,12 @@ export type HomeStackParamList = {
     offerId: number;
     offer: import('./database').Offer;
     selectedSlot?: import('./database').OfferSlot;
+    selectedSlots?: import('./database').OfferSlot[];
     partySize?: number;
   };
   ClaimSuccess: {
     purchaseTokenId: number;
+    purchaseTokenIds?: number[];
     offerName: string;
     businessName: string;
     pointsEarned?: number;
@@ -93,10 +95,12 @@ export type DirectoryStackParamList = {
     offerId: number;
     offer: import('./database').Offer;
     selectedSlot?: import('./database').OfferSlot;
+    selectedSlots?: import('./database').OfferSlot[];
     partySize?: number;
   };
   ClaimSuccess: {
     purchaseTokenId: number;
+    purchaseTokenIds?: number[];
     offerName: string;
     businessName: string;
     pointsEarned?: number;
@@ -207,10 +211,12 @@ export type FavouritesStackParamList = {
     offerId: number;
     offer: import('./database').Offer;
     selectedSlot?: import('./database').OfferSlot;
+    selectedSlots?: import('./database').OfferSlot[];
     partySize?: number;
   };
   ClaimSuccess: {
     purchaseTokenId: number;
+    purchaseTokenIds?: number[];
     offerName: string;
     businessName: string;
     pointsEarned?: number;

@@ -31,7 +31,7 @@ type ClaimScreenProps = {
 };
 
 export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
-  const { offerId, offer, selectedSlot, partySize = 1 } = route.params;
+  const { offerId, offer, selectedSlot, selectedSlots, partySize = 1 } = route.params;
   const { user, refreshUser } = useAuth();
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const { unreadCount } = useNotifications();
@@ -41,8 +41,12 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
+  // Normalize slots to an array for consistent handling
+  const slotsToBook = selectedSlots || (selectedSlot ? [selectedSlot] : []);
+  const hasMultipleSlots = slotsToBook.length > 1;
+
   const isPayUpfront = offer.offer_type === 'Pay up front';
-  const hasSlot = !!selectedSlot;
+  const hasSlot = slotsToBook.length > 0;
   const businessName = offer.business_name || offer.businesses?.name || 'Unknown Business';
   const businessId = offer.business_id || offer.businesses?.id;
 
@@ -103,47 +107,86 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         }
       }
 
-      // Create purchase token - matching actual Supabase table columns
-      // Use partySize for slot-based bookings, otherwise use quantity
-      const effectiveQty = hasSlot ? partySize : quantity;
-      const purchaseTokenData = {
-        user_id: user.id,
-        user_email: user.email,
-        offer_id: offerId,
-        offer_name: offer.name,
-        business_id: businessId || null,
-        purchase_type: offer.offer_type || 'Pay on the day',
-        customer_price: isPayUpfront ? total : null,
-        ping_local_take: pingLocalTake,
-        offer_slot: selectedSlot?.id || null,
-        quantity: effectiveQty,
-        customer_phone_no: user.phone_no || null,
-        redeemed: false,
-        cancelled: false,
-        ping_invoiced: false,
-        api_requires_sync: false,
-      };
+      // Create purchase tokens - one per slot for multi-slot bookings
+      const createdTokenIds: number[] = [];
+      let remainingPartySize = partySize;
 
-      const { data, error } = await supabase
-        .from('purchase_tokens')
-        .insert(purchaseTokenData)
-        .select()
-        .single();
+      if (slotsToBook.length > 0) {
+        // Create a purchase token for each slot
+        for (const slot of slotsToBook) {
+          // Calculate how many people to allocate to this slot
+          const peopleForThisSlot = Math.min(slot.capacity, remainingPartySize);
+          remainingPartySize -= peopleForThisSlot;
 
-      if (error) throw error;
+          const purchaseTokenData = {
+            user_id: user.id,
+            user_email: user.email,
+            offer_id: offerId,
+            offer_name: offer.name,
+            business_id: businessId || null,
+            purchase_type: offer.offer_type || 'Pay on the day',
+            customer_price: isPayUpfront ? (unitPrice * peopleForThisSlot) : null,
+            ping_local_take: pingLocalTake ? (pingLocalTake / slotsToBook.length) : null,
+            offer_slot: slot.id,
+            quantity: peopleForThisSlot,
+            customer_phone_no: user.phone_no || null,
+            redeemed: false,
+            cancelled: false,
+            ping_invoiced: false,
+            api_requires_sync: false,
+          };
 
-      // If there's a booking slot, increment the booked count
-      if (selectedSlot) {
-        await supabase
-          .from('offer_slots')
-          .update({ booked_count: (selectedSlot.booked_count || 0) + partySize })
-          .eq('id', selectedSlot.id);
+          const { data, error } = await supabase
+            .from('purchase_tokens')
+            .insert(purchaseTokenData)
+            .select()
+            .single();
+
+          if (error) throw error;
+          createdTokenIds.push(data.id);
+
+          // Increment the booked count for this slot
+          await supabase
+            .from('offer_slots')
+            .update({ booked_count: (slot.booked_count || 0) + peopleForThisSlot })
+            .eq('id', slot.id);
+        }
+      } else {
+        // No slots - create a single purchase token
+        const effectiveQty = quantity;
+        const purchaseTokenData = {
+          user_id: user.id,
+          user_email: user.email,
+          offer_id: offerId,
+          offer_name: offer.name,
+          business_id: businessId || null,
+          purchase_type: offer.offer_type || 'Pay on the day',
+          customer_price: isPayUpfront ? total : null,
+          ping_local_take: pingLocalTake,
+          offer_slot: null,
+          quantity: effectiveQty,
+          customer_phone_no: user.phone_no || null,
+          redeemed: false,
+          cancelled: false,
+          ping_invoiced: false,
+          api_requires_sync: false,
+        };
+
+        const { data, error } = await supabase
+          .from('purchase_tokens')
+          .insert(purchaseTokenData)
+          .select()
+          .single();
+
+        if (error) throw error;
+        createdTokenIds.push(data.id);
       }
 
       // Increment number_sold on the offer
+      const soldCount = hasSlot ? partySize : quantity;
       await supabase
         .from('offers')
-        .update({ number_sold: (offer.number_sold || 0) + quantity })
+        .update({ number_sold: (offer.number_sold || 0) + soldCount })
         .eq('id', offerId);
 
       // Send purchase notification to business
@@ -152,6 +195,7 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
           ? `${user.first_name} ${user.surname}`
           : user.email || 'A customer';
 
+        const primarySlot = slotsToBook[0];
         await supabase.functions.invoke('notify-purchase', {
           body: {
             offer_id: offerId,
@@ -162,8 +206,10 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
             consumer_name: customerName,
             amount: null, // Pay on the day
             purchase_type: 'Pay on the day',
-            booking_date: selectedSlot?.slot_date,
-            booking_time: selectedSlot?.slot_time,
+            booking_date: primarySlot?.slot_date,
+            booking_time: primarySlot?.slot_time,
+            party_size: partySize,
+            tables_booked: slotsToBook.length,
           },
         });
       } catch (notifError) {
@@ -182,7 +228,7 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
             business_id: businessId?.toString(),
             business_name: businessName,
             purchase_type: 'claim',
-            claim_id: data.id.toString(),
+            claim_id: createdTokenIds[0].toString(),
           },
         });
       } catch (notifError) {
@@ -191,7 +237,8 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
 
       // Navigate to success screen
       navigation.navigate('ClaimSuccess', {
-        purchaseTokenId: data.id,
+        purchaseTokenId: createdTokenIds[0],
+        purchaseTokenIds: createdTokenIds.length > 1 ? createdTokenIds : undefined,
         offerName: offer.name,
         businessName,
         // External/call booking data
@@ -270,47 +317,86 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         throw new Error(presentError.message);
       }
 
-      // 4. Payment successful - create the purchase token with payment info
-      // Use partySize for slot-based bookings, otherwise use quantity
-      const effectiveQty = hasSlot ? partySize : quantity;
-      const purchaseTokenData = {
-        user_id: user.id,
-        user_email: user.email,
-        offer_id: offerId,
-        offer_name: offer.name,
-        business_id: businessId || null,
-        purchase_type: offer.offer_type || 'Pay up front',
-        customer_price: total,
-        ping_local_take: paymentData.platformFee / 100, // Convert from cents
-        offer_slot: selectedSlot?.id || null,
-        quantity: effectiveQty,
-        customer_phone_no: user.phone_no || null,
-        redeemed: false,
-        cancelled: false,
-        ping_invoiced: false,
-        api_requires_sync: false,
-      };
+      // 4. Payment successful - create purchase tokens (one per slot for multi-slot bookings)
+      const createdTokenIds: number[] = [];
+      let remainingPartySize = partySize;
+      const platformFeePerToken = (paymentData.platformFee / 100) / (slotsToBook.length || 1);
 
-      const { data, error } = await supabase
-        .from('purchase_tokens')
-        .insert(purchaseTokenData)
-        .select()
-        .single();
+      if (slotsToBook.length > 0) {
+        // Create a purchase token for each slot
+        for (const slot of slotsToBook) {
+          const peopleForThisSlot = Math.min(slot.capacity, remainingPartySize);
+          remainingPartySize -= peopleForThisSlot;
 
-      if (error) throw error;
+          const purchaseTokenData = {
+            user_id: user.id,
+            user_email: user.email,
+            offer_id: offerId,
+            offer_name: offer.name,
+            business_id: businessId || null,
+            purchase_type: offer.offer_type || 'Pay up front',
+            customer_price: unitPrice * peopleForThisSlot,
+            ping_local_take: platformFeePerToken,
+            offer_slot: slot.id,
+            quantity: peopleForThisSlot,
+            customer_phone_no: user.phone_no || null,
+            redeemed: false,
+            cancelled: false,
+            ping_invoiced: false,
+            api_requires_sync: false,
+          };
 
-      // If there's a booking slot, increment the booked count
-      if (selectedSlot) {
-        await supabase
-          .from('offer_slots')
-          .update({ booked_count: (selectedSlot.booked_count || 0) + partySize })
-          .eq('id', selectedSlot.id);
+          const { data, error } = await supabase
+            .from('purchase_tokens')
+            .insert(purchaseTokenData)
+            .select()
+            .single();
+
+          if (error) throw error;
+          createdTokenIds.push(data.id);
+
+          // Increment the booked count for this slot
+          await supabase
+            .from('offer_slots')
+            .update({ booked_count: (slot.booked_count || 0) + peopleForThisSlot })
+            .eq('id', slot.id);
+        }
+      } else {
+        // No slots - create a single purchase token
+        const effectiveQty = quantity;
+        const purchaseTokenData = {
+          user_id: user.id,
+          user_email: user.email,
+          offer_id: offerId,
+          offer_name: offer.name,
+          business_id: businessId || null,
+          purchase_type: offer.offer_type || 'Pay up front',
+          customer_price: total,
+          ping_local_take: paymentData.platformFee / 100,
+          offer_slot: null,
+          quantity: effectiveQty,
+          customer_phone_no: user.phone_no || null,
+          redeemed: false,
+          cancelled: false,
+          ping_invoiced: false,
+          api_requires_sync: false,
+        };
+
+        const { data, error } = await supabase
+          .from('purchase_tokens')
+          .insert(purchaseTokenData)
+          .select()
+          .single();
+
+        if (error) throw error;
+        createdTokenIds.push(data.id);
       }
 
       // Increment number_sold on the offer
+      const soldCount = hasSlot ? partySize : quantity;
       await supabase
         .from('offers')
-        .update({ number_sold: (offer.number_sold || 0) + quantity })
+        .update({ number_sold: (offer.number_sold || 0) + soldCount })
         .eq('id', offerId);
 
       // Award loyalty points for Pay Up Front purchases (total × 10)
@@ -380,6 +466,7 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
           ? `${user.first_name} ${user.surname}`
           : user.email || 'A customer';
 
+        const primarySlot = slotsToBook[0];
         await supabase.functions.invoke('notify-purchase', {
           body: {
             offer_id: offerId,
@@ -390,8 +477,10 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
             consumer_name: customerName,
             amount: total,
             purchase_type: 'Pay up front',
-            booking_date: selectedSlot?.slot_date,
-            booking_time: selectedSlot?.slot_time,
+            booking_date: primarySlot?.slot_date,
+            booking_time: primarySlot?.slot_time,
+            party_size: partySize,
+            tables_booked: slotsToBook.length,
           },
         });
       } catch (notifError) {
@@ -410,7 +499,7 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
             business_id: businessId?.toString(),
             business_name: businessName,
             purchase_type: 'purchase',
-            claim_id: data.id.toString(),
+            claim_id: createdTokenIds[0].toString(),
           },
         });
       } catch (notifError) {
@@ -419,7 +508,8 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
 
       // Navigate to success screen with tier info
       navigation.navigate('ClaimSuccess', {
-        purchaseTokenId: data.id,
+        purchaseTokenId: createdTokenIds[0],
+        purchaseTokenIds: createdTokenIds.length > 1 ? createdTokenIds : undefined,
         offerName: offer.name,
         businessName,
         pointsEarned,
@@ -496,19 +586,37 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         </View>
 
         {/* Booking Details (if applicable) */}
-        {hasSlot && selectedSlot && (
+        {hasSlot && slotsToBook.length > 0 && (
           <View style={styles.bookingDetailsCard}>
             <Text style={styles.cardTitle}>Booking Details</Text>
             <View style={styles.bookingRow}>
               <Text style={styles.bookingLabel}>📅 Date</Text>
               <Text style={styles.bookingValue}>
-                {format(parseISO(selectedSlot.slot_date), 'EEEE, MMMM d, yyyy')}
+                {format(parseISO(slotsToBook[0].slot_date), 'EEEE, MMMM d, yyyy')}
               </Text>
             </View>
-            <View style={styles.bookingRow}>
-              <Text style={styles.bookingLabel}>🕐 Time</Text>
-              <Text style={styles.bookingValue}>{formatTime(selectedSlot.slot_time)}</Text>
-            </View>
+            {hasMultipleSlots ? (
+              <>
+                <View style={styles.bookingRow}>
+                  <Text style={styles.bookingLabel}>🪑 Tables</Text>
+                  <Text style={styles.bookingValue}>{slotsToBook.length} {offer.unit_of_measurement ? `${offer.unit_of_measurement}s` : 'slots'} booked</Text>
+                </View>
+                <View style={styles.multiSlotList}>
+                  {slotsToBook.map((slot, index) => (
+                    <View key={slot.id} style={styles.multiSlotItem}>
+                      <Text style={styles.multiSlotTime}>
+                        {formatTime(slot.slot_time)} - Table for {slot.min_people === slot.capacity ? slot.capacity : `${slot.min_people}-${slot.capacity}`}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </>
+            ) : (
+              <View style={styles.bookingRow}>
+                <Text style={styles.bookingLabel}>🕐 Time</Text>
+                <Text style={styles.bookingValue}>{formatTime(slotsToBook[0].slot_time)}</Text>
+              </View>
+            )}
             <View style={styles.bookingRow}>
               <Text style={styles.bookingLabel}>👥 Party Size</Text>
               <Text style={styles.bookingValue}>
@@ -865,6 +973,21 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     fontFamily: fontFamily.bodySemiBold,
     color: colors.primary,
+  },
+  multiSlotList: {
+    marginTop: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+  multiSlotItem: {
+    backgroundColor: colors.grayLight,
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.xs,
+  },
+  multiSlotTime: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.body,
+    color: colors.grayDark,
   },
 
   // Quantity Card

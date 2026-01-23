@@ -179,6 +179,7 @@ export interface OfferSlot {
   slot_date: string; // YYYY-MM-DD
   slot_time: string; // HH:MM
   capacity: number;
+  min_people: number; // Minimum party size for this slot
   booked_count: number;
   available: boolean;
   created: string;
