@@ -70,6 +70,7 @@ export interface Offer {
   one_per_customer: boolean;
   price_discount?: number;
   unit_of_measurement?: string;
+  slot_name?: string;
   quantity?: number;
   number_sold: number;
   quantity_item: boolean;

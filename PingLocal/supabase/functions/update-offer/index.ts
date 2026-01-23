@@ -80,6 +80,7 @@ serve(async (req) => {
       "one_per_customer",
       "price_discount",
       "unit_of_measurement",
+      "slot_name",
       "quantity",
       "quantity_item",
       "status",

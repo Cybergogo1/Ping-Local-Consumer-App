@@ -91,6 +91,7 @@ serve(async (req) => {
       one_per_customer: requestData.one_per_customer ?? false,
       price_discount: requestData.price_discount || null,
       unit_of_measurement: requestData.unit_of_measurement || null,
+      slot_name: requestData.slot_name || null,
       quantity: requestData.quantity || null,
       number_sold: 0,
       quantity_item: requestData.quantity_item ?? false,

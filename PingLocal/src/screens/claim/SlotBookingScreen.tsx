@@ -827,13 +827,13 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
               {requiresMultiSlot && (
                 <View style={styles.multiSlotInfo}>
                   <Text style={styles.multiSlotInfoText}>
-                    Your party is larger than a single {offer.unit_of_measurement || 'slot'}. Please select multiple {offer.unit_of_measurement ? `${offer.unit_of_measurement}s` : 'slots'}.
+                    Your party is larger than a single {offer.slot_name || 'slot'}. Please select multiple {offer.slot_name ? `${offer.slot_name}s` : 'slots'}.
                   </Text>
                   <View style={styles.multiSlotProgress}>
                     <Text style={styles.multiSlotProgressText}>
                       {totalSelectedCapacity >= partySize
                         ? `Great! You have ${totalSelectedCapacity} seats for your party of ${partySize}`
-                        : `Select ${offer.unit_of_measurement ? `${offer.unit_of_measurement}s` : 'slots'} for ${partySize - totalSelectedCapacity} more people`
+                        : `Select ${offer.slot_name ? `${offer.slot_name}s` : 'slots'} for ${partySize - totalSelectedCapacity} more people`
                       }
                     </Text>
                   </View>
@@ -952,7 +952,7 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
                   </Text>
                   <Text style={styles.selectedInfoSubtext}>
                     {partySize} {partySize === 1 ? 'person' : 'people'}
-                    {selectedSlots.length > 1 && ` across ${selectedSlots.length} ${offer.unit_of_measurement ? `${offer.unit_of_measurement}s` : 'slots'}`}
+                    {selectedSlots.length > 1 && ` across ${selectedSlots.length} ${offer.slot_name ? `${offer.slot_name}s` : 'slots'}`}
                   </Text>
                 </>
               )}
