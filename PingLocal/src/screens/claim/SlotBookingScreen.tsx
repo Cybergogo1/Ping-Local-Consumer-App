@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -299,6 +299,14 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
       }));
 
       setSlots(slotsWithCapacity);
+
+      // Set initial preferred hour to earliest available slot
+      const availableSlots = slotsWithCapacity.filter(s => (s.available_capacity ?? 0) > 0);
+      if (availableSlots.length > 0) {
+        const earliestTime = availableSlots[0].slot_time; // Already sorted by date then time
+        const earliestHour = parseInt(earliestTime.split(':')[0], 10);
+        setPreferredHour(earliestHour);
+      }
     } catch (error) {
       console.error('Error fetching slots:', error);
     } finally {
@@ -363,12 +371,30 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
     }
   }, [step, firstAvailableDateIndex]);
 
+  // Get the earliest available slot hour for a given date
+  const getEarliestSlotHour = useCallback((date: Date): number | null => {
+    const slotsForDate = slots.filter(s =>
+      isSameDay(parseISO(s.slot_date), date) &&
+      (s.available_capacity ?? (s.capacity - s.booked_count)) > 0
+    );
+    if (slotsForDate.length === 0) return null;
+    // Slots are already sorted by time from the query
+    const earliestTime = slotsForDate[0].slot_time; // "HH:MM" format
+    return parseInt(earliestTime.split(':')[0], 10);
+  }, [slots]);
+
   // Auto-select first available date when entering datetime step
   useEffect(() => {
-    if (step === 'datetime' && !selectedDate && availableDates.length > 0) {
-      setSelectedDate(availableDates[0]);
+    if (step === 'datetime' && !selectedDate && availableDates.length > 0 && slots.length > 0) {
+      const firstDate = availableDates[0];
+      setSelectedDate(firstDate);
+      // Also set preferred hour to earliest slot for this date
+      const earliestHour = getEarliestSlotHour(firstDate);
+      if (earliestHour !== null) {
+        setPreferredHour(earliestHour);
+      }
     }
-  }, [step, availableDates]);
+  }, [step, availableDates, slots, getEarliestSlotHour]);
 
   const isDateAvailable = (date: Date) => {
     return availableDates.some(d => isSameDay(d, date));
@@ -386,6 +412,16 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
     const ampm = preferredHour >= 12 ? 'pm' : 'am';
     return `${hour12}:${preferredMinute.toString().padStart(2, '0')}${ampm}`;
   }, [preferredHour, preferredMinute]);
+
+  // Update preferred hour to earliest available slot when date is selected
+  useEffect(() => {
+    if (selectedDate && slots.length > 0) {
+      const earliestHour = getEarliestSlotHour(selectedDate);
+      if (earliestHour !== null) {
+        setPreferredHour(earliestHour);
+      }
+    }
+  }, [selectedDate, slots, getEarliestSlotHour]);
 
   // Filter and sort slots based on party size
   const { filteredSlots, requiresMultiSlot } = useMemo(() => {
@@ -429,8 +465,10 @@ export default function SlotBookingScreen({ navigation, route }: SlotBookingScre
         }));
       } else {
         // No exact fit, show larger slots that could accommodate
+        // Still must respect min_people requirement
         applicableSlots = dateSlots
           .filter(slot =>
+            slot.min_people <= partySize &&
             partySize <= slot.capacity &&
             (slot.available_capacity || 0) >= partySize
           )

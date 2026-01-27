@@ -2,7 +2,7 @@
   "expo": {
     "name": "PingLocal",
     "slug": "PingLocal",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.ping-local-dan.ios",
-      "buildNumber": "8",
+      "buildNumber": "11",
       "supportsTablet": false,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "PingLocal needs your location to show nearby businesses and offers",
