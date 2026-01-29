@@ -22,11 +22,12 @@ serve(async (req) => {
     // Parse query parameters (for Adalo compatibility)
     const url = new URL(req.url)
     const page = parseInt(url.searchParams.get('page') || '1')
-    const limit = parseInt(url.searchParams.get('limit') || '50')
+    const limit = parseInt(url.searchParams.get('limit') || '100')
     const featured = url.searchParams.get('featured')
     const locationArea = url.searchParams.get('location_area')
     const isSignedOff = url.searchParams.get('is_signed_off')
     const businessId = url.searchParams.get('id')
+    const name = url.searchParams.get('name')
 
     // Build query
     let query = supabaseClient
@@ -47,6 +48,9 @@ serve(async (req) => {
     }
     if (businessId) {
       query = query.eq('id', businessId)
+    }
+    if (name && name.length > 0) {
+      query = query.ilike('name', `%${name}%`)
     }
 
     const { data, error } = await query
