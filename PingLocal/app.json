@@ -2,6 +2,7 @@
   "expo": {
     "name": "PingLocal",
     "slug": "PingLocal",
+    "scheme": "pinglocal",
     "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -31,6 +32,7 @@
       "config": {
         "googleMapsApiKey": "AIzaSyA3UvWRia-94eCIGPuyr4mMm3p-UJVpeGQ"
       },
+      "associatedDomains": ["applinks:app.pinglocal.co.uk"],
       "entitlements": {
         "aps-environment": "production",
         "com.apple.developer.in-app-payments": [
@@ -71,6 +73,20 @@
           "apiKey": "AIzaSyA3UvWRia-94eCIGPuyr4mMm3p-UJVpeGQ"
         }
       },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "app.pinglocal.co.uk",
+              "pathPrefix": "/"
+            }
+          ],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },

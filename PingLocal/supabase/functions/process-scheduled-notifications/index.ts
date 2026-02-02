@@ -76,6 +76,34 @@ serve(async (req) => {
         const result = await notificationResponse.json();
         console.log(`Notification ${notification.id} result:`, result);
 
+        // Also send booking reminder email if payload has user context
+        if (notification.payload?.user_id || notification.payload?.business_name) {
+          try {
+            await fetch(
+              `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                },
+                body: JSON.stringify({
+                  type: "booking_reminder",
+                  user_id: notification.payload.user_id,
+                  offer_name: notification.payload.offer_title,
+                  business_name: notification.payload.business_name,
+                  offer_id: notification.payload.offer_id,
+                  business_id: notification.payload.business_id,
+                  booking_date: notification.payload.booking_date,
+                }),
+              }
+            );
+            console.log(`Booking reminder email sent for notification ${notification.id}`);
+          } catch (emailErr) {
+            console.error(`Error sending booking reminder email for notification ${notification.id}:`, emailErr);
+          }
+        }
+
         // Mark as sent
         await supabase
           .from("scheduled_notifications")

@@ -140,6 +140,40 @@ serve(async (req) => {
           }
         }
 
+        // Send new offer emails to users who favorited this business
+        if (usersData && usersData.length > 0) {
+          for (const u of usersData) {
+            try {
+              const emailResponse = await fetch(
+                `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`,
+                {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+                  },
+                  body: JSON.stringify({
+                    type: "new_offer_from_favorite",
+                    user_id: String(u.id),
+                    user_auth_id: u.auth_id,
+                    offer_name: payload.offer_title,
+                    business_name: payload.business_name,
+                    offer_id: payload.offer_id,
+                    business_id: payload.business_id,
+                  }),
+                }
+              );
+              if (!emailResponse.ok) {
+                const emailErr = await emailResponse.json();
+                console.error(`Email send failed for user ${u.id}:`, emailErr);
+              }
+            } catch (emailErr) {
+              console.error(`Error sending new offer email to user ${u.id}:`, emailErr);
+            }
+          }
+          console.log(`New offer emails dispatched for ${usersData.length} users`);
+        }
+
         title = `New from ${payload.business_name || "a business you follow"}`;
         body = payload.offer_title ? `The promotion '${payload.offer_title}' is now available!` : "Check out their latest offer!";
         data = { type: "new_offer", offerId: payload.offer_id, businessId: payload.business_id };

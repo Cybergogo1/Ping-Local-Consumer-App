@@ -266,6 +266,37 @@ serve(async (req) => {
       }
     }
 
+    // Send redemption confirmation email
+    try {
+      const emailResponse = await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({
+            type: "redemption_complete",
+            user_id: String(user_id),
+            offer_name: offerName,
+            amount: billAmount,
+            points_earned: pointsEarned,
+            new_points_total: newPoints,
+          }),
+        }
+      );
+      const emailResult = await emailResponse.json();
+      if (!emailResponse.ok) {
+        console.error("Redemption email send failed:", emailResult);
+      } else {
+        console.log("Redemption confirmation email sent:", emailResult);
+      }
+    } catch (emailError) {
+      console.error('Error sending redemption confirmation email:', emailError)
+      // Don't fail the request
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

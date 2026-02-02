@@ -41,7 +41,8 @@
       "Bash(supabase functions deploy:*)",
       "Bash(supabase functions logs:*)",
       "Bash(xargs -I {} bash -c 'echo \"\"=== {} ===\"\" && head -20 \"\"{}\"\"')",
-      "Bash(npx md-to-pdf:*)"
+      "Bash(npx md-to-pdf:*)",
+      "Bash(ren:*)"
     ],
     "deny": [],
     "ask": []

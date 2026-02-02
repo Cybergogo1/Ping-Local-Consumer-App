@@ -7,6 +7,8 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StripeProvider } from '@stripe/stripe-react-native';
 
+import { LinkingOptions } from '@react-navigation/native';
+
 import { AuthProvider } from './src/contexts/AuthContext';
 import { LocationProvider } from './src/contexts/LocationContext';
 import { NotificationProvider } from './src/contexts/NotificationContext';
@@ -17,6 +19,47 @@ import RootNavigator from './src/navigation/RootNavigator';
 const STRIPE_PUBLISHABLE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51S0jaTD2e561klM22nIBz5A3AOE9t87uHy1XBaeTNB5W0tufDp2bH0andFHnxpm9BfiafXJZBYsaN5vYc6IXDycs00bQob2628';
 
 SplashScreen.preventAutoHideAsync();
+
+const linking: LinkingOptions<any> = {
+  prefixes: ['pinglocal://', 'https://app.pinglocal.co.uk'],
+  config: {
+    screens: {
+      Main: {
+        screens: {
+          Feed: {
+            screens: {
+              HomeFeed: '',
+              OfferDetail: 'offer/:offerId',
+              BusinessDetail: 'business/:businessId',
+            },
+          },
+          Claimed: {
+            screens: {
+              ClaimedMain: 'claimed',
+            },
+          },
+          Favourites: {
+            screens: {
+              FavouritesMain: 'favourites',
+            },
+          },
+          Businesses: {
+            screens: {
+              DirectoryMain: 'businesses',
+            },
+          },
+          Account: {
+            screens: {
+              AccountMain: 'account',
+              Settings: 'settings',
+              NotificationPreferences: 'settings/notifications',
+            },
+          },
+        },
+      },
+    },
+  },
+};
 
 export default function App() {
   const navigationRef = useRef<NavigationContainerRef<any>>(null);
@@ -56,6 +99,7 @@ export default function App() {
               <NotificationProvider>
               <NavigationContainer
                 ref={navigationRef}
+                linking={linking}
                 onReady={() => setNavigationRef(navigationRef.current)}
               >
                 <PushNotificationHandler>

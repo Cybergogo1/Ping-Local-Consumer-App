@@ -282,12 +282,61 @@ serve(async (req) => {
       }
     }
 
+    // 5. Send cancellation email to the consumer
+    let emailSent = false;
+    if (purchaseToken.user_id) {
+      try {
+        const offerName = purchaseToken.offers?.name || purchaseToken.offer_name || "your offer";
+        const businessName = purchaseToken.offers?.businesses?.name || "The business";
+
+        // Get user email and name for the email
+        const { data: userForEmail } = await supabaseClient
+          .from("users")
+          .select("email, first_name, auth_id")
+          .eq("id", purchaseToken.user_id)
+          .single();
+
+        if (userForEmail?.email) {
+          const emailResponse = await fetch(
+            `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+              },
+              body: JSON.stringify({
+                type: "cancellation_by_business",
+                user_id: String(purchaseToken.user_id),
+                user_email: userForEmail.email,
+                user_first_name: userForEmail.first_name,
+                user_auth_id: userForEmail.auth_id,
+                offer_name: offerName,
+                business_name: businessName,
+                cancellation_reason: reason,
+              }),
+            }
+          );
+          const emailResult = await emailResponse.json();
+          if (!emailResponse.ok) {
+            console.error("Cancellation email send failed:", emailResult);
+          } else {
+            emailSent = true;
+            console.log("Cancellation email sent to consumer:", emailResult);
+          }
+        }
+      } catch (emailError) {
+        console.error("Error sending cancellation email:", emailError);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         data: {
           cancelled: true,
           purchase_token_id: purchase_token_id,
           notification_sent: notificationSent,
+          email_sent: emailSent,
         },
         error: null,
       }),

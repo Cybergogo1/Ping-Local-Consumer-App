@@ -116,7 +116,7 @@ serve(async (req) => {
     // 2. Get business owner ID to create business notification
     const { data: business, error: businessError } = await supabase
       .from("businesses")
-      .select("owner_id")
+      .select("owner_id, email")
       .eq("id", business_id)
       .single();
 
@@ -235,12 +235,87 @@ serve(async (req) => {
       console.log("Consumer has push notifications disabled");
     }
 
+    // 4. Send purchase confirmation email
+    let emailSent = false;
+    try {
+      const emailResponse = await fetch(
+        `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+          },
+          body: JSON.stringify({
+            type: "purchase_confirmation",
+            user_id: String(consumer_user_id),
+            offer_name,
+            business_name,
+            amount,
+            booking_date,
+            booking_time,
+            purchase_type,
+          }),
+        }
+      );
+      const emailResult = await emailResponse.json();
+      if (!emailResponse.ok) {
+        console.error("Email send failed:", emailResult);
+      } else {
+        emailSent = true;
+        console.log("Purchase confirmation email sent:", emailResult);
+      }
+    } catch (emailError) {
+      console.error("Error sending purchase confirmation email:", emailError);
+    }
+
+    // 5. Send email to business about the new claim
+    let businessEmailSent = false;
+    if (business?.email) {
+      try {
+        const bizEmailResponse = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              type: "business_new_claim",
+              recipient_email: business.email,
+              offer_name,
+              business_name,
+              consumer_name,
+              amount,
+              booking_date,
+              booking_time,
+              purchase_type,
+            }),
+          }
+        );
+        const bizEmailResult = await bizEmailResponse.json();
+        if (!bizEmailResponse.ok) {
+          console.error("Business email send failed:", bizEmailResult);
+        } else {
+          businessEmailSent = true;
+          console.log("Business claim notification email sent:", bizEmailResult);
+        }
+      } catch (bizEmailError) {
+        console.error("Error sending business claim email:", bizEmailError);
+      }
+    } else {
+      console.log("No business email found, skipping business claim email");
+    }
+
     return new Response(
       JSON.stringify({
         success: true,
         consumer_notification: !consumerNotifError,
         business_notification: business?.owner_id && !businessError,
         push_sent: pushSent,
+        email_sent: emailSent,
+        business_email_sent: businessEmailSent,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
