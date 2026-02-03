@@ -12,6 +12,7 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, spacing, borderRadius, fontSize, fontWeight, fontFamily, responsiveSpacing } from '../../theme';
 import { constrainedImageSize } from '../../utils/responsive';
@@ -28,21 +29,29 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
   const [surname, setSurname] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const validatePassword = (pass: string) => {
     return pass.length >= 8;
   };
 
   const handleSignUp = async () => {
-    if (!firstName || !surname || !email || !password) {
+    if (!firstName || !surname || !email || !password || !confirmPassword) {
       setError('Please fill in all fields');
       return;
     }
 
     if (!validatePassword(password)) {
       setError('Password must be at least 8 characters');
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
       return;
     }
 
@@ -141,17 +150,52 @@ export default function SignUpScreen({ navigation }: SignUpScreenProps) {
                   />
                 </View>
 
-                <View style={[styles.inputContainer, styles.inputMargin]}>
+                <View style={[styles.inputContainer, styles.inputMargin, styles.passwordContainer]}>
                   <TextInput
                     placeholder="Enter Password"
                     placeholderTextColor={colors.grayMedium}
                     value={password}
                     onChangeText={setPassword}
-                    secureTextEntry
+                    secureTextEntry={!showPassword}
                     autoComplete="new-password"
                     textContentType="newPassword"
-                    style={styles.input}
+                    style={[styles.input, styles.passwordInput]}
                   />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color={colors.grayMedium}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={[styles.inputContainer, styles.inputMargin, styles.passwordContainer]}>
+                  <TextInput
+                    placeholder="Confirm Password"
+                    placeholderTextColor={colors.grayMedium}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry={!showConfirmPassword}
+                    autoComplete="new-password"
+                    textContentType="newPassword"
+                    style={[styles.input, styles.passwordInput]}
+                  />
+                  <TouchableOpacity
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    style={styles.eyeButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons
+                      name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color={colors.grayMedium}
+                    />
+                  </TouchableOpacity>
                 </View>
 
                 {/* Password hint */}
@@ -266,6 +310,16 @@ const styles = StyleSheet.create({
   },
   inputMargin: {
     marginTop: spacing.sm,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passwordInput: {
+    flex: 1,
+  },
+  eyeButton: {
+    paddingLeft: spacing.sm,
   },
   input: {
     fontSize: fontSize.sm,

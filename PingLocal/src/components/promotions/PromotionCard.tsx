@@ -268,7 +268,7 @@ const styles = StyleSheet.create({
     borderColor: '#eee'
   },
   imageContainer: {
-    height: 140,
+    height: 180,
     backgroundColor: colors.grayLight,
     position: 'relative',
   },

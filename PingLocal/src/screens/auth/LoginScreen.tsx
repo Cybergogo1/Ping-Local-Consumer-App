@@ -13,6 +13,7 @@ import {
   StyleSheet,
   Dimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const HEADER_IMAGE_HEIGHT = SCREEN_HEIGHT * 0.3;
@@ -42,6 +43,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -121,17 +123,28 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
                   />
                 </View>
 
-                <View style={[styles.inputContainer, styles.inputMargin]}>
+                <View style={[styles.inputContainer, styles.inputMargin, styles.passwordContainer]}>
                   <TextInput
                     placeholder="Enter Password"
                     placeholderTextColor={colors.grayMedium}
                     value={password}
                     onChangeText={setPassword}
-                    secureTextEntry
+                    secureTextEntry={!showPassword}
                     autoComplete="password"
                     textContentType="password"
-                    style={styles.input}
+                    style={[styles.input, styles.passwordInput]}
                   />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeButton}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Ionicons
+                      name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                      size={20}
+                      color={colors.grayMedium}
+                    />
+                  </TouchableOpacity>
                 </View>
 
                 <TouchableOpacity
@@ -251,6 +264,16 @@ const styles = StyleSheet.create({
   },
   inputMargin: {
     marginTop: spacing.md,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passwordInput: {
+    flex: 1,
+  },
+  eyeButton: {
+    paddingLeft: spacing.sm,
   },
   input: {
     fontSize: fontSize.md,

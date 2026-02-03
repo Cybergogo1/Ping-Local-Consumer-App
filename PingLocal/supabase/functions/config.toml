@@ -1,4 +1,7 @@
 # Disable JWT verification for functions that are called internally
+[send-email]
+verify_jwt = false
+
 [send-push-notification]
 verify_jwt = false
 

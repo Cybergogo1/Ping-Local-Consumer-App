@@ -37,7 +37,9 @@ type EmailType =
   | "offer_signed_off"
   | "business_stripe_connected"
   | "admin_new_business"
-  | "admin_offer_ready_for_review";
+  | "admin_offer_ready_for_review"
+  | "business_application_received"
+  | "business_redemption_complete";
 
 interface EmailPayload {
   type: EmailType;
@@ -163,6 +165,7 @@ function welcomeTemplate(firstName: string): { subject: string; html: string } {
         <li>Claim and redeem promotions</li>
         <li>Earn loyalty points with every redemption</li>
       </ul>
+      ${ctaButton("Start Exploring", `${BASE_URL}/`)}
     `),
   };
 }
@@ -204,6 +207,7 @@ function newOfferFromFavoriteTemplate(
       <div style="background-color:#f0f7fa;border-left:4px solid #1a3a4a;padding:16px;margin:0 0 24px;border-radius:0 4px 4px 0;">
         <p style="margin:0;color:#1a3a4a;font-size:18px;font-weight:600;">${offerName}</p>
       </div>
+      ${ctaButton("View Offer", offerId ? `${BASE_URL}/offer/${offerId}` : `${BASE_URL}/`)}
     `),
   };
 }
@@ -260,6 +264,7 @@ function purchaseConfirmationTemplate(
           ${bookingSection}
         </table>
       </div>
+      ${ctaButton("View My Claims", `${BASE_URL}/claimed`)}
     `),
   };
 }
@@ -286,6 +291,7 @@ function cancellationByBusinessTemplate(
         <p style="margin:0;color:#333333;font-size:18px;font-weight:600;">${offerName}</p>
       </div>
       ${reasonSection}
+      ${ctaButton("Browse Offers", `${BASE_URL}/`)}
     `),
   };
 }
@@ -305,6 +311,7 @@ function cancellationByUserTemplate(
       <div style="background-color:#f0f7fa;border-left:4px solid #1a3a4a;padding:16px;margin:0 0 24px;border-radius:0 4px 4px 0;">
         <p style="margin:0;color:#1a3a4a;font-size:18px;font-weight:600;">${offerName}</p>
       </div>
+      ${ctaButton("Browse Offers", `${BASE_URL}/`)}
     `),
   };
 }
@@ -342,6 +349,7 @@ function bookingReminderTemplate(
           </tr>
         </table>
       </div>
+      ${ctaButton("View My Claims", `${BASE_URL}/claimed`)}
     `),
   };
 }
@@ -388,6 +396,7 @@ function redemptionCompleteTemplate(
           </tr>
         </table>
       </div>
+      ${ctaButton("View My Account", `${BASE_URL}/account`)}
     `),
   };
 }
@@ -473,6 +482,7 @@ function weeklySummaryTemplate(
       ${offersSection}
       ${purchasesSection}
       ${bookingsSection}
+      ${ctaButton("Open PingLocal", `${BASE_URL}/`)}
     `),
   };
 }
@@ -595,17 +605,30 @@ function offerRejectedTemplate(
 
 function offerSignedOffTemplate(
   businessName: string,
-  offerName: string
+  offerName: string,
+  startDate?: string
 ): { subject: string; html: string } {
+  let liveMessage: string;
+  if (startDate) {
+    const formatted = new Date(startDate).toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    });
+    liveMessage = `Your offer <strong>${offerName}</strong> for <strong>${businessName}</strong> has been approved and will be live on <strong>${formatted}</strong>.`;
+  } else {
+    liveMessage = `Your offer <strong>${offerName}</strong> for <strong>${businessName}</strong> has been approved and is now live on PingLocal.`;
+  }
+
   return {
     subject: `Offer approved: ${offerName}`,
     html: baseLayout(`
       <h2 style="margin:0 0 16px;color:#27ae60;font-size:22px;">Offer Approved!</h2>
       <p style="margin:0 0 16px;color:#333333;font-size:16px;line-height:1.5;">
-        Your offer <strong>${offerName}</strong> for <strong>${businessName}</strong> has been approved and is now live on PingLocal.
+        ${liveMessage}
       </p>
       <p style="margin:0 0 16px;color:#333333;font-size:16px;line-height:1.5;">
-        Customers can now discover and claim this offer.
+        Customers will be able to discover and claim this offer.
       </p>
     `),
   };
@@ -689,6 +712,65 @@ function adminOfferReadyForReviewTemplate(
   };
 }
 
+function businessApplicationReceivedTemplate(
+  businessName: string
+): { subject: string; html: string } {
+  return {
+    subject: "We've received your application!",
+    html: baseLayout(`
+      <h2 style="margin:0 0 16px;color:#1a3a4a;font-size:22px;">Application Received</h2>
+      <p style="margin:0 0 16px;color:#333333;font-size:16px;line-height:1.5;">
+        Thanks for registering <strong>${businessName}</strong> on PingLocal!
+      </p>
+      <p style="margin:0 0 16px;color:#333333;font-size:16px;line-height:1.5;">
+        We've received your application and we'll be in touch to discuss your business joining PingLocal.
+      </p>
+      <p style="margin:0 0 16px;color:#333333;font-size:16px;line-height:1.5;">
+        In the meantime, if you have any questions, feel free to reach out to us.
+      </p>
+    `),
+  };
+}
+
+function businessRedemptionCompleteTemplate(
+  businessName: string,
+  offerName: string,
+  customerName: string,
+  amount: number | null
+): { subject: string; html: string } {
+  let amountRow = "";
+  if (amount != null) {
+    amountRow = `
+      <tr>
+        <td style="padding:8px 0;color:#666666;font-size:14px;">Bill Amount</td>
+        <td style="padding:8px 0;color:#333333;font-size:14px;text-align:right;">&pound;${amount.toFixed(2)}</td>
+      </tr>`;
+  }
+
+  return {
+    subject: `Offer redeemed: ${offerName}`,
+    html: baseLayout(`
+      <h2 style="margin:0 0 16px;color:#27ae60;font-size:22px;">Offer Redeemed</h2>
+      <p style="margin:0 0 16px;color:#333333;font-size:16px;line-height:1.5;">
+        A customer has redeemed an offer at <strong>${businessName}</strong>.
+      </p>
+      <div style="background-color:#f0faf4;border-radius:8px;padding:16px;margin:0 0 24px;">
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="padding:8px 0;color:#666666;font-size:14px;">Customer</td>
+            <td style="padding:8px 0;color:#333333;font-size:14px;text-align:right;font-weight:600;">${customerName}</td>
+          </tr>
+          <tr>
+            <td style="padding:8px 0;color:#666666;font-size:14px;">Offer</td>
+            <td style="padding:8px 0;color:#333333;font-size:14px;text-align:right;">${offerName}</td>
+          </tr>
+          ${amountRow}
+        </table>
+      </div>
+    `),
+  };
+}
+
 // =====================================================
 // Main handler
 // =====================================================
@@ -721,8 +803,9 @@ serve(async (req) => {
     const payload: EmailPayload = await req.json();
     console.log("Received email payload:", JSON.stringify(payload, null, 2));
 
-    // Handle database webhook payloads (they include record/old_record)
-    if (payload.record && !payload.type) {
+    // Handle database webhook payloads (they include record and type is a DB event)
+    const DB_EVENT_TYPES = ["INSERT", "UPDATE", "DELETE"];
+    if (payload.record && (!payload.type || DB_EVENT_TYPES.includes(payload.type))) {
       return handleDatabaseWebhook(supabase, payload);
     }
 
@@ -875,6 +958,17 @@ serve(async (req) => {
           payload.amount ?? null,
           payload.points_earned || 0,
           payload.new_points_total || 0
+        );
+        subject = t.subject;
+        html = t.html;
+        break;
+      }
+      case "business_redemption_complete": {
+        const t = businessRedemptionCompleteTemplate(
+          payload.business_name || "your business",
+          payload.offer_name || "an offer",
+          payload.consumer_name || "A customer",
+          payload.amount ?? null
         );
         subject = t.subject;
         html = t.html;
@@ -1301,7 +1395,8 @@ async function handleDatabaseWebhook(
     if (businessEmail) {
       const template = offerSignedOffTemplate(
         businessName,
-        (record.name as string) || "your offer"
+        (record.name as string) || "your offer",
+        (record.start_date as string) || undefined
       );
 
       const resendResponse = await fetch("https://api.resend.com/emails", {
@@ -1387,6 +1482,37 @@ async function handleDatabaseWebhook(
     !oldRecord &&
     record.id
   ) {
+    const results: Array<{ type: string; success: boolean }> = [];
+
+    // Send application received email to the business
+    if (record.email) {
+      const bizTemplate = businessApplicationReceivedTemplate(
+        (record.name as string)
+      );
+
+      const bizResponse = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${RESEND_API_KEY}`,
+        },
+        body: JSON.stringify({
+          from: FROM_EMAIL,
+          to: [record.email],
+          subject: bizTemplate.subject,
+          html: bizTemplate.html,
+        }),
+      });
+
+      const bizData = await bizResponse.json();
+      console.log(
+        "Resend response (webhook business application received):",
+        JSON.stringify(bizData, null, 2)
+      );
+      results.push({ type: "business_application_received", success: bizResponse.ok });
+    }
+
+    // Send admin notification
     const adminEmails = Deno.env.get("ADMIN_NOTIFICATION_EMAILS");
     if (adminEmails) {
       const template = adminNewBusinessTemplate(
@@ -1414,20 +1540,21 @@ async function handleDatabaseWebhook(
         "Resend response (webhook new business admin):",
         JSON.stringify(resendData, null, 2)
       );
-
-      return new Response(
-        JSON.stringify({
-          success: resendResponse.ok,
-          type: "admin_new_business",
-          webhook: true,
-        }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
+      results.push({ type: "admin_new_business", success: resendResponse.ok });
     } else {
       console.log("ADMIN_NOTIFICATION_EMAILS not set, skipping admin new business email");
     }
+
+    return new Response(
+      JSON.stringify({
+        success: results.every((r) => r.success),
+        types: results.map((r) => r.type),
+        webhook: true,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      }
+    );
   }
 
   // Detect: offers.status changed to 'Ready for Review'

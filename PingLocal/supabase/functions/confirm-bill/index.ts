@@ -129,17 +129,23 @@ serve(async (req) => {
       )
     }
 
-    // Get business cut_percent to calculate PingTake
+    // Get business details for PingTake calculation and email notification
     let pingTake = 0
+    let businessEmail = ''
+    let businessName = ''
     if (businessId) {
       const { data: business } = await supabaseClient
         .from('businesses')
-        .select('cut_percent')
+        .select('cut_percent, email, name')
         .eq('id', businessId)
         .single()
 
-      if (business && business.cut_percent) {
-        pingTake = billAmount * (business.cut_percent / 100)
+      if (business) {
+        if (business.cut_percent) {
+          pingTake = billAmount * (business.cut_percent / 100)
+        }
+        businessEmail = business.email || ''
+        businessName = business.name || ''
       }
     }
 
@@ -295,6 +301,39 @@ serve(async (req) => {
     } catch (emailError) {
       console.error('Error sending redemption confirmation email:', emailError)
       // Don't fail the request
+    }
+
+    // Send redemption notification email to business
+    if (businessEmail) {
+      try {
+        const bizEmailResponse = await fetch(
+          `${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+            },
+            body: JSON.stringify({
+              type: "business_redemption_complete",
+              recipient_email: businessEmail,
+              offer_name: offerName,
+              business_name: businessName,
+              consumer_name: redemptionToken.customer_name || "A customer",
+              amount: billAmount,
+            }),
+          }
+        );
+        const bizEmailResult = await bizEmailResponse.json();
+        if (!bizEmailResponse.ok) {
+          console.error("Business redemption email send failed:", bizEmailResult);
+        } else {
+          console.log("Business redemption notification email sent:", bizEmailResult);
+        }
+      } catch (bizEmailError) {
+        console.error('Error sending business redemption email:', bizEmailError)
+        // Don't fail the request
+      }
     }
 
     return new Response(

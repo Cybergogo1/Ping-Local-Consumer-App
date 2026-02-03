@@ -651,10 +651,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   descriptionText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     fontFamily: fontFamily.body,
     color: colors.grayMedium,
-    lineHeight: fontSize.sm * 1.6,
+    lineHeight: fontSize.md * 1.6,
   },
   readMoreButton: {
     marginTop: spacing.sm,
@@ -665,10 +665,10 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyMedium,
   },
   fullDescriptionText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     fontFamily: fontFamily.body,
     color: colors.grayMedium,
-    lineHeight: fontSize.sm * 1.6,
+    lineHeight: fontSize.md * 1.6,
     marginTop: spacing.sm,
   },
   promotionsCarousel: {

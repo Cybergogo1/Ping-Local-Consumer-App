@@ -88,7 +88,7 @@ export default function VerificationScreen({ navigation, route }: VerificationSc
         >
           {/* Go Back button */}
           <TouchableOpacity onPress={handleGoBack} style={styles.goBackButton}>
-            <Text style={styles.goBackText}>→ Go Back</Text>
+            <Text style={styles.goBackText}>Continue</Text>
           </TouchableOpacity>
 
           {/* Logo icon */}
@@ -104,7 +104,7 @@ export default function VerificationScreen({ navigation, route }: VerificationSc
           <View style={styles.content}>
             <Text style={styles.headline}>Check Your Email</Text>
             <Text style={styles.bodyText}>
-              We've sent a verification link to "{email}". Click the link in your email to verify your account.
+              We've sent a verification link to "{email}". Click the link in your email to verify your account before logging in again.
             </Text>
           </View>
         </KeyboardAvoidingView>

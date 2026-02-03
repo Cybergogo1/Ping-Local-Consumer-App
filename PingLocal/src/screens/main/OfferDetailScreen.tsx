@@ -337,18 +337,11 @@ export default function OfferDetailScreen({ navigation, route }: OfferDetailScre
   };
 
   const getButtonText = () => {
-    if (!offer) return 'Buy Now';
-
     if (isSoldOut()) {
       return 'Sold Out';
     }
 
-    // 'Pay on the day' means booking only, otherwise it's a purchase
-    if (offer.offer_type === 'Pay on the day') {
-      return 'Book Now';
-    }
-
-    return 'Buy Now';
+    return 'Claim Now';
   };
 
   const handleClaimPress = () => {
@@ -1047,15 +1040,15 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   summaryText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     color: colors.grayMedium,
-    lineHeight: fontSize.sm * 1.6,
+    lineHeight: fontSize.md * 1.6,
     fontFamily: fontFamily.body,
   },
   fullDescriptionText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     color: colors.grayMedium,
-    lineHeight: fontSize.sm * 1.6,
+    lineHeight: fontSize.md * 1.6,
     fontFamily: fontFamily.body,
     marginTop: spacing.sm,
   },
@@ -1093,7 +1086,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   specialNotesText: {
-    fontSize: fontSize.sm,
+    fontSize: fontSize.md,
     color: colors.grayDark,
     fontFamily: fontFamily.body,
   },
