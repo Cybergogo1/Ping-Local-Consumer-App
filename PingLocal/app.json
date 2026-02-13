@@ -15,7 +15,7 @@
     },
     "ios": {
       "bundleIdentifier": "com.ping-local-dan.ios",
-      "buildNumber": "12",
+      "buildNumber": "13",
       "supportsTablet": false,
       "infoPlist": {
         "NSLocationWhenInUseUsageDescription": "PingLocal needs your location to show nearby businesses and offers",
@@ -42,8 +42,8 @@
       }
     },
     "android": {
-      "package": "com.pinglocal.app",
-      "versionCode": 1,
+      "package": "com.pinglocal.android",
+      "versionCode": 366,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

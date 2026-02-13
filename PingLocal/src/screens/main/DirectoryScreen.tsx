@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,16 +11,23 @@ import {
   StyleSheet,
   StatusBar,
   Image,
+  Modal,
+  Animated,
+  Dimensions,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../lib/supabase';
-import { colors, spacing, borderRadius, fontSize, fontWeight, fontFamily } from '../../theme';
-import { Business } from '../../types/database';
+import { colors, spacing, borderRadius, fontSize, fontWeight, fontFamily, shadows } from '../../theme';
+import { Business, LocationArea, Tag } from '../../types/database';
 import { DirectoryStackParamList } from '../../types/navigation';
 import { useNotifications } from '../../contexts/NotificationContext';
 import BusinessCard from '../../components/business/BusinessCard';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const MODAL_WIDTH = SCREEN_WIDTH * 0.75;
 
 type NavigationProp = StackNavigationProp<DirectoryStackParamList>;
 
@@ -39,8 +46,22 @@ export default function DirectoryScreen() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
+  // Filter state
+  const [locationAreas, setLocationAreas] = useState<LocationArea[]>([]);
+  const [tags, setTags] = useState<Tag[]>([]);
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [businessTagsMap, setBusinessTagsMap] = useState<Record<number, Tag[]>>({});
+
+  // Modal state
+  const [showLocationModal, setShowLocationModal] = useState(false);
+  const [showFilterModal, setShowFilterModal] = useState(false);
+  const locationSlideAnim = useRef(new Animated.Value(-MODAL_WIDTH)).current;
+  const filterSlideAnim = useRef(new Animated.Value(-MODAL_WIDTH)).current;
+
   useEffect(() => {
     fetchBusinesses();
+    fetchFilters();
   }, []);
 
   const fetchBusinesses = async () => {
@@ -104,9 +125,109 @@ export default function DirectoryScreen() {
     }
   };
 
+  const fetchFilters = async () => {
+    try {
+      // Fetch location areas
+      const { data: locations } = await supabase
+        .from('location_areas')
+        .select('*')
+        .order('name');
+
+      if (locations) {
+        setLocationAreas(locations);
+      }
+
+      // Fetch tags that are actually used by signed-off businesses
+      const { data: businessTagData } = await supabase
+        .from('business_tags')
+        .select('business_id, tags(id, name, type)');
+
+      if (businessTagData) {
+        // Build a map of business_id -> tags
+        const tagMap: Record<number, Tag[]> = {};
+        const allTagsMap = new Map<string, Tag>();
+
+        businessTagData.forEach((bt: any) => {
+          if (bt.tags) {
+            const tag = bt.tags as Tag;
+            if (!tagMap[bt.business_id]) {
+              tagMap[bt.business_id] = [];
+            }
+            tagMap[bt.business_id].push(tag);
+            allTagsMap.set(tag.id, tag);
+          }
+        });
+
+        setBusinessTagsMap(tagMap);
+        setTags(
+          Array.from(allTagsMap.values())
+            .filter(t => t.type === 'tag' || t.type === 'tags')
+            .sort((a, b) => a.name.localeCompare(b.name))
+        );
+      }
+    } catch (error) {
+      console.error('Error fetching filters:', error);
+    }
+  };
+
+  // Modal animation functions
+  const openLocationModal = () => {
+    setShowLocationModal(true);
+    Animated.timing(locationSlideAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeLocationModal = () => {
+    Animated.timing(locationSlideAnim, {
+      toValue: -MODAL_WIDTH,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => setShowLocationModal(false));
+  };
+
+  const openFilterModal = () => {
+    setShowFilterModal(true);
+    Animated.timing(filterSlideAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const closeFilterModal = () => {
+    Animated.timing(filterSlideAnim, {
+      toValue: -MODAL_WIDTH,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => setShowFilterModal(false));
+  };
+
+  const handleLocationSelect = (locationName: string | null) => {
+    setSelectedLocation(locationName);
+    closeLocationModal();
+  };
+
+  const handleTagToggle = (tagName: string) => {
+    setSelectedTags(prev =>
+      prev.includes(tagName)
+        ? prev.filter(t => t !== tagName)
+        : [...prev, tagName]
+    );
+  };
+
+  const clearAllFilters = () => {
+    setSelectedTags([]);
+  };
+
+  const activeFilterCount = selectedTags.length;
+
   const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
     await fetchBusinesses();
+    await fetchFilters();
     setIsRefreshing(false);
   }, []);
 
@@ -115,12 +236,55 @@ export default function DirectoryScreen() {
     navigation.navigate('BusinessDetail', { businessId: business.name as any });
   };
 
-  const filteredBusinesses = businesses.filter(business =>
-    business?.name?.toLowerCase()?.includes(searchQuery.toLowerCase()) ?? false
+  const filteredBusinesses = businesses.filter(business => {
+    // Text search filter
+    const matchesSearch = business?.name?.toLowerCase()?.includes(searchQuery.toLowerCase()) ?? false;
+    if (!matchesSearch) return false;
+
+    // Location filter
+    if (selectedLocation && business.location_area?.toLowerCase() !== selectedLocation.toLowerCase()) {
+      return false;
+    }
+
+    // Tags filter (AND logic - business must have ALL selected tags)
+    if (selectedTags.length > 0) {
+      const bTags = businessTagsMap[business.id] || [];
+      const bTagNames = bTags.map(t => t.name);
+      const hasAllTags = selectedTags.every(tag => bTagNames.includes(tag));
+      if (!hasAllTags) return false;
+    }
+
+    return true;
+  });
+
+  const filteredFeaturedBusinesses = featuredBusinesses.filter(business => {
+    if (selectedLocation && business.location_area?.toLowerCase() !== selectedLocation.toLowerCase()) {
+      return false;
+    }
+    if (selectedTags.length > 0) {
+      const bTags = businessTagsMap[business.id] || [];
+      const bTagNames = bTags.map(t => t.name);
+      if (!selectedTags.every(tag => bTagNames.includes(tag))) return false;
+    }
+    return true;
+  });
+
+  // Get location areas that have at least one business
+  const availableLocations = locationAreas.filter(area =>
+    businesses.some(b => b.location_area?.toLowerCase() === area.name.toLowerCase())
   );
 
+  // Get tags that are available given current filters
+  const availableTags = tags.filter(tag => {
+    // Check if any business matching current filters has this tag
+    return filteredBusinesses.some(business => {
+      const bTags = businessTagsMap[business.id] || [];
+      return bTags.some(t => t.name === tag.name);
+    });
+  });
+
   const renderFeaturedSection = () => {
-    if (featuredBusinesses.length === 0) return null;
+    if (filteredFeaturedBusinesses.length === 0) return null;
 
     return (
       <View style={styles.featuredSection}>
@@ -130,7 +294,7 @@ export default function DirectoryScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.featuredScroll}
         >
-          {featuredBusinesses.map((business) => (
+          {filteredFeaturedBusinesses.map((business) => (
             <BusinessCard
               key={business.name}
               business={business}
@@ -175,8 +339,8 @@ export default function DirectoryScreen() {
     <View style={styles.emptyContainer}>
       <Text style={styles.emptyTitle}>No businesses found</Text>
       <Text style={styles.emptySubtitle}>
-        {searchQuery
-          ? 'Try a different search term'
+        {searchQuery || selectedLocation || selectedTags.length > 0
+          ? 'Try adjusting your search or filters'
           : 'Check back later for new businesses'}
       </Text>
     </View>
@@ -233,12 +397,47 @@ export default function DirectoryScreen() {
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity
-              style={styles.clearButton}
+              style={styles.searchClearButton}
               onPress={() => setSearchQuery('')}
             >
-              <Text style={styles.clearButtonText}>×</Text>
+              <Text style={styles.searchClearButtonText}>×</Text>
             </TouchableOpacity>
           )}
+        </View>
+
+        {/* Filter Bar */}
+        <View style={styles.filterBar}>
+          <View style={styles.filterBarInner}>
+            <TouchableOpacity
+              style={styles.locationButton}
+              onPress={openLocationModal}
+            >
+              <Ionicons name="location" size={16} color={colors.primary} />
+              <Text style={styles.locationButtonText}>Location</Text>
+            </TouchableOpacity>
+            <Text style={styles.showingText}>
+              Showing: {selectedLocation || 'All'}
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={[
+              styles.filterButton,
+              activeFilterCount > 0 && styles.filterButtonActive,
+            ]}
+            onPress={openFilterModal}
+          >
+            <Ionicons
+              name="filter"
+              size={16}
+              color={colors.primary}
+            />
+            <Text style={[
+              styles.filterButtonText,
+              activeFilterCount > 0 && styles.filterButtonTextActive,
+            ]}>
+              Filter{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <FlatList
@@ -261,6 +460,157 @@ export default function DirectoryScreen() {
           showsVerticalScrollIndicator={false}
         />
       </SafeAreaView>
+
+      {/* Location Slide-Out Modal */}
+      <Modal
+        visible={showLocationModal}
+        transparent={true}
+        animationType="none"
+        onRequestClose={closeLocationModal}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={closeLocationModal}
+          />
+          <Animated.View
+            style={[
+              styles.slideModal,
+              { transform: [{ translateX: locationSlideAnim }] },
+            ]}
+          >
+            <View style={[styles.modalSafeArea, { paddingTop: insets.top }]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Select Location</Text>
+                <TouchableOpacity onPress={closeLocationModal}>
+                  <Ionicons name="close" size={24} color={colors.white} />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: insets.bottom }}>
+                {/* All Locations Option */}
+                <TouchableOpacity
+                  style={[
+                    styles.modalItem,
+                    !selectedLocation && styles.modalItemActive,
+                  ]}
+                  onPress={() => handleLocationSelect(null)}
+                >
+                  <Text style={[
+                    styles.modalItemText,
+                    !selectedLocation && styles.modalItemTextActive,
+                  ]}>
+                    All Locations
+                  </Text>
+                  {!selectedLocation && (
+                    <Ionicons name="checkmark" size={20} color={colors.primary} />
+                  )}
+                </TouchableOpacity>
+
+                {availableLocations.map((area) => (
+                  <TouchableOpacity
+                    key={area.id}
+                    style={[
+                      styles.modalItem,
+                      selectedLocation === area.name && styles.modalItemActive,
+                    ]}
+                    onPress={() => handleLocationSelect(area.name)}
+                  >
+                    <Text style={[
+                      styles.modalItemText,
+                      selectedLocation === area.name && styles.modalItemTextActive,
+                    ]}>
+                      {area.name}
+                    </Text>
+                    {selectedLocation === area.name && (
+                      <Ionicons name="checkmark" size={20} color={colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* Tags Filter Slide-Out Modal */}
+      <Modal
+        visible={showFilterModal}
+        transparent={true}
+        animationType="none"
+        onRequestClose={closeFilterModal}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            activeOpacity={1}
+            onPress={closeFilterModal}
+          />
+          <Animated.View
+            style={[
+              styles.slideModal,
+              { transform: [{ translateX: filterSlideAnim }] },
+            ]}
+          >
+            <View style={[styles.modalSafeArea, { paddingTop: insets.top }]}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Filter by Tags</Text>
+                <TouchableOpacity onPress={closeFilterModal}>
+                  <Ionicons name="close" size={24} color={colors.white} />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.modalContent} contentContainerStyle={{ paddingBottom: insets.bottom }}>
+                <Text style={styles.filterSectionTitle}>Tags</Text>
+                <View style={styles.pillsContainer}>
+                  {tags.map((tag) => {
+                    const isActive = selectedTags.includes(tag.name);
+                    const isAvailable = availableTags.some(t => t.name === tag.name);
+                    const isInactive = !isActive && !isAvailable;
+
+                    return (
+                      <TouchableOpacity
+                        key={tag.id}
+                        style={[
+                          styles.pill,
+                          isActive && styles.pillActive,
+                          !isActive && !isInactive && styles.pillAvailable,
+                          isInactive && styles.pillInactive,
+                        ]}
+                        onPress={() => {
+                          if (!isInactive) {
+                            handleTagToggle(tag.name);
+                          }
+                        }}
+                        disabled={isInactive}
+                      >
+                        <Text style={[
+                          styles.pillText,
+                          isActive && styles.pillTextActive,
+                          !isActive && !isInactive && styles.pillTextAvailable,
+                          isInactive && styles.pillTextInactive,
+                        ]}>
+                          {tag.name}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </ScrollView>
+
+              {activeFilterCount > 0 && (
+                <View style={[styles.clearFilterContainer, { paddingBottom: insets.bottom }]}>
+                  <TouchableOpacity
+                    style={styles.clearFilterButton}
+                    onPress={clearAllFilters}
+                  >
+                    <Text style={styles.clearFilterButtonText}>Clear All Filters</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -350,10 +700,10 @@ const styles = StyleSheet.create({
     color: colors.grayDark,
     paddingVertical: spacing.md,
   },
-  clearButton: {
+  searchClearButton: {
     padding: spacing.xs,
   },
-  clearButtonText: {
+  searchClearButtonText: {
     fontSize: fontSize.xl,
     color: colors.grayMedium,
   },
@@ -411,5 +761,189 @@ const styles = StyleSheet.create({
     fontSize: fontSize.md,
     color: colors.grayMedium,
     textAlign: 'center',
+  },
+  // Filter Bar
+  filterBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.sm,
+    backgroundColor: colors.white,
+  },
+  filterBarInner: {
+    flexDirection: 'row',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    maxWidth: '70%',
+  },
+  locationButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    gap: spacing.xs,
+  },
+  locationButtonText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontFamily: fontFamily.bodySemiBold,
+  },
+  showingText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.grayDark,
+    textAlign: 'left',
+    marginHorizontal: spacing.sm,
+    fontFamily: fontFamily.bodyRegular,
+  },
+  filterButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: borderRadius.full,
+    gap: spacing.xs,
+  },
+  filterButtonActive: {
+    backgroundColor: colors.accent,
+  },
+  filterButtonText: {
+    fontSize: fontSize.sm,
+    color: colors.primary,
+    fontFamily: fontFamily.bodySemiBold,
+  },
+  filterButtonTextActive: {
+    color: colors.primary,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  slideModal: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: MODAL_WIDTH,
+    backgroundColor: colors.primary,
+    ...shadows.lg,
+  },
+  modalSafeArea: {
+    flex: 1,
+    backgroundColor: colors.primary,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#fff2',
+  },
+  modalTitle: {
+    fontSize: fontSize.xl,
+    color: colors.white,
+    fontFamily: fontFamily.headingBold,
+  },
+  modalContent: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+  },
+  modalItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: '#fff1',
+  },
+  modalItemActive: {
+    backgroundColor: colors.accent,
+  },
+  modalItemText: {
+    fontSize: fontSize.md,
+    color: colors.grayLight,
+    fontFamily: fontFamily.bodyRegular,
+  },
+  modalItemTextActive: {
+    fontFamily: fontFamily.bodySemiBold,
+    color: colors.primary,
+  },
+  // Filter modal pill styles
+  filterSectionTitle: {
+    fontSize: fontSize.lg,
+    color: colors.white,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.primary,
+    letterSpacing: 1,
+    fontFamily: fontFamily.bodyBold,
+  },
+  pillsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    gap: spacing.sm,
+  },
+  pill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pillAvailable: {
+    backgroundColor: colors.primaryLight,
+  },
+  pillActive: {
+    backgroundColor: colors.accent,
+  },
+  pillInactive: {
+    backgroundColor: colors.primaryLight,
+    opacity: 0.4,
+  },
+  pillText: {
+    fontSize: fontSize.sm,
+    fontFamily: fontFamily.bodySemiBold,
+  },
+  pillTextAvailable: {
+    color: colors.white,
+  },
+  pillTextActive: {
+    color: colors.primary,
+  },
+  pillTextInactive: {
+    color: colors.white,
+  },
+  clearFilterContainer: {
+    padding: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: colors.primaryLight,
+  },
+  clearFilterButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: colors.white,
+  },
+  clearFilterButtonText: {
+    fontSize: fontSize.md,
+    color: colors.white,
+    fontFamily: fontFamily.bodySemiBold,
   },
 });
