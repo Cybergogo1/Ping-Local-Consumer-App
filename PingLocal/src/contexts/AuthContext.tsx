@@ -275,6 +275,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
+      // Supabase returns a fake success (no error) when the email already exists
+      // and is confirmed — to prevent email enumeration. Detect this by checking
+      // that the user has no identities.
+      if (data.user && (!data.user.identities || data.user.identities.length === 0)) {
+        console.log('Signup returned fake success — email already registered:', email);
+        throw new Error('User already registered');
+      }
+
       console.log('Auth signup successful, user:', data.user?.id);
 
       // Create or reset user profile in users table
