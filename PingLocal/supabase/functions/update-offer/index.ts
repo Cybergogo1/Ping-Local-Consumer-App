@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "PUT, PATCH, OPTIONS",
+  "Access-Control-Allow-Methods": "POST, PUT, PATCH, OPTIONS",
 };
 
 serve(async (req) => {
@@ -13,7 +13,7 @@ serve(async (req) => {
     return new Response("ok", { headers: corsHeaders });
   }
 
-  if (req.method !== "PUT" && req.method !== "PATCH") {
+  if (req.method !== "POST" && req.method !== "PUT" && req.method !== "PATCH") {
     return new Response(
       JSON.stringify({ data: null, error: "Method not allowed" }),
       {
@@ -100,6 +100,7 @@ serve(async (req) => {
       "business_location",
       "pricing_complete",
       "rejection_reason",
+      "is_test",
     ];
 
     for (const field of allowedFields) {

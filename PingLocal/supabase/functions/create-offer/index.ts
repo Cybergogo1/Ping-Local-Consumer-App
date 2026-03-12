@@ -110,6 +110,7 @@ serve(async (req) => {
       policy_notes: requestData.policy_notes || null,
       location_area: business.location_area || null,
       business_location: requestData.business_location || null,
+      is_test: requestData.is_test ?? false,
     };
 
     const { data, error } = await supabaseClient

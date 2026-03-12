@@ -737,7 +737,7 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
         {/* Terms Notice */}
         <View style={styles.termsNotice}>
           <Text style={styles.termsText}>
-            By {isPayUpfront ? 'purchasing' : 'claiming'} this offer, you agree to the{' '}
+            By {isPayUpfront && total > 0 ? 'purchasing' : 'claiming'} this offer, you agree to the{' '}
             <Text style={styles.termsLink} onPress={() => setShowTermsModal(true)}>Terms & Conditions</Text>
           </Text>
         </View>
@@ -747,7 +747,7 @@ export default function ClaimScreen({ navigation, route }: ClaimScreenProps) {
 
       {/* Bottom Action Button */}
       <View style={styles.bottomContainer}>
-        {isPayUpfront ? (
+        {isPayUpfront && total > 0 ? (
           <TouchableOpacity
             style={[styles.actionButton, isProcessing && styles.actionButtonDisabled]}
             onPress={handlePayment}
