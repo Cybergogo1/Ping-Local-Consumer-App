@@ -84,6 +84,13 @@ serve(async (req) => {
       query = query.eq("status", status);
     }
 
+    // Only show offers that have started (start_date <= now or null)
+    const now = new Date().toISOString();
+    query = query.or(`start_date.is.null,start_date.lte.${now}`);
+
+    // Only show offers that haven't expired (end_date >= now or null)
+    query = query.or(`end_date.is.null,end_date.gte.${now}`);
+
     // Filter by category using the junction table
     if (category) {
       query = query.eq("offer_tags.tags.name", category).eq("offer_tags.tags.type", "Category");

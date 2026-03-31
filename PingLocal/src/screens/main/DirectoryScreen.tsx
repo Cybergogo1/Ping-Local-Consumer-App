@@ -81,6 +81,7 @@ export default function DirectoryScreen() {
         .from('offers')
         .select('business_name')
         .eq('status', 'Signed Off')
+        .lte('start_date', new Date().toISOString())
         .gte('end_date', new Date().toISOString());
 
       if (offersError) throw offersError;

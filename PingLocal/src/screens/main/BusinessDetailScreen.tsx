@@ -107,6 +107,7 @@ export default function BusinessDetailScreen({ navigation, route }: BusinessDeta
         .select('*')
         .eq('business_name', businessId)
         .eq('status', 'Signed Off')
+        .lte('start_date', new Date().toISOString())
         .gte('end_date', new Date().toISOString());
 
       if (error) {

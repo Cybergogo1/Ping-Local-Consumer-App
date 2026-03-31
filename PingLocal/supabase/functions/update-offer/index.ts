@@ -112,6 +112,11 @@ serve(async (req) => {
           value = null;
         }
 
+        // Handle date/timestamp fields: empty string should be stored as null
+        if ((field === "start_date" || field === "end_date" || field === "finish_time") && value === "") {
+          value = null;
+        }
+
         cleanedData[field] = value;
       }
     }

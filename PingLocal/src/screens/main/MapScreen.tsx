@@ -78,6 +78,7 @@ export default function MapScreen() {
         .from('offers')
         .select('id, name, summary, price_discount, status, end_date, business_name')
         .eq('status', 'Signed Off')
+        .lte('start_date', new Date().toISOString())
         .gte('end_date', new Date().toISOString());
 
       if (offersError) throw offersError;

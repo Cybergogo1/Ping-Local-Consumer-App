@@ -22,7 +22,7 @@ serve(async (req) => {
     // Parse query parameters (for Adalo compatibility)
     const url = new URL(req.url)
     const page = parseInt(url.searchParams.get('page') || '1')
-    const limit = parseInt(url.searchParams.get('limit') || '100')
+    const limit = parseInt(url.searchParams.get('limit') || '300')
     const featured = url.searchParams.get('featured')
     const locationArea = url.searchParams.get('location_area')
     const isSignedOff = url.searchParams.get('is_signed_off')
@@ -33,7 +33,7 @@ serve(async (req) => {
     let query = supabaseClient
       .from('businesses')
       .select('*')
-      .order('created', { ascending: false })
+      .order('name', { ascending: true })
       .range((page - 1) * limit, page * limit - 1)
 
     // Apply filters

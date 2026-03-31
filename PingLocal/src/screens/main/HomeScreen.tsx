@@ -162,6 +162,7 @@ export default function HomeScreen() {
         .from('offers')
         .select('business_id, businesses!inner(category)')
         .eq('status', 'Signed Off')
+        .lte('start_date', new Date().toISOString())
         .gte('end_date', new Date().toISOString());
 
       if (offersWithBusiness) {
@@ -208,6 +209,7 @@ export default function HomeScreen() {
         .from('offers')
         .select('*, businesses!inner(location_area, name), offer_tags(tags(id, name, type))')
         .eq('status', 'Signed Off')
+        .lte('start_date', new Date().toISOString())
         .gte('end_date', new Date().toISOString());
 
       const { data, error } = await query;
@@ -268,6 +270,7 @@ export default function HomeScreen() {
         .from('offers')
         .select('*, businesses!inner(location_area, category), offer_tags(tags(id, name, type))')
         .eq('status', 'Signed Off')
+        .lte('start_date', new Date().toISOString())
         .gte('end_date', new Date().toISOString());
 
       const { data, error } = await query;
@@ -331,6 +334,7 @@ export default function HomeScreen() {
         .from('offers')
         .select('*, businesses!inner(location_area, category), offer_tags(tags(id, name, type))')
         .eq('status', 'Signed Off')
+        .lte('start_date', new Date().toISOString())
         .gte('end_date', new Date().toISOString());
 
       const { data, error } = await query;
@@ -407,6 +411,7 @@ export default function HomeScreen() {
         .from('offers')
         .select(selectQuery)
         .eq('status', 'Signed Off')
+        .lte('start_date', new Date().toISOString())
         .gte('end_date', new Date().toISOString());
 
       // Apply location filter using business's location_area (case-insensitive with ilike)
